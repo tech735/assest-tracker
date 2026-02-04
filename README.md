@@ -1,73 +1,292 @@
-# Welcome to your Lovable project
+# Asset Compass
 
-## Project info
+A comprehensive asset management system built with React, TypeScript, and Supabase. Track, manage, and monitor organizational assets across multiple locations with real-time insights and detailed reporting.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## 🚀 Features
 
-## How can I edit this code?
+### 📊 Dashboard
+- **Real-time Statistics**: Overview of total assets, employees, locations, and assignments
+- **Recent Activity**: Track latest asset additions and assignments
+- **Asset Distribution**: Visual breakdown by category with interactive charts
+- **System Alerts**: Warranty expirations, lost assets, and maintenance reminders
 
-There are several ways of editing your application.
+### 🏢 Asset Management
+- **Complete Asset Lifecycle**: Add, edit, clone, and delete assets
+- **Bulk Operations**: CSV import and manual bulk asset addition
+- **Smart Filtering**: Search by name, category, status, location, and more
+- **Asset Cloning**: Duplicate assets with auto-generated tags
+- **Status Tracking**: Available, Assigned, In Repair, Lost, Retired
+- **Condition Monitoring**: New, Good, Fair, Poor condition levels
 
-**Use Lovable**
+### 👥 Employee Management
+- **Employee Directory**: Complete employee profiles with contact information
+- **Asset Assignment**: Assign/unassign assets with full history tracking
+- **Department Organization**: Categorize employees by department and position
+- **Location Tracking**: Monitor employee locations and asset assignments
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+### 📍 Location Management
+- **Multi-Location Support**: Offices, warehouses, remote sites, and outlets
+- **Detailed Location Views**: Complete asset and employee breakdowns
+- **Location Analytics**: Asset utilization rates and category distribution
+- **Smart Location Matching**: Automatic location assignment based on existing data
 
-Changes made via Lovable will be committed automatically to this repo.
+### 📈 Reports & Analytics
+- **Inventory Reports**: Complete asset inventory with filtering options
+- **Assignment Reports**: Asset assignment history and current status
+- **Aging Reports**: Asset age analysis and depreciation tracking
+- **Warranty Reports**: Warranty expiration monitoring and alerts
+- **Location Summary**: Asset distribution across locations
+- **Utilization Reports**: Asset usage and efficiency metrics
+- **CSV Export**: Download any report in CSV format
 
-**Use your preferred IDE**
+### 🔧 Advanced Features
+- **Auto-Generated Asset Tags**: Automatic unique identifier generation
+- **Bulk Data Operations**: CSV import/export with validation
+- **Real-time Updates**: Live data synchronization across all views
+- **Responsive Design**: Works seamlessly on desktop, tablet, and mobile
+- **Toast Notifications**: Real-time feedback for all operations
+- **Error Handling**: Comprehensive error management and user feedback
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## 🛠️ Technology Stack
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Frontend
+- **React 18**: Modern React with hooks and functional components
+- **TypeScript**: Type-safe development with full IntelliSense support
+- **Vite**: Fast build tool and development server
+- **Tailwind CSS**: Utility-first CSS framework
+- **shadcn/ui**: Beautiful, accessible UI components
+- **React Hook Form**: Performant forms with validation
+- **Zod**: Schema validation and TypeScript inference
+- **React Query**: Data fetching and state management
+- **Recharts**: Data visualization and charting
 
-Follow these steps:
+### Backend
+- **Supabase**: Backend-as-a-Service with:
+  - PostgreSQL database
+  - Real-time subscriptions
+  - Authentication & authorization
+  - File storage
+  - RESTful API
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### Development Tools
+- **ESLint**: Code linting and formatting
+- **Prettier**: Code formatting
+- **Husky**: Git hooks for code quality
+- **TypeScript**: Static type checking
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+## 📋 Prerequisites
 
-# Step 3: Install the necessary dependencies.
-npm i
+- Node.js 18+ 
+- npm or yarn
+- Supabase account (for backend setup)
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+## 🚀 Getting Started
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/your-username/asset-compass.git
+cd asset-compass
+```
+
+### 2. Install Dependencies
+
+```bash
+npm install
+```
+
+### 3. Environment Setup
+
+Create a `.env.local` file in the root directory:
+
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+### 4. Database Setup
+
+1. Create a new Supabase project
+2. Run the SQL schema from `supabase/schema.sql`
+3. Set up the database triggers for asset tag generation
+4. Configure Row Level Security (RLS) policies
+
+### 5. Start Development Server
+
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The application will be available at `http://localhost:5173`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## 📁 Project Structure
 
-**Use GitHub Codespaces**
+```
+asset-compass/
+├── src/
+│   ├── components/          # Reusable UI components
+│   │   ├── assets/         # Asset-related components
+│   │   ├── employees/      # Employee-related components
+│   │   ├── locations/     # Location-related components
+│   │   ├── reports/        # Report components
+│   │   └── ui/            # Base UI components
+│   ├── pages/              # Main application pages
+│   │   ├── Dashboard.tsx
+│   │   ├── Assets.tsx
+│   │   ├── Employees.tsx
+│   │   ├── Locations.tsx
+│   │   └── Reports.tsx
+│   ├── hooks/              # Custom React hooks
+│   │   └── useSupabaseData.ts
+│   ├── services/           # API and data services
+│   │   └── supabaseService.ts
+│   ├── types/              # TypeScript type definitions
+│   │   └── asset.ts
+│   ├── utils/              # Utility functions
+│   │   └── exportUtils.ts
+│   └── lib/                # Library configurations
+│       └── supabase.ts
+├── supabase/               # Database schema and migrations
+│   └── schema.sql
+└── public/                 # Static assets
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 🔧 Configuration
 
-## What technologies are used for this project?
+### Database Schema
 
-This project is built with:
+The application uses the following main tables:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- **assets**: Asset information and metadata
+- **employees**: Employee profiles and assignments
+- **locations**: Physical locations and sites
+- **assignments**: Asset assignment history
 
-## How can I deploy this project?
+### Key Features Implementation
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+#### Asset Tag Generation
+Assets automatically receive unique tags (e.g., AST-0001) via database triggers.
 
-## Can I connect a custom domain to my Lovable project?
+#### Location Matching
+Smart location matching handles variations like:
+- "Warehouse" ↔ "Central Warehouse"
+- Case-insensitive matching
+- Whitespace trimming
 
-Yes, you can!
+#### Bulk Operations
+- CSV import with validation
+- Manual bulk addition with dropdowns
+- Error handling for partial failures
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## 📊 Reports Guide
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+### Available Reports
+
+1. **Inventory Report**
+   - Complete asset list
+   - Filter by category, status, location
+   - Export to CSV
+
+2. **Assignment Report**
+   - Current asset assignments
+   - Assignment history
+   - Employee asset summary
+
+3. **Aging Report**
+   - Asset age analysis
+   - Purchase date tracking
+   - Depreciation insights
+
+4. **Warranty Report**
+   - Warranty expiration tracking
+   - Upcoming expirations
+   - Maintenance scheduling
+
+5. **Location Summary**
+   - Asset distribution
+   - Location utilization
+   - Employee counts
+
+6. **Utilization Report**
+   - Asset usage metrics
+   - Efficiency analysis
+   - Performance indicators
+
+## 🎯 Usage Guide
+
+### Adding Assets
+1. Navigate to Assets page
+2. Click "Add Asset"
+3. Fill in asset details
+4. Select location and category
+5. Save asset (auto-generates tag)
+
+### Bulk Asset Addition
+1. Click "Add Asset" → "Bulk Addition"
+2. Choose CSV upload or manual entry
+3. Map fields correctly
+4. Review and confirm
+
+### Asset Cloning
+1. Find asset to clone
+2. Click menu (⋮) → "Clone asset"
+3. Edit cloned details
+4. Save as new asset
+
+### Location Management
+1. Navigate to Locations page
+2. View asset counts per location
+3. Click "View details" for comprehensive breakdown
+4. Add/edit locations as needed
+
+### Report Generation
+1. Navigate to Reports page
+2. Select report type
+3. Configure filters
+4. Generate and download CSV
+
+## 🔍 Troubleshooting
+
+### Common Issues
+
+**Assets not showing in locations**
+- Check location name matching
+- Use "Fix Location Data" button
+- Verify asset location field
+
+**CSV import failures**
+- Ensure required fields are present
+- Check date format (YYYY-MM-DD)
+- Validate location names
+
+**Asset tag generation**
+- Verify database triggers
+- Check asset_tag uniqueness
+- Review schema constraints
+
+### Debug Mode
+
+Enable console logging by checking browser dev tools for detailed operation logs.
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+## 🆘 Support
+
+For support and questions:
+- Create an issue in the repository
+- Check the troubleshooting section
+- Review the database schema
+
+---
+
+**Built with ❤️ using React, TypeScript, and Supabase**
