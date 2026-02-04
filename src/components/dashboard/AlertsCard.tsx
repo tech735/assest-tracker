@@ -51,7 +51,7 @@ export function AlertsCard({ alerts }: AlertsCardProps) {
   };
 
   return (
-    <Card className="border shadow-card">
+    <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-semibold">Alerts & Notifications</CardTitle>
@@ -73,13 +73,13 @@ export function AlertsCard({ alerts }: AlertsCardProps) {
               <div
                 key={alert.id}
                 className={cn(
-                  'flex items-start justify-between gap-3 p-3 rounded-lg bg-muted/30 border-l-4',
+                  'flex items-start justify-between gap-3 p-3 rounded-md bg-muted/40 border-l-4',
                   severityStyles[alert.severity]
                 )}
               >
                 <div className="flex items-start gap-3">
                   <div className="mt-0.5">
-                    <Icon className="w-4 h-4 text-brand-blue" />
+                    <Icon className="w-4 h-4 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">

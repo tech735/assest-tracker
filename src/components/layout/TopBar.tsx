@@ -50,14 +50,14 @@ export function TopBar({
   };
 
   return (
-    <header className="sticky top-0 z-10 flex items-center justify-between h-16 px-6 bg-card border-b border-border">
+    <header className="sticky top-0 z-10 flex items-center justify-between h-16 px-6 bg-background border-b border-border/70">
       {/* Search */}
       <div className="relative w-96">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           type="search"
           placeholder="Search assets, people, locations..."
-          className="pl-10 bg-background border-border"
+          className="pl-10 bg-card border-border"
         />
       </div>
 
@@ -134,8 +134,8 @@ export function TopBar({
         </Popover>
 
         {/* User Avatar */}
-        <div className="flex items-center gap-2 pl-3 border-l border-border">
-          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-sm font-medium text-primary-foreground">
+        <div className="flex items-center gap-2 pl-3 border-l border-border/70">
+          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary">
             TK
           </div>
         </div>

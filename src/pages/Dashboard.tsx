@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { DashboardStats } from '@/components/dashboard/DashboardStats';
 import { AlertsCard } from '@/components/dashboard/AlertsCard';
-import { RecentAssetsCard } from '@/components/dashboard/RecentAssetsCard';
 import { RecentAssignmentsCard } from '@/components/dashboard/RecentAssignmentsCard';
 import { CategoryChart } from '@/components/dashboard/CategoryChart';
 import { useDashboardStats, useAlerts, useAssets, useAssignments } from '@/hooks/useSupabaseData';
@@ -56,28 +55,24 @@ const Dashboard = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Welcome back! Here's an overview of your asset inventory.
-        </p>
+      <div className="flex items-end justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Overview of your asset inventory</p>
+        </div>
       </div>
 
       {/* Stats Cards */}
       {stats && <DashboardStats stats={stats} />}
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - 2/3 width */}
-        <div className="lg:col-span-2 space-y-6">
-          <RecentAssetsCard assets={assets.slice(0, 5)} />
+      {/* Main panels */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-8 space-y-6">
           <RecentAssignmentsCard assignments={assignments.slice(0, 5)} />
         </div>
-
-        {/* Right Column - 1/3 width */}
-        <div className="space-y-6">
-          <AlertsCard alerts={alerts} />
+        <div className="lg:col-span-4 space-y-6">
           <CategoryChart data={categoryData} />
+          <AlertsCard alerts={alerts} />
         </div>
       </div>
     </div>

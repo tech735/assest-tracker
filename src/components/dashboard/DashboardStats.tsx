@@ -23,30 +23,30 @@ interface StatCardProps {
 
 const variantStyles = {
   default: 'bg-card',
-  primary: 'bg-primary/5',
-  success: 'bg-success/5',
-  warning: 'bg-warning/5',
-  muted: 'bg-muted/50',
+  primary: 'bg-card',
+  success: 'bg-card',
+  warning: 'bg-card',
+  muted: 'bg-card',
 };
 
 const iconVariantStyles = {
-  default: 'bg-brand-blue/10 text-brand-blue',
-  primary: 'bg-brand-blue/10 text-brand-blue',
-  success: 'bg-brand-blue/10 text-brand-blue',
-  warning: 'bg-brand-blue/10 text-brand-blue',
-  muted: 'bg-brand-blue/10 text-brand-blue',
+  default: 'bg-muted text-primary',
+  primary: 'bg-muted text-primary',
+  success: 'bg-muted text-primary',
+  warning: 'bg-muted text-primary',
+  muted: 'bg-muted text-primary',
 };
 
 export function StatCard({ title, value, icon: Icon, trend, variant = 'default' }: StatCardProps) {
   return (
-    <Card className={cn('border shadow-card hover:shadow-card-hover transition-shadow', variantStyles[variant])}>
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between">
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            <p className="text-3xl font-bold tracking-tight">{value.toLocaleString()}</p>
+    <Card className={cn('border', variantStyles[variant])}>
+      <CardContent className="px-5 py-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1.5">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</p>
+            <p className="text-2xl font-semibold tracking-tight">{value.toLocaleString()}</p>
             {trend && (
-              <div className="flex items-center gap-1 text-sm">
+              <div className="flex items-center gap-1 text-xs">
                 {trend.isPositive ? (
                   <TrendingUp className="w-4 h-4 text-success" />
                 ) : (
@@ -59,7 +59,7 @@ export function StatCard({ title, value, icon: Icon, trend, variant = 'default' 
               </div>
             )}
           </div>
-          <div className={cn('p-3 rounded-xl', iconVariantStyles[variant])}>
+          <div className={cn('p-2.5 rounded-lg', iconVariantStyles[variant])}>
             <Icon className="w-6 h-6" />
           </div>
         </div>
@@ -80,7 +80,7 @@ interface DashboardStatsProps {
 
 export function DashboardStats({ stats }: DashboardStatsProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
       <StatCard
         title="Total Assets"
         value={stats.totalAssets}

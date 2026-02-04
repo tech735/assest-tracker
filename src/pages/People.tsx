@@ -178,9 +178,9 @@ const People = () => {
       <Card className="border shadow-card overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/50">
+            <TableRow>
               <TableHead
-                className="w-[300px] cursor-pointer hover:bg-muted/80 transition-colors"
+                className="w-[300px] cursor-pointer hover:bg-muted/60 transition-colors"
                 onClick={() => requestSort('name')}
               >
                 <div className="flex items-center">
@@ -188,7 +188,7 @@ const People = () => {
                 </div>
               </TableHead>
               <TableHead
-                className="cursor-pointer hover:bg-muted/80 transition-colors"
+                className="cursor-pointer hover:bg-muted/60 transition-colors"
                 onClick={() => requestSort('department')}
               >
                 <div className="flex items-center">
@@ -196,7 +196,7 @@ const People = () => {
                 </div>
               </TableHead>
               <TableHead
-                className="cursor-pointer hover:bg-muted/80 transition-colors"
+                className="cursor-pointer hover:bg-muted/60 transition-colors"
                 onClick={() => requestSort('position')}
               >
                 <div className="flex items-center">
@@ -204,7 +204,7 @@ const People = () => {
                 </div>
               </TableHead>
               <TableHead
-                className="cursor-pointer hover:bg-muted/80 transition-colors"
+                className="cursor-pointer hover:bg-muted/60 transition-colors"
                 onClick={() => requestSort('location')}
               >
                 <div className="flex items-center">
@@ -212,7 +212,7 @@ const People = () => {
                 </div>
               </TableHead>
               <TableHead
-                className="text-center cursor-pointer hover:bg-muted/80 transition-colors"
+                className="text-center cursor-pointer hover:bg-muted/60 transition-colors"
                 onClick={() => requestSort('assets')}
               >
                 <div className="flex items-center justify-center">
@@ -220,7 +220,7 @@ const People = () => {
                 </div>
               </TableHead>
               <TableHead
-                className="cursor-pointer hover:bg-muted/80 transition-colors"
+                className="cursor-pointer hover:bg-muted/60 transition-colors"
                 onClick={() => requestSort('status')}
               >
                 <div className="flex items-center">
@@ -239,12 +239,12 @@ const People = () => {
               </TableRow>
             ) : (
               sortedEmployees.map((employee) => (
-                <TableRow key={employee.id} className="hover:bg-muted/30 transition-colors">
+                <TableRow key={employee.id} className="transition-colors">
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar className="w-9 h-9">
                         <AvatarImage src={employee.avatarUrl} />
-                        <AvatarFallback className="bg-brand-blue/10 text-brand-blue text-sm">
+                        <AvatarFallback className="bg-muted text-primary text-sm">
                           {employee.name.split(' ').map(n => n[0]).join('')}
                         </AvatarFallback>
                       </Avatar>

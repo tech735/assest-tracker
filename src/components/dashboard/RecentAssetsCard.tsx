@@ -42,7 +42,7 @@ const statusLabels: Record<AssetStatus, string> = {
 
 export function RecentAssetsCard({ assets }: RecentAssetsCardProps) {
   return (
-    <Card className="border shadow-card">
+    <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-lg font-semibold">Recent Assets</CardTitle>
       </CardHeader>
@@ -53,10 +53,10 @@ export function RecentAssetsCard({ assets }: RecentAssetsCardProps) {
             return (
               <div
                 key={asset.id}
-                className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                className="flex items-center gap-4 p-3 rounded-md hover:bg-muted/50 transition-colors cursor-pointer"
               >
-                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-brand-blue/10">
-                  <Icon className="w-5 h-5 text-brand-blue" />
+                <div className="flex items-center justify-center w-10 h-10 rounded-md bg-muted">
+                  <Icon className="w-5 h-5 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">

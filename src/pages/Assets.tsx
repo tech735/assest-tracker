@@ -371,7 +371,7 @@ const Assets = () => {
       <Card className="border shadow-card overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/50">
+            <TableRow>
               <TableHead className="w-[250px]">Asset</TableHead>
               <TableHead>Tag / Serial</TableHead>
               <TableHead>Status</TableHead>
@@ -392,11 +392,11 @@ const Assets = () => {
               filteredAssets.map((asset) => {
                 const Icon = categoryIcons[asset.category.toLowerCase()] || Package;
                 return (
-                  <TableRow key={asset.id} className="hover:bg-muted/30 transition-colors">
+                  <TableRow key={asset.id} className="transition-colors">
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-brand-blue/10">
-                          <Icon className="w-4 h-4 text-brand-blue" />
+                        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-muted">
+                          <Icon className="w-4 h-4 text-primary" />
                         </div>
                         <div>
                           <p className="font-medium">{asset.name}</p>

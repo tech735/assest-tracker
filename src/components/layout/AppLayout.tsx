@@ -30,8 +30,10 @@ export function AppLayout() {
           onReturnAsset={() => setReturnAssetOpen(true)}
           onImportAssets={handleImportAssets}
         />
-        <main className="flex-1 p-6 overflow-auto">
-          <Outlet />
+        <main className="flex-1 px-8 py-7 overflow-auto">
+          <div className="mx-auto w-full max-w-6xl">
+            <Outlet />
+          </div>
         </main>
       </div>
 

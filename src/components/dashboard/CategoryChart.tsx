@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { ArrowUpRight } from 'lucide-react';
 
 interface AssetsByCategory {
   name: string;
@@ -15,7 +16,12 @@ export function CategoryChart({ data }: CategoryChartProps) {
   return (
     <Card className="border shadow-card">
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg font-semibold">Assets by Category</CardTitle>
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+            <ArrowUpRight className="h-4 w-4" />
+          </div>
+          <CardTitle className="text-lg font-semibold">Overview</CardTitle>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="h-[280px]">
