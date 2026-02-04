@@ -1,0 +1,149 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* IT Asset Management Portal - Modern SaaS Design System */
+
+@layer base {
+  :root {
+    /* Clean white background with subtle warmth */
+    --background: 210 20% 98%;
+    --foreground: 220 25% 10%;
+
+    /* Cards with pure white */
+    --card: 0 0% 100%;
+    --card-foreground: 220 25% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 25% 10%;
+
+    /* Primary - Brand Blue for main actions */
+    --primary: 241 98% 31%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary - Soft gray for secondary elements */
+    --secondary: 210 20% 96%;
+    --secondary-foreground: 220 20% 25%;
+
+    /* Muted - For subtle backgrounds and text */
+    --muted: 210 15% 95%;
+    --muted-foreground: 220 10% 45%;
+
+    /* Accent - Lighter blue for highlights */
+    --accent: 241 50% 95%;
+    --accent-foreground: 241 98% 25%;
+
+    /* Status colors */
+    --success: 152 69% 40%;
+    --success-foreground: 0 0% 100%;
+    
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --info: 210 92% 55%;
+    --info-foreground: 0 0% 100%;
+
+    /* Borders and inputs */
+    --border: 214 20% 90%;
+    --input: 214 20% 90%;
+    --ring: 241 98% 31%;
+
+    --radius: 0.75rem;
+
+    /* Sidebar - Clean professional look */
+    --sidebar-background: 220 25% 12%;
+    --sidebar-foreground: 210 15% 85%;
+    --sidebar-primary: 162 63% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 25% 18%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 220 20% 20%;
+    --sidebar-ring: 162 63% 45%;
+    --sidebar-muted: 220 15% 50%;
+  }
+
+  .dark {
+    --background: 220 25% 8%;
+    --foreground: 210 20% 95%;
+
+    --card: 220 25% 12%;
+    --card-foreground: 210 20% 95%;
+
+    --popover: 220 25% 12%;
+    --popover-foreground: 210 20% 95%;
+
+    --primary: 241 98% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 20% 18%;
+    --secondary-foreground: 210 15% 85%;
+
+    --muted: 220 20% 18%;
+    --muted-foreground: 215 15% 60%;
+
+    --accent: 162 40% 20%;
+    --accent-foreground: 162 60% 65%;
+
+    --success: 152 69% 40%;
+    --success-foreground: 0 0% 100%;
+    
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    
+    --destructive: 0 62% 40%;
+    --destructive-foreground: 0 0% 100%;
+
+    --info: 210 92% 55%;
+    --info-foreground: 0 0% 100%;
+
+    --border: 220 20% 20%;
+    --input: 220 20% 20%;
+    --ring: 241 98% 45%;
+
+    --sidebar-background: 220 30% 6%;
+    --sidebar-foreground: 210 15% 85%;
+    --sidebar-primary: 162 63% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 30% 12%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 220 25% 15%;
+    --sidebar-ring: 162 63% 45%;
+    --sidebar-muted: 220 15% 45%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 3px;
+  }
+}
