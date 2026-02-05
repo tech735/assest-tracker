@@ -29,10 +29,10 @@ export function RecentAssignmentsCard({ assignments }: RecentAssignmentsCardProp
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[260px]">Type</TableHead>
-                  <TableHead>Asset</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Date</TableHead>
+                  <TableHead className="w-[200px] sm:w-[260px]">Type</TableHead>
+                  <TableHead className="min-w-[150px]">Asset</TableHead>
+                  <TableHead className="w-[80px]">Status</TableHead>
+                  <TableHead className="w-[100px] text-right">Date</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
