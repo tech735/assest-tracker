@@ -32,7 +32,7 @@ export function AppSidebar() {
   return (
     <aside
       className={cn(
-        'flex flex-col bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out h-screen sticky top-0 border-r border-sidebar-border',
+        'app-sidebar flex flex-col transition-all duration-300 ease-in-out h-screen sticky top-0',
         collapsed ? 'w-16' : 'w-60'
       )}
     >
@@ -88,11 +88,9 @@ export function AppSidebar() {
                   key={item.name}
                   to={item.href}
                   className={cn(
-                    'group relative flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
+                    'sidebar-nav-item',
                     collapsed && 'justify-center px-2',
-                    isActive
-                      ? 'bg-card text-sidebar-foreground shadow-sm ring-1 ring-border'
-                      : 'text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/60'
+                    isActive && 'sidebar-nav-item-active'
                   )}
                 >
                   <item.icon className={cn('w-4 h-4 flex-shrink-0', isActive && 'text-sidebar-primary')} />
@@ -118,11 +116,9 @@ export function AppSidebar() {
                   key={item.name}
                   to={item.href}
                   className={cn(
-                    'group relative flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
+                    'sidebar-nav-item',
                     collapsed && 'justify-center px-2',
-                    isActive
-                      ? 'bg-card text-sidebar-foreground shadow-sm ring-1 ring-border'
-                      : 'text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/60'
+                    isActive && 'sidebar-nav-item-active'
                   )}
                 >
                   <item.icon className={cn('w-4 h-4 flex-shrink-0', isActive && 'text-sidebar-primary')} />
@@ -150,10 +146,10 @@ export function AppSidebar() {
           <>
             <Link
               to="/settings"
-              className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/60 transition-colors"
+              className="sidebar-nav-item"
             >
               <Settings className="w-4 h-4" />
-              <span>Settings</span>
+              {!collapsed && <span>Settings</span>}
             </Link>
 
             <div className="pt-2">
