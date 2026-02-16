@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
-import type { Asset, Employee, Location, Assignment, Alert, DashboardStats } from '@/types/asset';
+import { Alert } from '@/types/alert';
+import { Asset, AssetCategory, AssetStatus, Assignment, DashboardStats, Employee, Location } from '@/types/asset';
 
 // =====================================================
 // MAPPING UTILITIES
@@ -72,7 +73,9 @@ const mapAlert = (data: any): Alert => ({
     description: data.description,
     assetId: data.asset_id,
     severity: data.severity,
+    isResolved: data.is_resolved,
     createdAt: data.created_at,
+    updatedAt: data.updated_at,
 });
 
 // =====================================================
@@ -406,7 +409,7 @@ export async function getAlerts(): Promise<Alert[]> {
     return (data || []).map(mapAlert);
 }
 
-export async function createAlert(alert: Omit<Alert, 'id' | 'createdAt'>): Promise<Alert> {
+export async function createAlert(alert: Omit<Alert, 'id' | 'createdAt' | 'updatedAt' | 'isResolved'>): Promise<Alert> {
     const { data, error } = await supabase
         .from('alerts')
         .insert([{
@@ -431,6 +434,8 @@ export async function updateAlert(id: string, updates: Partial<Alert>): Promise<
             title: updates.title,
             description: updates.description,
             severity: updates.severity,
+            asset_id: updates.assetId,
+            is_resolved: updates.isResolved,
         })
         .eq('id', id)
         .select()
@@ -487,7 +492,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 export const DEFAULT_SETTINGS = {
     orgName: "Asset Compass",
     tagPrefix: "AST-",
-    currency: "USD",
+    currency: "INR",
     timezone: "UTC",
     notifications: {
         warrantyAlerts: true,

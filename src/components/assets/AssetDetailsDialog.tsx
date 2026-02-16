@@ -22,7 +22,7 @@ import {
     ArrowRight
 } from 'lucide-react';
 import { Asset, AssetStatus, AssetCategory } from '@/types/asset';
-import { useAssetAssignments } from '@/hooks/useSupabaseData';
+import { useAssetAssignments, useSettings } from '@/hooks/useSupabaseData';
 import { format } from 'date-fns';
 
 interface AssetDetailsDialogProps {
@@ -60,6 +60,7 @@ const categoryLabels: Record<AssetCategory, string> = {
 
 export function AssetDetailsDialog({ asset, open, onOpenChange, defaultTab = 'details' }: AssetDetailsDialogProps) {
     const { data: assignments = [], isLoading: assignmentsLoading } = useAssetAssignments(asset?.id || '');
+    const { data: settings } = useSettings();
 
     if (!asset) return null;
 
@@ -74,12 +75,14 @@ export function AssetDetailsDialog({ asset, open, onOpenChange, defaultTab = 'de
                             </div>
                             <div>
                                 <DialogTitle className="text-xl">{asset.name}</DialogTitle>
-                                <DialogDescription className="flex items-center gap-2 mt-1">
-                                    <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">{asset.assetTag}</span>
-                                    <span className="text-muted-foreground">·</span>
-                                    <Badge variant={statusVariants[asset.status]} className="capitalize">
-                                        {statusLabels[asset.status]}
-                                    </Badge>
+                                <DialogDescription asChild className="flex items-center gap-2 mt-1">
+                                    <div>
+                                        <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">{asset.assetTag}</span>
+                                        <span className="text-muted-foreground">·</span>
+                                        <Badge variant={statusVariants[asset.status]} className="capitalize">
+                                            {statusLabels[asset.status]}
+                                        </Badge>
+                                    </div>
                                 </DialogDescription>
                             </div>
                         </div>
@@ -184,7 +187,10 @@ export function AssetDetailsDialog({ asset, open, onOpenChange, defaultTab = 'de
                                         <div>
                                             <p className="text-xs text-muted-foreground italic mb-1">Cost</p>
                                             <p className="text-sm font-medium">
-                                                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(asset.purchaseCost)}
+                                                {new Intl.NumberFormat(settings?.currency === 'INR' ? 'en-IN' : 'en-US', {
+                                                    style: 'currency',
+                                                    currency: settings?.currency || 'USD'
+                                                }).format(asset.purchaseCost)}
                                             </p>
                                         </div>
                                         <div className="col-span-2">

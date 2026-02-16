@@ -140,7 +140,7 @@ export function AddAssetDialog({
         try {
             // Find location name for the selected ID
             const selectedLocation = locations.find(l => l.id === values.locationId);
-            
+
             console.log('Creating asset with values:', values);
             console.log('Selected location:', selectedLocation);
             console.log('Location ID:', values.locationId);
@@ -151,16 +151,22 @@ export function AddAssetDialog({
             }
 
             await createAsset.mutateAsync({
-                ...values,
+                name: values.name,
+                brand: values.brand,
+                model: values.model,
+                serialNumber: values.serialNumber,
+                assetTag: values.assetTag || '',
                 category: values.category as AssetCategory,
                 condition: values.condition as AssetCondition,
                 status: values.status as any,
                 location: selectedLocation.name, // Use the actual location name
                 locationId: selectedLocation.id, // Ensure locationId is set correctly
+                purchaseDate: values.purchaseDate,
                 purchaseCost: Number(values.purchaseCost),
-                warrantyStart: values.warrantyStart || null,
-                warrantyEnd: values.warrantyEnd || null,
-                notes: values.notes || null,
+                vendor: values.vendor,
+                warrantyStart: values.warrantyStart || undefined,
+                warrantyEnd: values.warrantyEnd || undefined,
+                notes: values.notes || undefined,
             });
 
             toast({

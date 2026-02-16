@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { Search, Plus, MoreHorizontal, MapPin, Building2, Warehouse, Globe, Edit2, Trash2, Eye, Store, Wrench } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Plus, MoreHorizontal, MapPin, Building2, Warehouse, Globe, Edit2, Trash2, Eye, Store, Wrench, Printer } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -43,10 +44,21 @@ const Locations = () => {
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
   const [deletingLocation, setDeletingLocation] = useState<Location | null>(null);
   const [viewingLocation, setViewingLocation] = useState<Location | null>(null);
+  const [searchParams] = useSearchParams();
 
   const { data: locations = [], isLoading: isLoadingLocations } = useLocations();
   const { data: assets = [], isLoading: isLoadingAssets } = useAssets();
   const { data: employees = [], isLoading: isLoadingEmployees } = useEmployees();
+
+  useEffect(() => {
+    const viewId = searchParams.get('view');
+    if (viewId && locations.length > 0) {
+      const location = locations.find(l => l.id === viewId);
+      if (location) {
+        setViewingLocation(location);
+      }
+    }
+  }, [searchParams, locations]);
   const { toast } = useToast();
 
   const isLoading = isLoadingLocations || isLoadingAssets || isLoadingEmployees;
@@ -56,7 +68,7 @@ const Locations = () => {
     setIsFixing(true);
     try {
       console.log('Starting location ID fix...');
-      
+
       // Create a mapping from location name to location ID
       const locationMap = new Map();
       locations.forEach(location => {
@@ -66,27 +78,27 @@ const Locations = () => {
           locationMap.set('Central Warehouse', location.id);
         }
       });
-      
+
       console.log('Location mapping:', Object.fromEntries(locationMap));
-      
+
       // Get all assets that need fixing
       const { data: allAssets, error: fetchError } = await supabase
         .from('assets')
         .select('*');
-      
+
       if (fetchError) throw fetchError;
-      
+
       console.log(`Found ${allAssets.length} total assets`);
-      
+
       // Find assets that need fixing
       const assetsToFix = allAssets.filter(asset => {
-        return !asset.location_id || 
-               asset.location_id === '' || 
-               !locations.find(loc => loc.id === asset.location_id);
+        return !asset.location_id ||
+          asset.location_id === '' ||
+          !locations.find(loc => loc.id === asset.location_id);
       });
-      
+
       console.log(`Found ${assetsToFix.length} assets that need fixing`);
-      
+
       if (assetsToFix.length === 0) {
         toast({
           title: "No Fix Needed",
@@ -94,23 +106,23 @@ const Locations = () => {
         });
         return;
       }
-      
+
       // Fix each asset
       let fixedCount = 0;
       for (const asset of assetsToFix) {
         const correctLocationId = locationMap.get(asset.location);
-        
+
         if (correctLocationId) {
           console.log(`Fixing asset ${asset.name} (${asset.asset_tag}):`);
           console.log(`  Current location: ${asset.location}`);
           console.log(`  Current location_id: ${asset.location_id}`);
           console.log(`  New location_id: ${correctLocationId}`);
-          
+
           const { error: updateError } = await supabase
             .from('assets')
             .update({ location_id: correctLocationId })
             .eq('id', asset.id);
-          
+
           if (updateError) {
             console.error(`Failed to update asset ${asset.asset_tag}:`, updateError);
           } else {
@@ -121,15 +133,15 @@ const Locations = () => {
           console.warn(`⚠️ No location found for asset ${asset.name} with location "${asset.location}"`);
         }
       }
-      
+
       toast({
         title: "Location Data Fixed",
         description: `Successfully fixed ${fixedCount} out of ${assetsToFix.length} assets.`,
       });
-      
+
       // Refresh the data to show updated counts
       window.location.reload();
-      
+
     } catch (error) {
       console.error('Error fixing location IDs:', error);
       toast({
@@ -152,16 +164,16 @@ const Locations = () => {
       // Handle both "Warehouse" and "Central Warehouse" mapping
       const assetLocation = a.location?.toLowerCase().trim();
       const locationName = location.name.toLowerCase().trim();
-      
-      return assetLocation === locationName || 
-             (locationName === 'warehouse' && assetLocation === 'central warehouse') ||
-             (locationName === 'central warehouse' && assetLocation === 'warehouse');
+
+      return assetLocation === locationName ||
+        (locationName === 'warehouse' && assetLocation === 'central warehouse') ||
+        (locationName === 'central warehouse' && assetLocation === 'warehouse');
     });
-    
+
     console.log(`Location ${location.name} has ${locationAssets.length} assets:`, locationAssets);
-    
+
     return location.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (location.address?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
+      (location.address?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
   });
 
   if (isLoading) {
@@ -186,8 +198,8 @@ const Locations = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="gap-2"
             onClick={fixLocationData}
             disabled={isFixing || locations.length === 0}
@@ -225,17 +237,17 @@ const Locations = () => {
         ) : (
           filteredLocations.map((location) => {
             const Icon = typeIcons[location.type];
-            
+
             // Count assets by location name (text field) instead of locationId
             const locationAssets = assets.filter(a => {
               const assetLocation = a.location?.toLowerCase().trim();
               const locationName = location.name.toLowerCase().trim();
-              
-              return assetLocation === locationName || 
-                     (locationName === 'warehouse' && assetLocation === 'central warehouse') ||
-                     (locationName === 'central warehouse' && assetLocation === 'warehouse');
+
+              return assetLocation === locationName ||
+                (locationName === 'warehouse' && assetLocation === 'central warehouse') ||
+                (locationName === 'central warehouse' && assetLocation === 'warehouse');
             });
-            
+
             return (
               <Card key={location.id} className="border shadow-card hover:shadow-card-hover transition-shadow">
                 <CardContent className="p-5">
@@ -261,7 +273,7 @@ const Locations = () => {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           className="gap-2"
                           onClick={() => setViewingLocation(location)}
                         >
@@ -274,6 +286,13 @@ const Locations = () => {
                         >
                           <Edit2 className="w-4 h-4 text-muted-foreground" />
                           Edit location
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="gap-2"
+                          onClick={() => window.open(`/print-handover/location/${location.id}`, '_blank')}
+                        >
+                          <Printer className="w-4 h-4 text-muted-foreground" />
+                          Print Handover Form
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem

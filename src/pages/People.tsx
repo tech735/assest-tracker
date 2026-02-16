@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { Search, Download, MoreHorizontal, Eye, Edit, UserMinus, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Download, MoreHorizontal, Eye, Edit, UserMinus, ArrowUpDown, ArrowUp, ArrowDown, Printer } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,8 +32,10 @@ import { useEmployees, useAssets } from '@/hooks/useSupabaseData';
 import { AddEmployeeDialog } from '@/components/people/AddEmployeeDialog';
 import { EditEmployeeDialog } from '@/components/people/EditEmployeeDialog';
 import { OffboardEmployeeDialog } from '@/components/people/OffboardEmployeeDialog';
+import { EmployeeProfileDialog } from '@/components/people/EmployeeProfileDialog';
 import { Employee } from '@/types/asset';
 import { exportToCSV } from '@/lib/exportUtils';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
 
 const People = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,9 +46,25 @@ const People = () => {
   // State for edit/offboard dialogs
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [offboardingEmployee, setOffboardingEmployee] = useState<Employee | null>(null);
+  const [viewingEmployee, setViewingEmployee] = useState<Employee | null>(null);
+  const [searchParams] = useSearchParams();
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const { data: employees = [], isLoading: isLoadingEmployees } = useEmployees();
   const { data: assets = [], isLoading: isLoadingAssets } = useAssets();
+
+  useEffect(() => {
+    const viewId = searchParams.get('view');
+    if (viewId && employees.length > 0) {
+      const employee = employees.find(e => e.id === viewId);
+      if (employee) {
+        setViewingEmployee(employee);
+      }
+    }
+  }, [searchParams, employees]);
 
   const isLoading = isLoadingEmployees || isLoadingAssets;
 
@@ -82,6 +101,17 @@ const People = () => {
     if (aValue > bValue) return direction === 'asc' ? 1 : -1;
     return 0;
   });
+
+  // Reset to first page when filters/sort change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, departmentFilter, sortConfig]);
+
+  // Pagination Logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentEmployees = sortedEmployees.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(sortedEmployees.length / itemsPerPage);
 
   const requestSort = (key: string) => {
     let direction: 'asc' | 'desc' = 'asc';
@@ -231,14 +261,14 @@ const People = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredEmployees.length === 0 ? (
+            {currentEmployees.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
                   No employees found matching your criteria
                 </TableCell>
               </TableRow>
             ) : (
-              sortedEmployees.map((employee) => (
+              currentEmployees.map((employee) => (
                 <TableRow key={employee.id} className="transition-colors">
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -275,7 +305,7 @@ const People = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem className="gap-2">
+                        <DropdownMenuItem className="gap-2" onClick={() => setViewingEmployee(employee)}>
                           <Eye className="w-4 h-4" /> View Profile
                         </DropdownMenuItem>
                         <DropdownMenuItem
@@ -283,6 +313,12 @@ const People = () => {
                           onClick={() => setEditingEmployee(employee)}
                         >
                           <Edit className="w-4 h-4" /> Edit Employee
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="gap-2"
+                          onClick={() => window.open(`/print-handover/employee/${employee.id}`, '_blank')}
+                        >
+                          <Printer className="w-4 h-4" /> Print Handover Form
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -301,9 +337,18 @@ const People = () => {
         </Table>
       </Card>
 
-      {/* Footer Stats */}
-      <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <span>Showing {filteredEmployees.length} of {employees.length} employees</span>
+      {/* Footer Stats and Pagination */}
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">
+          Showing {currentEmployees.length > 0 ? indexOfFirstItem + 1 : 0} to {Math.min(indexOfLastItem, sortedEmployees.length)} of {sortedEmployees.length} employees
+        </div>
+        <DataTablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          pageSize={itemsPerPage}
+          setPageSize={setItemsPerPage}
+        />
       </div>
 
       {/* Dialogs */}
@@ -319,6 +364,13 @@ const People = () => {
           employee={offboardingEmployee}
           open={!!offboardingEmployee}
           onOpenChange={(open) => !open && setOffboardingEmployee(null)}
+        />
+      )}
+      {viewingEmployee && (
+        <EmployeeProfileDialog
+          employee={viewingEmployee}
+          open={!!viewingEmployee}
+          onOpenChange={(open) => !open && setViewingEmployee(null)}
         />
       )}
     </div>

@@ -57,7 +57,7 @@ const Dashboard = () => {
       {/* Page Header */}
       <div className="flex items-end justify-between">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+          <h1 className="text-2xl mt-2 font-semibold tracking-tight">Dashboard</h1>
           <p className="text-sm text-muted-foreground">Overview of your asset inventory</p>
         </div>
       </div>

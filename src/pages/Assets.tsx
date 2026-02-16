@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Filter, Download, Plus, MoreHorizontal, Eye, Edit, Trash2, Edit2, History, Copy } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -40,8 +41,10 @@ import { EditAssetDialog } from '@/components/assets/EditAssetDialog';
 import { DeleteAssetDialog } from '@/components/assets/DeleteAssetDialog';
 import { AssignAssetDialog } from '@/components/assets/AssignAssetDialog';
 import { AssetDetailsDialog } from '@/components/assets/AssetDetailsDialog';
+import { ReturnAssetDialog } from '@/components/assets/ReturnAssetDialog';
 import { Asset, AssetStatus, AssetCategory } from '@/types/asset';
 import { exportToCSV } from '@/lib/exportUtils';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import {
   Laptop,
   Smartphone,
@@ -94,11 +97,27 @@ const Assets = () => {
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [deletingAsset, setDeletingAsset] = useState<Asset | null>(null);
   const [assigningAsset, setAssigningAsset] = useState<Asset | null>(null);
+  const [returningAsset, setReturningAsset] = useState<Asset | null>(null);
   const [viewingAsset, setViewingAsset] = useState<{ asset: Asset; tab: 'details' | 'history' } | null>(null);
   const [cloningAsset, setCloningAsset] = useState<Asset | null>(null);
+  const [searchParams] = useSearchParams();
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const { data: assets = [], isLoading: assetsLoading } = useAssets();
   const { data: locations = [], isLoading: locationsLoading } = useLocations();
+
+  useEffect(() => {
+    const viewId = searchParams.get('view');
+    if (viewId && assets.length > 0) {
+      const asset = assets.find(a => a.id === viewId);
+      if (asset) {
+        setViewingAsset({ asset, tab: 'details' });
+      }
+    }
+  }, [searchParams, assets]);
 
   // Derive unique categories from actual asset data and settings
   const { data: settings } = useSettings();
@@ -155,6 +174,17 @@ const Assets = () => {
     return matchesSearch && matchesStatus && matchesCategory && matchesLocation && matchesVendor && matchesBrand && matchesCondition && matchesAssignedTo;
   });
 
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, categoryFilter, locationFilter, vendorFilter, brandFilter, conditionFilter, assignedToFilter]);
+
+  // Pagination Logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentAssets = filteredAssets.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredAssets.length / itemsPerPage);
+
   const handleCloneAsset = (asset: Asset) => {
     // Create a clone of the asset with modified fields for adding as new asset
     const clonedAsset = {
@@ -176,7 +206,7 @@ const Assets = () => {
       warrantyEnd: asset.warrantyEnd,
       notes: asset.notes ? `Cloned from: ${asset.name}\n${asset.notes}` : `Cloned from: ${asset.name}`,
     };
-    
+
     setCloningAsset(clonedAsset as Asset);
   };
 
@@ -382,14 +412,14 @@ const Assets = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredAssets.length === 0 ? (
+            {currentAssets.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
                   No assets found matching your criteria
                 </TableCell>
               </TableRow>
             ) : (
-              filteredAssets.map((asset) => {
+              currentAssets.map((asset) => {
                 const Icon = categoryIcons[asset.category.toLowerCase()] || Package;
                 return (
                   <TableRow key={asset.id} className="transition-colors">
@@ -469,6 +499,15 @@ const Assets = () => {
                               Assign asset
                             </DropdownMenuItem>
                           )}
+                          {asset.status === 'assigned' && (
+                            <DropdownMenuItem
+                              className="gap-2"
+                              onClick={() => setReturningAsset(asset)}
+                            >
+                              <Edit className="w-4 h-4 text-muted-foreground" />
+                              Return asset
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem
                             className="gap-2"
                             onClick={() => setViewingAsset({ asset, tab: 'history' })}
@@ -495,10 +534,19 @@ const Assets = () => {
         </Table>
       </Card >
 
-      {/* Footer Stats */}
-      < div className="flex items-center justify-between text-sm text-muted-foreground" >
-        <span>Showing {filteredAssets.length} of {assets.length} assets</span>
-      </div >
+      {/* Footer Stats and Pagination */}
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">
+          Showing {currentAssets.length > 0 ? indexOfFirstItem + 1 : 0} to {Math.min(indexOfLastItem, filteredAssets.length)} of {filteredAssets.length} assets
+        </div>
+        <DataTablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          pageSize={itemsPerPage}
+          setPageSize={setItemsPerPage}
+        />
+      </div>
 
       {/* Dialogs */}
       {
@@ -548,6 +596,13 @@ const Assets = () => {
           />
         )
       }
+      {returningAsset && (
+        <ReturnAssetDialog
+          open={!!returningAsset}
+          onOpenChange={(open) => !open && setReturningAsset(null)}
+          assetId={returningAsset.id}
+        />
+      )}
     </div >
   );
 };

@@ -11,29 +11,43 @@ import Locations from "./pages/Locations";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import PrintHandover from "./pages/PrintHandover";
+import Auth from "./pages/Auth";
+import { UserProvider } from "@/contexts/UserContext";
 
 const queryClient = new QueryClient();
 
 const App = () => (
+  // Main App Component with Auth Provider
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <NewLayout>
+    <UserProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/assets" element={<Assets />} />
-            <Route path="/people" element={<People />} />
-            <Route path="/locations" element={<Locations />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/settings" element={<Settings />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
+            <Route path="/login" element={<Auth />} />
+            <Route
+              path="/*"
+              element={
+                <NewLayout>
+                  <Routes>
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/assets" element={<Assets />} />
+                    <Route path="/people" element={<People />} />
+                    <Route path="/locations" element={<Locations />} />
+                    <Route path="/reports" element={<Reports />} />
+                    <Route path="/settings" element={<Settings />} />
+                    <Route path="/print-handover/:type/:id" element={<PrintHandover />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </NewLayout>
+              }
+            />
           </Routes>
-        </NewLayout>
-      </BrowserRouter>
-    </TooltipProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </UserProvider>
   </QueryClientProvider>
 );
 

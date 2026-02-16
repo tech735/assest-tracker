@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as supabaseService from '@/services/supabaseService';
-import type { Asset, Employee, Location, Assignment, Alert } from '@/types/asset';
+import { Alert } from '@/types/alert';
+import { Asset, Employee, Location } from '@/types/asset';
 
 // =====================================================
 // ASSET HOOKS
@@ -325,3 +326,4 @@ export function useUpdateSettings() {
         },
     });
 }
+

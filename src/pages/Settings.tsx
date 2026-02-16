@@ -9,6 +9,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { useSettings, useUpdateSettings } from '@/hooks/useSupabaseData';
 import { useToast } from '@/hooks/use-toast';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const Settings = () => {
   const { toast } = useToast();
@@ -152,11 +159,22 @@ const Settings = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="currency">Currency</Label>
-                  <Input
-                    id="currency"
+                  <Select
                     value={localConfig.currency}
-                    onChange={(e) => setLocalConfig({ ...localConfig, currency: e.target.value })}
-                  />
+                    onValueChange={(value) => setLocalConfig({ ...localConfig, currency: value })}
+                  >
+                    <SelectTrigger id="currency">
+                      <SelectValue placeholder="Select currency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="INR">INR (₹)</SelectItem>
+                      <SelectItem value="USD">USD ($)</SelectItem>
+                      <SelectItem value="EUR">EUR (€)</SelectItem>
+                      <SelectItem value="GBP">GBP (£)</SelectItem>
+                      <SelectItem value="AUD">AUD ($)</SelectItem>
+                      <SelectItem value="CAD">CAD ($)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="timezone">Timezone</Label>

@@ -1,8 +1,14 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, Package, Users, MapPin, BarChart3, Settings, LogOut, User, Menu, X, Bell, Mail, Search } from 'lucide-react';
+import { LayoutDashboard, Package, Users, MapPin, BarChart3, Settings, LogOut, User, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+
+import { GlobalSearch } from '@/components/GlobalSearch';
+import { AlertsPopover } from './AlertsPopover';
+import { UserPopover } from './UserPopover';
+import { MessagesPopover } from './MessagePopover';
+import { UserProfile } from './EditProfileDialog';
 
 interface NavItem {
   to: string;
@@ -24,21 +30,41 @@ export default function NewLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // User state lifted to layout with localStorage persistence
+  const [user, setUser] = useState<UserProfile>(() => {
+    const savedUser = localStorage.getItem('userProfile');
+    return savedUser ? JSON.parse(savedUser) : {
+      name: "Admin User",
+      email: "admin@assetcompass.com",
+      role: "Administrator",
+      avatarUrl: undefined
+    };
+  });
+
+  const handleUpdateProfile = (updatedUser: UserProfile) => {
+    setUser(updatedUser);
+    localStorage.setItem('userProfile', JSON.stringify(updatedUser)); // Immediate save
+  };
+
   const handleSignOut = async () => {
     // Implement sign out logic here
     navigate('/login');
   };
 
+  if (location.pathname.startsWith('/print-handover')) {
+    return <>{children}</>;
+  }
+
   return (
     <div className="app-shell">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
-      
+
       {/* Sidebar */}
       <aside className={cn(
         "fixed inset-y-4 left-4 z-50 w-64 flex flex-col transform transition-transform duration-200 ease-in-out lg:relative lg:translate-x-0",
@@ -74,13 +100,13 @@ export default function NewLayout({ children }: { children: React.ReactNode }) {
           </nav>
           <div className="p-4">
             <p className="px-3 text-[11px] uppercase tracking-[0.2em] text-sidebar-foreground/50">General</p>
-            <div className="flex items-center gap-3 px-4 py-3 mt-2 rounded-2xl bg-white/70">
+            <div className="flex items-center gap-3 px-4 py-3 mt-2 rounded-2xl">
               <div className="w-9 h-9 rounded-full bg-sidebar-accent flex items-center justify-center">
-                <User className="h-4 w-4 text-sidebar-foreground" />
+                {user.avatarUrl ? <img src={user.avatarUrl} alt="Avatar" className="w-full h-full rounded-full object-cover" /> : <User className="h-4 w-4 text-sidebar-foreground" />}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-sidebar-foreground truncate">Admin User</p>
-                <p className="text-xs text-sidebar-foreground/60">Administrator</p>
+                <p className="text-sm font-medium text-sidebar-foreground truncate">{user.name}</p>
+                <p className="text-xs text-sidebar-foreground/60">{user.role}</p>
               </div>
             </div>
             <div className={cn('sidebar-nav-item', 'w-full justify-start cursor-pointer mt-2')} onClick={handleSignOut}>
@@ -90,7 +116,7 @@ export default function NewLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </aside>
-      
+
       {/* Mobile header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-background border-b border-border">
         <div className="flex items-center justify-between p-4">
@@ -112,29 +138,11 @@ export default function NewLayout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 overflow-auto lg:pt-0 pt-16">
         <div className="hidden lg:block app-header">
           <div className="flex items-center gap-4 w-full">
-            <div className="relative max-w-md flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input
-                className="h-11 w-full rounded-full bg-white px-10 text-sm text-foreground placeholder:text-muted-foreground shadow-sm border border-transparent focus:outline-none focus:ring-2 focus:ring-primary/20"
-                placeholder="Search assets, people, locations"
-              />
-            </div>
+            <GlobalSearch />
             <div className="flex items-center gap-3 ml-auto">
-              <button className="h-10 w-10 rounded-full bg-white shadow-sm flex items-center justify-center text-muted-foreground hover:text-foreground transition">
-                <Mail className="h-4 w-4" />
-              </button>
-              <button className="h-10 w-10 rounded-full bg-white shadow-sm flex items-center justify-center text-muted-foreground hover:text-foreground transition">
-                <Bell className="h-4 w-4" />
-              </button>
-              <div className="flex items-center gap-3 pl-3 border-l border-border">
-                <div className="w-10 h-10 rounded-full bg-sidebar-accent flex items-center justify-center">
-                  <User className="h-4 w-4 text-sidebar-foreground" />
-                </div>
-                <div className="text-sm">
-                  <p className="font-medium text-foreground">Admin User</p>
-                  <p className="text-xs text-muted-foreground">Administrator</p>
-                </div>
-              </div>
+              <MessagesPopover /> {/* Corrected component usage */}
+              <AlertsPopover />
+              <UserPopover user={user} onUpdateProfile={handleUpdateProfile} />
             </div>
           </div>
         </div>

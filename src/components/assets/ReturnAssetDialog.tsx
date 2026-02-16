@@ -39,20 +39,22 @@ type ReturnFormValues = z.infer<typeof returnSchema>;
 interface ReturnAssetDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    assetId?: string;
 }
 
-export function ReturnAssetDialog({ open, onOpenChange }: ReturnAssetDialogProps) {
+export function ReturnAssetDialog({ open, onOpenChange, assetId }: ReturnAssetDialogProps) {
     const { toast } = useToast();
     const returnAsset = useReturnAsset();
     const { data: assets = [] } = useAssets();
 
     // Filter only assigned assets
     const assignedAssets = assets.filter(asset => asset.status === 'assigned');
+    const preselectedAsset = assetId ? assets.find(a => a.id === assetId) : undefined;
 
     const form = useForm<ReturnFormValues>({
         resolver: zodResolver(returnSchema),
         defaultValues: {
-            assetId: '',
+            assetId: assetId || '',
         },
     });
 
@@ -87,42 +89,56 @@ export function ReturnAssetDialog({ open, onOpenChange }: ReturnAssetDialogProps
                         <DialogTitle>Return Asset</DialogTitle>
                     </div>
                     <DialogDescription>
-                        Select an assigned asset to return it to the inventory.
+                        {assetId
+                            ? 'Confirm returning this asset to inventory.'
+                            : 'Select an assigned asset to return it to the inventory.'}
                     </DialogDescription>
                 </DialogHeader>
 
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-                        <FormField
-                            control={form.control}
-                            name="assetId"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Assigned Asset</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select an assigned asset" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {assignedAssets.length > 0 ? (
-                                                assignedAssets.map((asset) => (
-                                                    <SelectItem key={asset.id} value={asset.id}>
-                                                        {asset.name} ({asset.assetTag}) - {asset.assignedTo}
-                                                    </SelectItem>
-                                                ))
-                                            ) : (
-                                                <div className="py-2 px-4 text-sm text-muted-foreground">
-                                                    No assets currently assigned
-                                                </div>
-                                            )}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                        {assetId ? (
+                            <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+                                <div className="font-medium">
+                                    {preselectedAsset?.name ?? 'Selected asset'}
+                                </div>
+                                <div className="text-muted-foreground">
+                                    {preselectedAsset?.assetTag ? `${preselectedAsset.assetTag} · ` : ''}
+                                    {preselectedAsset?.assignedTo ?? 'Currently assigned'}
+                                </div>
+                            </div>
+                        ) : (
+                            <FormField
+                                control={form.control}
+                                name="assetId"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Assigned Asset</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select an assigned asset" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {assignedAssets.length > 0 ? (
+                                                    assignedAssets.map((asset) => (
+                                                        <SelectItem key={asset.id} value={asset.id}>
+                                                            {asset.name} ({asset.assetTag}) - {asset.assignedTo}
+                                                        </SelectItem>
+                                                    ))
+                                                ) : (
+                                                    <div className="py-2 px-4 text-sm text-muted-foreground">
+                                                        No assets currently assigned
+                                                    </div>
+                                                )}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        )}
 
                         <DialogFooter className="pt-4">
                             <Button
@@ -136,7 +152,11 @@ export function ReturnAssetDialog({ open, onOpenChange }: ReturnAssetDialogProps
                             <Button
                                 type="submit"
                                 className="bg-brand-blue hover:bg-brand-blue/90"
-                                disabled={returnAsset.isPending || assignedAssets.length === 0}
+                                disabled={
+                                    returnAsset.isPending ||
+                                    (assetId ? !preselectedAsset : assignedAssets.length === 0) ||
+                                    !form.getValues('assetId')
+                                }
                             >
                                 {returnAsset.isPending ? (
                                     <>

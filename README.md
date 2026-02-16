@@ -5,7 +5,7 @@ A comprehensive asset management system built with React, TypeScript, and Supaba
 ## 🚀 Features
 
 ### 📊 Dashboard
-- **Real-time Statistics**: Overview of total assets, employees, locations, and assignments
+- **Real-time Statistics**: Overview of total assets, people, locations, and assignments
 - **Recent Activity**: Track latest asset additions and assignments
 - **Asset Distribution**: Visual breakdown by category with interactive charts
 - **System Alerts**: Warranty expirations, lost assets, and maintenance reminders
@@ -18,11 +18,11 @@ A comprehensive asset management system built with React, TypeScript, and Supaba
 - **Status Tracking**: Available, Assigned, In Repair, Lost, Retired
 - **Condition Monitoring**: New, Good, Fair, Poor condition levels
 
-### 👥 Employee Management
-- **Employee Directory**: Complete employee profiles with contact information
+### 👥 People Management
+- **People Directory**: Complete people profiles with contact information
 - **Asset Assignment**: Assign/unassign assets with full history tracking
-- **Department Organization**: Categorize employees by department and position
-- **Location Tracking**: Monitor employee locations and asset assignments
+- **Department Organization**: Categorize people by department and position
+- **Location Tracking**: Monitor people locations and asset assignments
 
 ### 📍 Location Management
 - **Multi-Location Support**: Offices, warehouses, remote sites, and outlets
@@ -46,6 +46,7 @@ A comprehensive asset management system built with React, TypeScript, and Supaba
 - **Responsive Design**: Works seamlessly on desktop, tablet, and mobile
 - **Toast Notifications**: Real-time feedback for all operations
 - **Error Handling**: Comprehensive error management and user feedback
+- **Settings Management**: Application configuration and preferences
 
 ## 🛠️ Technology Stack
 
@@ -53,12 +54,16 @@ A comprehensive asset management system built with React, TypeScript, and Supaba
 - **React 18**: Modern React with hooks and functional components
 - **TypeScript**: Type-safe development with full IntelliSense support
 - **Vite**: Fast build tool and development server
+- **React Router DOM**: Client-side routing
 - **Tailwind CSS**: Utility-first CSS framework
 - **shadcn/ui**: Beautiful, accessible UI components
 - **React Hook Form**: Performant forms with validation
 - **Zod**: Schema validation and TypeScript inference
-- **React Query**: Data fetching and state management
+- **TanStack React Query**: Data fetching and state management
 - **Recharts**: Data visualization and charting
+- **Radix UI**: Primitive components for accessible design
+- **Lucide React**: Icon library
+- **Sonner**: Toast notifications
 
 ### Backend
 - **Supabase**: Backend-as-a-Service with:
@@ -71,8 +76,11 @@ A comprehensive asset management system built with React, TypeScript, and Supaba
 ### Development Tools
 - **ESLint**: Code linting and formatting
 - **Prettier**: Code formatting
-- **Husky**: Git hooks for code quality
 - **TypeScript**: Static type checking
+- **Vitest**: Testing framework
+- **Testing Library**: React testing utilities
+- **PostCSS**: CSS processing
+- **Autoprefixer**: CSS vendor prefixing
 
 ## 📋 Prerequisites
 
@@ -97,19 +105,20 @@ npm install
 
 ### 3. Environment Setup
 
-Create a `.env.local` file in the root directory:
+Create a `.env` file in the root directory using the provided `.env.example`:
 
 ```env
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_SUPABASE_URL=your-project-url.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key-here
 ```
 
 ### 4. Database Setup
 
 1. Create a new Supabase project
-2. Run the SQL schema from `supabase/schema.sql`
-3. Set up the database triggers for asset tag generation
-4. Configure Row Level Security (RLS) policies
+2. Follow the detailed setup instructions in `SUPABASE_SETUP.md`
+3. Run the SQL schema from `supabase/schema.sql`
+4. Set up the database triggers for asset tag generation
+5. Configure Row Level Security (RLS) policies
 
 ### 5. Start Development Server
 
@@ -117,7 +126,7 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 npm run dev
 ```
 
-The application will be available at `http://localhost:5173`
+The application will be available at `http://localhost:8080`
 
 ## 📁 Project Structure
 
@@ -126,29 +135,33 @@ asset-compass/
 ├── src/
 │   ├── components/          # Reusable UI components
 │   │   ├── assets/         # Asset-related components
-│   │   ├── employees/      # Employee-related components
-│   │   ├── locations/     # Location-related components
-│   │   ├── reports/        # Report components
-│   │   └── ui/            # Base UI components
+│   │   ├── dashboard/      # Dashboard components
+│   │   ├── layout/         # Layout components
+│   │   ├── locations/      # Location-related components
+│   │   ├── people/         # People-related components
+│   │   └── ui/            # Base UI components (shadcn/ui)
 │   ├── pages/              # Main application pages
-│   │   ├── Dashboard.tsx
-│   │   ├── Assets.tsx
-│   │   ├── Employees.tsx
-│   │   ├── Locations.tsx
-│   │   └── Reports.tsx
+│   │   ├── Dashboard.tsx   # Main dashboard
+│   │   ├── Assets.tsx      # Asset management
+│   │   ├── People.tsx      # People management
+│   │   ├── Locations.tsx   # Location management
+│   │   ├── Reports.tsx     # Reports and analytics
+│   │   ├── Settings.tsx    # Application settings
+│   │   └── NotFound.tsx    # 404 page
 │   ├── hooks/              # Custom React hooks
-│   │   └── useSupabaseData.ts
 │   ├── services/           # API and data services
-│   │   └── supabaseService.ts
 │   ├── types/              # TypeScript type definitions
-│   │   └── asset.ts
 │   ├── utils/              # Utility functions
-│   │   └── exportUtils.ts
-│   └── lib/                # Library configurations
-│       └── supabase.ts
+│   ├── lib/                # Library configurations
+│   │   └── supabase.ts     # Supabase client configuration
+│   ├── data/               # Static data and constants
+│   └── test/               # Test utilities
 ├── supabase/               # Database schema and migrations
-│   └── schema.sql
-└── public/                 # Static assets
+│   └── schema.sql          # Complete database schema
+├── public/                 # Static assets
+├── .env.example            # Environment variables template
+├── SUPABASE_SETUP.md       # Detailed Supabase setup guide
+└── package.json            # Dependencies and scripts
 ```
 
 ## 🔧 Configuration
@@ -158,7 +171,7 @@ asset-compass/
 The application uses the following main tables:
 
 - **assets**: Asset information and metadata
-- **employees**: Employee profiles and assignments
+- **people**: People profiles and assignments
 - **locations**: Physical locations and sites
 - **assignments**: Asset assignment history
 
@@ -190,7 +203,7 @@ Smart location matching handles variations like:
 2. **Assignment Report**
    - Current asset assignments
    - Assignment history
-   - Employee asset summary
+   - People asset summary
 
 3. **Aging Report**
    - Asset age analysis
@@ -205,12 +218,37 @@ Smart location matching handles variations like:
 5. **Location Summary**
    - Asset distribution
    - Location utilization
-   - Employee counts
+   - People counts
 
 6. **Utilization Report**
    - Asset usage metrics
    - Efficiency analysis
    - Performance indicators
+
+## 🚀 Available Scripts
+
+```bash
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Build for development
+npm run build:dev
+
+# Run tests
+npm run test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Lint code
+npm run lint
+
+# Preview production build
+npm run preview
+```
 
 ## 🎯 Usage Guide
 
@@ -233,6 +271,12 @@ Smart location matching handles variations like:
 3. Edit cloned details
 4. Save as new asset
 
+### People Management
+1. Navigate to People page
+2. View all people and their asset assignments
+3. Add/edit people profiles
+4. Assign/unassign assets to people
+
 ### Location Management
 1. Navigate to Locations page
 2. View asset counts per location
@@ -244,6 +288,26 @@ Smart location matching handles variations like:
 2. Select report type
 3. Configure filters
 4. Generate and download CSV
+
+### Settings
+1. Navigate to Settings page
+2. Configure application preferences
+3. Manage system settings
+4. View application information
+
+## 🧪 Testing
+
+The project includes a comprehensive testing setup:
+
+- **Vitest**: Fast unit test framework
+- **Testing Library**: React component testing utilities
+- **jsdom**: DOM environment for testing
+
+Run tests with:
+```bash
+npm run test          # Run all tests once
+npm run test:watch    # Run tests in watch mode
+```
 
 ## 🔍 Troubleshooting
 
