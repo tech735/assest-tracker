@@ -1,7 +1,19 @@
-import { useMemo } from 'react';
-import { Loader2, RotateCcw } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Loader2, RotateCcw, Mail } from 'lucide-react';
 import type { Asset, Employee } from '@/types/asset';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { supabase } from '@/lib/supabase';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -19,6 +31,8 @@ export function EmployeeProfileDialog({ employee, open, onOpenChange }: Employee
   const { toast } = useToast();
   const { data: assets = [], isLoading } = useAssets();
   const returnAsset = useReturnAsset();
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [showEmailConfirm, setShowEmailConfirm] = useState(false);
 
   const assignedAssets = useMemo(
     () => assets.filter((a) => a.status === 'assigned' && a.assignedToId === employee.id),
@@ -38,6 +52,33 @@ export function EmployeeProfileDialog({ employee, open, onOpenChange }: Employee
         description: 'Failed to return asset. Please try again.',
         variant: 'destructive',
       });
+    }
+  };
+
+  const handleSendEmail = async () => {
+    setIsSendingEmail(true);
+    console.log('Sending email for employee:', { id: employee.id, email: employee.email });
+    try {
+      const { error } = await supabase.functions.invoke('send-asset-email', {
+        body: { employeeId: employee.id },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Asset summary sent',
+        description: `Email has been sent to ${employee.email}`,
+      });
+      setShowEmailConfirm(false);
+    } catch (error) {
+      console.error('Error sending email (Detailed):', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to send asset summary email.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSendingEmail(false);
     }
   };
 
@@ -152,6 +193,35 @@ export function EmployeeProfileDialog({ employee, open, onOpenChange }: Employee
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>
+          <AlertDialog open={showEmailConfirm} onOpenChange={setShowEmailConfirm}>
+            <AlertDialogTrigger asChild>
+              <Button variant="secondary" className="gap-2">
+                <Mail className="h-4 w-4" />
+                Send Asset Summary
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Send Asset Summary?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will send an email to <strong>{employee.email}</strong> containing a list of all assets currently assigned to them.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={isSendingEmail}>Cancel</AlertDialogCancel>
+                <Button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleSendEmail();
+                  }}
+                  disabled={isSendingEmail}
+                >
+                  {isSendingEmail && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {isSendingEmail ? 'Sending...' : 'Send Email'}
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </DialogFooter>
       </DialogContent>
     </Dialog>

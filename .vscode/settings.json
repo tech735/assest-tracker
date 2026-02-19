@@ -1,4 +1,9 @@
 {
+  "deno.enable": true,
+  "deno.enablePaths": [
+    "supabase",
+    "supabase/functions"
+  ],
   "css.validate": false,
   "scss.validate": false,
   "less.validate": false,
@@ -13,7 +18,13 @@
     "css": "css"
   },
   "tailwindCSS.experimental.classRegex": [
-    ["@apply\\s+([^;]+);", 1],
-    ["@layer\\s+\\w+\\s*{([^}]+)}", 1]
+    [
+      "@apply\\s+([^;]+);",
+      1
+    ],
+    [
+      "@layer\\s+\\w+\\s*{([^}]+)}",
+      1
+    ]
   ]
 }
