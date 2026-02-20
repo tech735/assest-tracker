@@ -103,6 +103,8 @@ export function AssignAssetDialog({ asset, open, onOpenChange }: AssignAssetDial
                     status: 'assigned',
                     assignedTo: selectedEmployee?.name || 'Unknown',
                     assignedToId: values.employeeId,
+                    location: selectedEmployee?.location,
+                    locationId: selectedEmployee?.locationId,
                 }
             });
 

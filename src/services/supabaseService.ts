@@ -173,15 +173,20 @@ export async function deleteAsset(id: string): Promise<void> {
     if (error) throw error;
 }
 
-export async function returnAsset(assetId: string): Promise<void> {
-    // 1. Update asset status
+export async function returnAsset({ assetId, locationId, locationName }: { assetId: string, locationId?: string, locationName?: string }): Promise<void> {
+    // 1. Update asset status and location
+    const updateData: any = {
+        status: 'available',
+        assigned_to: null,
+        assigned_to_id: null
+    };
+
+    if (locationId) updateData.location_id = locationId;
+    if (locationName) updateData.location = locationName;
+
     const { error: assetError } = await supabase
         .from('assets')
-        .update({
-            status: 'available',
-            assigned_to: null,
-            assigned_to_id: null
-        })
+        .update(updateData)
         .eq('id', assetId);
 
     if (assetError) throw assetError;

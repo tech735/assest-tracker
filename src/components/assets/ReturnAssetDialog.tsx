@@ -27,7 +27,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { useAssets, useReturnAsset } from '@/hooks/useSupabaseData';
+import { useAssets, useReturnAsset, useLocations } from '@/hooks/useSupabaseData';
 import { useToast } from '@/hooks/use-toast';
 
 const returnSchema = z.object({
@@ -58,11 +58,18 @@ export function ReturnAssetDialog({ open, onOpenChange, assetId }: ReturnAssetDi
         },
     });
 
+    const { data: locations = [] } = useLocations();
+
     const onSubmit = async (values: ReturnFormValues) => {
         try {
             const selectedAsset = assets.find(a => a.id === values.assetId);
+            const coreOffice = locations.find(l => l.name === 'Core Office');
 
-            await returnAsset.mutateAsync(values.assetId);
+            await returnAsset.mutateAsync({
+                assetId: values.assetId,
+                locationId: coreOffice?.id,
+                locationName: coreOffice?.name
+            });
 
             toast({
                 title: 'Asset Returned',
