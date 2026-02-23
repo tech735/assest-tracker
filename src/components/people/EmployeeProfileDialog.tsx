@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useAssets, useReturnAsset } from '@/hooks/useSupabaseData';
+import { useAssets, useReturnAsset, useLocations } from '@/hooks/useSupabaseData';
 import { useToast } from '@/hooks/use-toast';
 
 interface EmployeeProfileDialogProps {
@@ -31,6 +31,7 @@ export function EmployeeProfileDialog({ employee, open, onOpenChange }: Employee
   const { toast } = useToast();
   const { data: assets = [], isLoading } = useAssets();
   const returnAsset = useReturnAsset();
+  const { data: locations = [] } = useLocations();
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [showEmailConfirm, setShowEmailConfirm] = useState(false);
 
@@ -41,7 +42,12 @@ export function EmployeeProfileDialog({ employee, open, onOpenChange }: Employee
 
   const handleReturn = async (asset: Asset) => {
     try {
-      await returnAsset.mutateAsync(asset.id);
+      const coreOffice = locations.find(l => l.name === 'Core Office');
+      await returnAsset.mutateAsync({
+        assetId: asset.id,
+        locationId: coreOffice?.id,
+        locationName: coreOffice?.name
+      });
       toast({
         title: 'Asset Returned',
         description: `${asset.name} has been returned to inventory.`,
