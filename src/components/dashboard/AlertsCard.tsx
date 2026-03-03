@@ -2,7 +2,7 @@ import { AlertTriangle, Clock, AlertCircle, CheckCircle2, Check, Loader2 } from 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Alert } from '@/types/asset';
+import { Alert } from '@/types/alert';
 import { cn } from '@/lib/utils';
 import { useResolveAlert } from '@/hooks/useSupabaseData';
 import { useToast } from '@/hooks/use-toast';
@@ -16,6 +16,7 @@ const alertIcons = {
   overdue: Clock,
   missing: AlertTriangle,
   approval: CheckCircle2,
+  other: AlertCircle,
 };
 
 const severityStyles = {

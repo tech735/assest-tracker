@@ -72,12 +72,4 @@ export interface DashboardStats {
   retired: number;
 }
 
-export interface Alert {
-  id: string;
-  type: 'warranty' | 'overdue' | 'missing' | 'approval';
-  title: string;
-  description: string;
-  assetId?: string;
-  severity: 'low' | 'medium' | 'high';
-  createdAt: string;
-}
+

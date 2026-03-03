@@ -81,9 +81,6 @@ serve(async (req) => {
       </head>
       <body>
         <div class="header">
-          <p style="background-color: #fff3cd; padding: 10px; border: 1px solid #ffeeba; color: #856404; font-size: 14px; margin-bottom: 20px;">
-            <strong>TEST MODE:</strong> This email was intended for <strong>${employee.email}</strong> but was sent to the verified testing address.
-          </p>
           <p>Dear ${employee.name},</p>
           <p>Below is the list of company assets currently assigned to you.</p>
         </div>
@@ -129,8 +126,8 @@ serve(async (req) => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "Asset Compass <onboarding@resend.dev>",
-        to: ["tech@kotu.co.in"], // Forced for testing on free tier
+        from: "Asset Compass <notifications@kotu.co.in>", // Adjust the email address if your verified domain is different
+        to: [employee.email],
         subject: `Your Assigned Company Assets - Asset Compass`,
         html: emailHtml,
       }),
