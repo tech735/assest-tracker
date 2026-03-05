@@ -126,7 +126,7 @@ serve(async (req: Request) => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "Asset Compass <notifications@kotu.co.in>", // Adjust the email address if your verified domain is different
+        from: "Asset Compass <notifications@asset.kotu.co.in>", // Adjust the email address if your verified domain is different
         to: [employee.email],
         subject: `Your Assigned Company Assets - Asset Compass`,
         html: emailHtml,
