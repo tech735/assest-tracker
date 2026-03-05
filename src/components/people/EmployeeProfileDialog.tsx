@@ -65,11 +65,24 @@ export function EmployeeProfileDialog({ employee, open, onOpenChange }: Employee
     setIsSendingEmail(true);
     console.log('Sending email for employee:', { id: employee.id, email: employee.email });
     try {
-      const { error } = await supabase.functions.invoke('send-asset-email', {
+      const { data, error: functionError } = await supabase.functions.invoke('send-asset-email', {
         body: { employeeId: employee.id },
       });
 
-      if (error) throw error;
+      if (functionError) {
+        let errorMessage = functionError.message;
+        if (functionError.context) {
+          try {
+            const errorBody = await functionError.context.json();
+            if (errorBody.error) {
+              errorMessage = errorBody.error;
+            }
+          } catch (e) {
+            console.error('Failed to parse error context:', e);
+          }
+        }
+        throw new Error(errorMessage);
+      }
 
       toast({
         title: 'Asset summary sent',

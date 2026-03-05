@@ -14,7 +14,7 @@ interface EmailRequest {
   employeeId: string;
 }
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -54,7 +54,7 @@ serve(async (req) => {
     }
 
     // 3. Generate HTML Table
-    const tableRows = assets.map((asset: any, index: number) => `
+    const tableRows = assets.map((asset: { category?: string; name: string; asset_tag: string; serial_number?: string; updated_at: string; condition?: string }, index: number) => `
       <tr>
         <td style="padding: 8px; border: 1px solid #ddd;">${index + 1}</td>
         <td style="padding: 8px; border: 1px solid #ddd;">${asset.category || "N/A"}</td>
@@ -143,8 +143,9 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
-  } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return new Response(JSON.stringify({ error: errorMessage }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
