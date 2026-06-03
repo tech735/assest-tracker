@@ -190,12 +190,10 @@ const Locations = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Locations</h1>
-          <p className="text-muted-foreground">
-            Manage offices, warehouses, and remote locations
-          </p>
+          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">Locations</h1>
+          <p className="text-muted-foreground text-sm mt-1">Manage offices, warehouses, and remote locations</p>
         </div>
         <div className="flex items-center gap-3">
           <Button
@@ -205,7 +203,7 @@ const Locations = () => {
             disabled={isFixing || locations.length === 0}
           >
             <Wrench className="w-4 h-4" />
-            {isFixing ? 'Fixing...' : 'Fix Location Data'}
+            <span className="hidden sm:inline">{isFixing ? 'Fixing...' : 'Fix Location Data'}</span>
           </Button>
           <AddLocationDialog />
         </div>
@@ -213,12 +211,12 @@ const Locations = () => {
 
       {/* Search */}
       <Card className="p-4 border shadow-card">
-        <div className="relative max-w-md">
+        <div className="relative w-full sm:max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             type="search"
             placeholder="Search locations..."
-            className="pl-10"
+            className="pl-10 w-full"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />

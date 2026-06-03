@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Download, MoreHorizontal, Eye, Edit, UserMinus, ArrowUpDown, ArrowUp, ArrowDown, Printer } from 'lucide-react';
+import { Search, Download, MoreHorizontal, Eye, Edit, UserMinus, ArrowUpDown, ArrowUp, ArrowDown, Printer, ChevronRight } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -43,13 +43,11 @@ const People = () => {
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
-  // State for edit/offboard dialogs
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [offboardingEmployee, setOffboardingEmployee] = useState<Employee | null>(null);
   const [viewingEmployee, setViewingEmployee] = useState<Employee | null>(null);
   const [searchParams] = useSearchParams();
 
-  // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
@@ -60,14 +58,11 @@ const People = () => {
     const viewId = searchParams.get('view');
     if (viewId && employees.length > 0) {
       const employee = employees.find(e => e.id === viewId);
-      if (employee) {
-        setViewingEmployee(employee);
-      }
+      if (employee) setViewingEmployee(employee);
     }
   }, [searchParams, employees]);
 
   const isLoading = isLoadingEmployees || isLoadingAssets;
-
   const departments = Array.from(new Set(employees.map((e) => e.department))).filter(Boolean);
 
   const filteredEmployees = employees.filter((employee) => {
@@ -75,39 +70,28 @@ const People = () => {
       employee.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       employee.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       employee.department.toLowerCase().includes(searchQuery.toLowerCase());
-
     const matchesStatus = statusFilter === 'all' || employee.status === statusFilter;
     const matchesDepartment = departmentFilter === 'all' || employee.department === departmentFilter;
-
     return matchesSearch && matchesStatus && matchesDepartment;
   });
 
   const sortedEmployees = [...filteredEmployees].sort((a, b) => {
     if (!sortConfig) return 0;
-
     const { key, direction } = sortConfig;
-
     if (key === 'assets') {
       const aCount = assets.filter(asset => asset.assignedToId === a.id).length;
       const bCount = assets.filter(asset => asset.assignedToId === b.id).length;
       return direction === 'asc' ? aCount - bCount : bCount - aCount;
     }
-
-    // Handle other keys
     const aValue = a[key as keyof Employee]?.toString().toLowerCase() || '';
     const bValue = b[key as keyof Employee]?.toString().toLowerCase() || '';
-
     if (aValue < bValue) return direction === 'asc' ? -1 : 1;
     if (aValue > bValue) return direction === 'asc' ? 1 : -1;
     return 0;
   });
 
-  // Reset to first page when filters/sort change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, statusFilter, departmentFilter, sortConfig]);
+  useEffect(() => { setCurrentPage(1); }, [searchQuery, statusFilter, departmentFilter, sortConfig]);
 
-  // Pagination Logic
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentEmployees = sortedEmployees.slice(indexOfFirstItem, indexOfLastItem);
@@ -115,17 +99,15 @@ const People = () => {
 
   const requestSort = (key: string) => {
     let direction: 'asc' | 'desc' = 'asc';
-    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
     setSortConfig({ key, direction });
   };
 
   const SortIcon = ({ columnKey }: { columnKey: string }) => {
     if (sortConfig?.key !== columnKey) return <ArrowUpDown className="w-4 h-4 ml-2 text-muted-foreground/50" />;
-    return sortConfig.direction === 'asc' ?
-      <ArrowUp className="w-4 h-4 ml-2 text-primary" /> :
-      <ArrowDown className="w-4 h-4 ml-2 text-primary" />;
+    return sortConfig.direction === 'asc'
+      ? <ArrowUp className="w-4 h-4 ml-2 text-primary" />
+      : <ArrowDown className="w-4 h-4 ml-2 text-primary" />;
   };
 
   if (isLoading) {
@@ -142,12 +124,10 @@ const People = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">People</h1>
-          <p className="text-muted-foreground">
-            Manage employees and their asset assignments
-          </p>
+          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">People</h1>
+          <p className="text-muted-foreground text-sm mt-1">Manage employees and their asset assignments</p>
         </div>
         <div className="flex items-center gap-3">
           <Button
@@ -157,7 +137,7 @@ const People = () => {
             disabled={filteredEmployees.length === 0}
           >
             <Download className="w-4 h-4" />
-            Export
+            <span className="hidden sm:inline">Export</span>
           </Button>
           <AddEmployeeDialog />
         </div>
@@ -165,190 +145,209 @@ const People = () => {
 
       {/* Filters */}
       <Card className="p-4 border shadow-card">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="relative flex-1 min-w-[200px]">
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
+          <div className="relative flex-1 min-w-0 sm:min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search by name, email, or department..."
-              className="pl-10"
+              placeholder="Search people..."
+              className="pl-10 w-full"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+          <div className="flex flex-wrap gap-2">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[130px]">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
 
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="All Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="All Departments" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Departments</SelectItem>
-              {departments.map((dept) => (
-                <SelectItem key={dept} value={dept}>
-                  {dept}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="All Departments" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Departments</SelectItem>
+                {departments.map((dept) => (
+                  <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </Card>
 
-      {/* People Table */}
-      <Card className="border shadow-card overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead
-                className="w-[300px] cursor-pointer hover:bg-muted/60 transition-colors"
-                onClick={() => requestSort('name')}
-              >
-                <div className="flex items-center">
-                  Employee <SortIcon columnKey="name" />
-                </div>
-              </TableHead>
-              <TableHead
-                className="cursor-pointer hover:bg-muted/60 transition-colors"
-                onClick={() => requestSort('department')}
-              >
-                <div className="flex items-center">
-                  Department <SortIcon columnKey="department" />
-                </div>
-              </TableHead>
-              <TableHead
-                className="cursor-pointer hover:bg-muted/60 transition-colors"
-                onClick={() => requestSort('position')}
-              >
-                <div className="flex items-center">
-                  Position <SortIcon columnKey="position" />
-                </div>
-              </TableHead>
-              <TableHead
-                className="cursor-pointer hover:bg-muted/60 transition-colors"
-                onClick={() => requestSort('location')}
-              >
-                <div className="flex items-center">
-                  Location <SortIcon columnKey="location" />
-                </div>
-              </TableHead>
-              <TableHead
-                className="text-center cursor-pointer hover:bg-muted/60 transition-colors"
-                onClick={() => requestSort('assets')}
-              >
-                <div className="flex items-center justify-center">
-                  Assets <SortIcon columnKey="assets" />
-                </div>
-              </TableHead>
-              <TableHead
-                className="cursor-pointer hover:bg-muted/60 transition-colors"
-                onClick={() => requestSort('status')}
-              >
-                <div className="flex items-center">
-                  Status <SortIcon columnKey="status" />
-                </div>
-              </TableHead>
-              <TableHead className="w-[50px]"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {currentEmployees.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
-                  No employees found matching your criteria
-                </TableCell>
-              </TableRow>
-            ) : (
-              currentEmployees.map((employee) => (
-                <TableRow key={employee.id} className="transition-colors">
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="w-9 h-9">
-                        <AvatarImage src={employee.avatarUrl} />
-                        <AvatarFallback className="bg-muted text-primary text-sm">
-                          {employee.name.split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium">{employee.name}</p>
-                        <p className="text-sm text-muted-foreground">{employee.email}</p>
-                      </div>
+      {/* ── Mobile card list (< lg) ───────────────────────── */}
+      <div className="block lg:hidden rounded-xl overflow-hidden border border-border bg-card">
+        {currentEmployees.length === 0 ? (
+          <p className="py-10 text-center text-sm text-muted-foreground">
+            No employees found matching your criteria
+          </p>
+        ) : (
+          <>
+            {currentEmployees.map((employee, idx) => {
+              const assetCount = assets.filter(a => a.assignedToId === employee.id).length;
+              return (
+                <div
+                  key={employee.id}
+                  className={`px-4 py-3 flex items-center gap-3 cursor-pointer active:bg-muted/50 transition-colors ${idx < currentEmployees.length - 1 ? 'border-b border-border' : ''}`}
+                  onClick={() => setViewingEmployee(employee)}
+                >
+                  <Avatar className="w-10 h-10 shrink-0">
+                    <AvatarImage src={employee.avatarUrl} />
+                    <AvatarFallback className="bg-muted text-primary text-sm">
+                      {employee.name.split(' ').map(n => n[0]).join('')}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium text-[15px] text-foreground leading-snug truncate">{employee.name}</span>
+                      <Badge variant={employee.status === 'active' ? 'success' : 'secondary'} className="shrink-0 text-[11px]">
+                        {employee.status === 'active' ? 'Active' : 'Inactive'}
+                      </Badge>
                     </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{employee.department}</TableCell>
-                  <TableCell className="text-muted-foreground">{employee.position}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {employee.location === 'Warehouse' ? 'Central Warehouse' : employee.location}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {assets.filter(a => a.assignedToId === employee.id).length} assets
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={employee.status === 'active' ? 'success' : 'secondary'}>
-                      {employee.status === 'active' ? 'Active' : 'Inactive'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem className="gap-2" onClick={() => setViewingEmployee(employee)}>
-                          <Eye className="w-4 h-4" /> View Profile
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="gap-2"
-                          onClick={() => setEditingEmployee(employee)}
-                        >
-                          <Edit className="w-4 h-4" /> Edit Employee
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="gap-2"
-                          onClick={() => window.open(`/print-handover/employee/${employee.id}`, '_blank')}
-                        >
-                          <Printer className="w-4 h-4" /> Print Handover Form
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="gap-2 text-destructive"
-                          onClick={() => setOffboardingEmployee(employee)}
-                        >
-                          <UserMinus className="w-4 h-4" /> Offboard
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <p className="text-[13px] text-muted-foreground mt-0.5 leading-snug truncate">{employee.email}</p>
+                    <p className="text-[12px] text-muted-foreground leading-snug">
+                      {employee.department} · {assetCount} {assetCount === 1 ? 'asset' : 'assets'}
+                    </p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground/50 shrink-0" />
+                </div>
+              );
+            })}
+
+            {/* Mobile pagination */}
+            <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+              <span className="text-xs text-muted-foreground">
+                {indexOfFirstItem + 1}–{Math.min(indexOfLastItem, sortedEmployees.length)} of {sortedEmployees.length}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="h-8 w-8 p-0">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="h-8 w-8 p-0">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* ── Desktop table (≥ lg) ─────────────────────────── */}
+      <div className="hidden lg:block">
+        <Card className="border shadow-card overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[300px] cursor-pointer hover:bg-muted/60 transition-colors" onClick={() => requestSort('name')}>
+                  <div className="flex items-center">Employee <SortIcon columnKey="name" /></div>
+                </TableHead>
+                <TableHead className="cursor-pointer hover:bg-muted/60 transition-colors" onClick={() => requestSort('department')}>
+                  <div className="flex items-center">Department <SortIcon columnKey="department" /></div>
+                </TableHead>
+                <TableHead className="cursor-pointer hover:bg-muted/60 transition-colors" onClick={() => requestSort('position')}>
+                  <div className="flex items-center">Position <SortIcon columnKey="position" /></div>
+                </TableHead>
+                <TableHead className="cursor-pointer hover:bg-muted/60 transition-colors" onClick={() => requestSort('location')}>
+                  <div className="flex items-center">Location <SortIcon columnKey="location" /></div>
+                </TableHead>
+                <TableHead className="text-center cursor-pointer hover:bg-muted/60 transition-colors" onClick={() => requestSort('assets')}>
+                  <div className="flex items-center justify-center">Assets <SortIcon columnKey="assets" /></div>
+                </TableHead>
+                <TableHead className="cursor-pointer hover:bg-muted/60 transition-colors" onClick={() => requestSort('status')}>
+                  <div className="flex items-center">Status <SortIcon columnKey="status" /></div>
+                </TableHead>
+                <TableHead className="w-[50px]"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {currentEmployees.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                    No employees found matching your criteria
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </Card>
+              ) : (
+                currentEmployees.map((employee) => (
+                  <TableRow key={employee.id} className="transition-colors">
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="w-9 h-9">
+                          <AvatarImage src={employee.avatarUrl} />
+                          <AvatarFallback className="bg-muted text-primary text-sm">
+                            {employee.name.split(' ').map(n => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium">{employee.name}</p>
+                          <p className="text-sm text-muted-foreground">{employee.email}</p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{employee.department}</TableCell>
+                    <TableCell className="text-muted-foreground">{employee.position}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {employee.location === 'Warehouse' ? 'Central Warehouse' : employee.location}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {assets.filter(a => a.assignedToId === employee.id).length} assets
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={employee.status === 'active' ? 'success' : 'secondary'}>
+                        {employee.status === 'active' ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem className="gap-2" onClick={() => setViewingEmployee(employee)}>
+                            <Eye className="w-4 h-4" /> View Profile
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="gap-2" onClick={() => setEditingEmployee(employee)}>
+                            <Edit className="w-4 h-4" /> Edit Employee
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="gap-2" onClick={() => window.open(`/print-handover/employee/${employee.id}`, '_blank')}>
+                            <Printer className="w-4 h-4" /> Print Handover Form
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="gap-2 text-destructive" onClick={() => setOffboardingEmployee(employee)}>
+                            <UserMinus className="w-4 h-4" /> Offboard
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </Card>
 
-      {/* Footer Stats and Pagination */}
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          Showing {currentEmployees.length > 0 ? indexOfFirstItem + 1 : 0} to {Math.min(indexOfLastItem, sortedEmployees.length)} of {sortedEmployees.length} employees
+        {/* Desktop Pagination */}
+        <div className="flex items-center justify-between mt-4">
+          <div className="text-sm text-muted-foreground">
+            Showing {currentEmployees.length > 0 ? indexOfFirstItem + 1 : 0} to {Math.min(indexOfLastItem, sortedEmployees.length)} of {sortedEmployees.length} employees
+          </div>
+          <DataTablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            pageSize={itemsPerPage}
+            setPageSize={setItemsPerPage}
+          />
         </div>
-        <DataTablePagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-          pageSize={itemsPerPage}
-          setPageSize={setItemsPerPage}
-        />
       </div>
 
       {/* Dialogs */}

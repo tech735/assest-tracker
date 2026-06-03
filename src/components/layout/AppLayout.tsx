@@ -12,6 +12,7 @@ export function AppLayout() {
   const [addAssetOpen, setAddAssetOpen] = useState(false);
   const [assignAssetOpen, setAssignAssetOpen] = useState(false);
   const [returnAssetOpen, setReturnAssetOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleImportAssets = () => {
     toast({
@@ -22,15 +23,25 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-screen w-full bg-background">
-      <AppSidebar />
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      <AppSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
       <div className="flex-1 flex flex-col min-w-0">
         <TopBar
+          onMenuOpen={() => setSidebarOpen(true)}
           onAddAsset={() => setAddAssetOpen(true)}
           onAssignAsset={() => setAssignAssetOpen(true)}
           onReturnAsset={() => setReturnAssetOpen(true)}
           onImportAssets={handleImportAssets}
         />
-        <main className="flex-1 px-8 py-7 overflow-auto">
+        <main className="flex-1 px-4 py-5 sm:px-8 sm:py-7 overflow-auto">
           <div className="mx-auto w-full max-w-6xl">
             <Outlet />
           </div>

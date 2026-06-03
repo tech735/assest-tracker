@@ -84,7 +84,7 @@ export function LocationDetailsDialog({ location, open, onOpenChange }: Location
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-4xl max-h-[90vh] overflow-y-auto scrollbar-hide">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-brand-blue/10">

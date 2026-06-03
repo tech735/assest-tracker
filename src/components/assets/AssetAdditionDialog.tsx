@@ -60,7 +60,7 @@ export function AssetAdditionDialog({
                         </Button>
                     </DialogTrigger>
                 )}
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-2xl">
                     <DialogHeader>
                         <DialogTitle>Add Assets</DialogTitle>
                         <DialogDescription>

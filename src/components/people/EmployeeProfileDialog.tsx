@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Loader2, RotateCcw, Mail } from 'lucide-react';
+import { Loader2, RotateCcw, Mail, Package, User, MapPin, Briefcase } from 'lucide-react';
 import type { Asset, Employee } from '@/types/asset';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
@@ -48,22 +48,14 @@ export function EmployeeProfileDialog({ employee, open, onOpenChange }: Employee
         locationId: coreOffice?.id,
         locationName: coreOffice?.name
       });
-      toast({
-        title: 'Asset Returned',
-        description: `${asset.name} has been returned to inventory.`,
-      });
+      toast({ title: 'Asset Returned', description: `${asset.name} has been returned to inventory.` });
     } catch {
-      toast({
-        title: 'Error',
-        description: 'Failed to return asset. Please try again.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'Failed to return asset. Please try again.', variant: 'destructive' });
     }
   };
 
   const handleSendEmail = async () => {
     setIsSendingEmail(true);
-    console.log('Sending email for employee:', { id: employee.id, email: employee.email });
     try {
       const { data, error: functionError } = await supabase.functions.invoke('send-asset-email', {
         body: { employeeId: employee.id },
@@ -74,23 +66,15 @@ export function EmployeeProfileDialog({ employee, open, onOpenChange }: Employee
         if (functionError.context) {
           try {
             const errorBody = await functionError.context.json();
-            if (errorBody.error) {
-              errorMessage = errorBody.error;
-            }
-          } catch (e) {
-            console.error('Failed to parse error context:', e);
-          }
+            if (errorBody.error) errorMessage = errorBody.error;
+          } catch (e) { /* ignore */ }
         }
         throw new Error(errorMessage);
       }
 
-      toast({
-        title: 'Asset summary sent',
-        description: `Email has been sent to ${employee.email}`,
-      });
+      toast({ title: 'Asset summary sent', description: `Email has been sent to ${employee.email}` });
       setShowEmailConfirm(false);
     } catch (error) {
-      console.error('Error sending email (Detailed):', error);
       toast({
         title: 'Error',
         description: error instanceof Error ? error.message : 'Failed to send asset summary email.',
@@ -103,118 +87,155 @@ export function EmployeeProfileDialog({ employee, open, onOpenChange }: Employee
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-2rem)] max-w-[95vw] sm:max-w-[720px] max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Employee Profile</DialogTitle>
-          <DialogDescription>View employee details and assigned assets.</DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-5">
-          <div className="flex flex-col sm:flex-row items-start gap-4 rounded-lg border bg-muted/20 p-4">
-            <Avatar className="h-12 w-12">
+      <DialogContent className="w-full max-w-[calc(100%-2rem)] sm:max-w-2xl max-h-[88vh] overflow-hidden flex flex-col p-0">
+        {/* Header */}
+        <DialogHeader className="px-4 sm:px-6 pt-5 pb-4 border-b border-border shrink-0">
+          <div className="flex items-center gap-3 pr-8">
+            <Avatar className="h-12 w-12 shrink-0">
               <AvatarImage src={employee.avatarUrl} />
               <AvatarFallback className="bg-muted text-primary text-sm">
                 {employee.name.split(' ').map((n) => n[0]).join('')}
               </AvatarFallback>
             </Avatar>
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <div className="text-lg font-semibold leading-none">{employee.name}</div>
-                <Badge variant={employee.status === 'active' ? 'success' : 'secondary'}>
+                <DialogTitle className="text-lg leading-tight">{employee.name}</DialogTitle>
+                <Badge variant={employee.status === 'active' ? 'success' : 'secondary'} className="text-xs">
                   {employee.status === 'active' ? 'Active' : employee.status}
                 </Badge>
               </div>
-              <div className="mt-1 text-sm text-muted-foreground break-words">{employee.email}</div>
-              <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-                <div>
-                  <div className="text-muted-foreground">Department</div>
-                  <div className="font-medium">{employee.department}</div>
+              <DialogDescription className="text-sm truncate mt-0.5">{employee.email}</DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto scrollbar-hide divide-y divide-border">
+          {/* Employee Info */}
+          <section className="px-4 sm:px-6 py-4">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Profile</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="flex items-center gap-2.5 p-3 rounded-xl bg-muted/40">
+                <Briefcase className="w-4 h-4 text-muted-foreground shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Department</p>
+                  <p className="text-sm font-medium truncate">{employee.department}</p>
                 </div>
-                <div>
-                  <div className="text-muted-foreground">Position</div>
-                  <div className="font-medium">{employee.position}</div>
+              </div>
+              <div className="flex items-center gap-2.5 p-3 rounded-xl bg-muted/40">
+                <User className="w-4 h-4 text-muted-foreground shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Position</p>
+                  <p className="text-sm font-medium truncate">{employee.position}</p>
                 </div>
-                <div>
-                  <div className="text-muted-foreground">Location</div>
-                  <div className="font-medium">
+              </div>
+              <div className="flex items-center gap-2.5 p-3 rounded-xl bg-muted/40">
+                <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Location</p>
+                  <p className="text-sm font-medium truncate">
                     {employee.location === 'Warehouse' ? 'Central Warehouse' : employee.location}
-                  </div>
+                  </p>
                 </div>
               </div>
             </div>
-          </div>
+          </section>
 
-          <div className="rounded-lg border overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b bg-card">
-              <div className="font-medium">Assigned assets</div>
-              <div className="text-sm text-muted-foreground">{assignedAssets.length} assigned</div>
+          {/* Assigned Assets */}
+          <section className="px-4 sm:px-6 py-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Assigned Assets</h3>
+              <span className="text-xs text-muted-foreground">{assignedAssets.length} assigned</span>
             </div>
 
             {isLoading ? (
-              <div className="flex items-center justify-center py-10 text-muted-foreground text-sm">
+              <div className="flex items-center justify-center py-8 text-muted-foreground text-sm">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Loading assets...
               </div>
+            ) : assignedAssets.length === 0 ? (
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                No assets currently assigned to this employee
+              </div>
             ) : (
-              <div className="w-full overflow-x-auto">
-                <Table className="min-w-[640px]">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Asset</TableHead>
-                      <TableHead>Tag</TableHead>
-                      <TableHead className="w-[140px]">Status</TableHead>
-                      <TableHead className="w-[140px] text-right">Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {assignedAssets.length === 0 ? (
+              <>
+                {/* Mobile card list */}
+                <div className="block sm:hidden rounded-xl overflow-hidden border border-border">
+                  {assignedAssets.map((asset, idx) => (
+                    <div
+                      key={asset.id}
+                      className={`px-4 py-3 flex items-center gap-3 ${idx < assignedAssets.length - 1 ? 'border-b border-border' : ''}`}
+                    >
+                      <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-muted shrink-0">
+                        <Package className="w-4 h-4 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{asset.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {asset.brand} · <span className="font-mono">{asset.assetTag}</span>
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 shrink-0 h-8 text-xs px-2.5"
+                        onClick={() => handleReturn(asset)}
+                        disabled={returnAsset.isPending}
+                      >
+                        <RotateCcw className="h-3 w-3" />
+                        Return
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop table */}
+                <div className="hidden sm:block rounded-xl overflow-hidden border border-border">
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                          No assets currently assigned to this employee
-                        </TableCell>
+                        <TableHead>Asset</TableHead>
+                        <TableHead>Tag</TableHead>
+                        <TableHead className="w-[120px]">Status</TableHead>
+                        <TableHead className="w-[120px] text-right">Action</TableHead>
                       </TableRow>
-                    ) : (
-                      assignedAssets.map((asset) => (
+                    </TableHeader>
+                    <TableBody>
+                      {assignedAssets.map((asset) => (
                         <TableRow key={asset.id}>
                           <TableCell>
                             <div className="font-medium">{asset.name}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {asset.brand} · {asset.category}
-                            </div>
+                            <div className="text-xs text-muted-foreground">{asset.brand} · {asset.category}</div>
                           </TableCell>
                           <TableCell className="font-mono text-sm">{asset.assetTag}</TableCell>
-                          <TableCell>
-                            <Badge variant="assigned">Assigned</Badge>
-                          </TableCell>
+                          <TableCell><Badge variant="assigned">Assigned</Badge></TableCell>
                           <TableCell className="text-right">
                             <Button
-                              variant="outline"
-                              size="sm"
-                              className="gap-2"
+                              variant="outline" size="sm" className="gap-2"
                               onClick={() => handleReturn(asset)}
                               disabled={returnAsset.isPending}
                             >
-                              <RotateCcw className="h-4 w-4" />
-                              Return
+                              <RotateCcw className="h-4 w-4" />Return
                             </Button>
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             )}
-          </div>
+          </section>
         </div>
 
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+        {/* Footer */}
+        <DialogFooter className="px-4 sm:px-6 py-4 border-t border-border shrink-0 flex-col sm:flex-row gap-2">
+          <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => onOpenChange(false)}>
             Close
           </Button>
           <AlertDialog open={showEmailConfirm} onOpenChange={setShowEmailConfirm}>
             <AlertDialogTrigger asChild>
-              <Button variant="secondary" className="gap-2">
+              <Button variant="secondary" className="gap-2 w-full sm:w-auto">
                 <Mail className="h-4 w-4" />
                 Send Asset Summary
               </Button>
@@ -228,13 +249,7 @@ export function EmployeeProfileDialog({ employee, open, onOpenChange }: Employee
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel disabled={isSendingEmail}>Cancel</AlertDialogCancel>
-                <Button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleSendEmail();
-                  }}
-                  disabled={isSendingEmail}
-                >
+                <Button onClick={(e) => { e.preventDefault(); handleSendEmail(); }} disabled={isSendingEmail}>
                   {isSendingEmail && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {isSendingEmail ? 'Sending...' : 'Send Email'}
                 </Button>
@@ -246,4 +261,3 @@ export function EmployeeProfileDialog({ employee, open, onOpenChange }: Employee
     </Dialog>
   );
 }
-

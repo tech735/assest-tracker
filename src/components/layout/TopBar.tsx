@@ -1,4 +1,4 @@
-import { Search, Plus, Bell } from 'lucide-react';
+import { Search, Plus, Bell, Menu } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,6 +17,7 @@ import { useAlerts } from '@/hooks/useSupabaseData';
 import { AlertTriangle, CheckCircle, Clock, Info } from 'lucide-react';
 
 interface TopBarProps {
+  onMenuOpen?: () => void;
   onAddAsset?: () => void;
   onAssignAsset?: () => void;
   onReturnAsset?: () => void;
@@ -24,6 +25,7 @@ interface TopBarProps {
 }
 
 export function TopBar({
+  onMenuOpen,
   onAddAsset,
   onAssignAsset,
   onReturnAsset,
@@ -50,9 +52,20 @@ export function TopBar({
   };
 
   return (
-    <header className="sticky top-0 z-10 flex items-center justify-between h-16 px-6 bg-background border-b border-border/70">
-      {/* Search */}
-      <div className="relative w-96">
+    <header className="sticky top-0 z-10 flex items-center justify-between h-16 px-4 sm:px-6 bg-background border-b border-border/70 gap-3">
+      {/* Hamburger — mobile only */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onMenuOpen}
+        className="lg:hidden h-9 w-9 shrink-0"
+        aria-label="Open menu"
+      >
+        <Menu className="w-5 h-5" />
+      </Button>
+
+      {/* Search — hidden on mobile, visible on desktop */}
+      <div className="relative hidden sm:block w-72 lg:w-96">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           type="search"
@@ -61,14 +74,19 @@ export function TopBar({
         />
       </div>
 
+      {/* Mobile: logo/title centered */}
+      <div className="flex-1 flex justify-center sm:hidden">
+        <span className="text-sm font-semibold text-foreground">Asset Tracker</span>
+      </div>
+
       {/* Actions */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         {/* Quick Actions Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2" size="sm">
               <Plus className="w-4 h-4" />
-              Quick Actions
+              <span className="hidden sm:inline">Quick Actions</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
@@ -88,10 +106,9 @@ export function TopBar({
         </DropdownMenu>
 
         {/* Notifications */}
-        {/* Notifications */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative">
+            <Button variant="ghost" size="icon" className="relative h-9 w-9">
               <Bell className="w-5 h-5 text-muted-foreground" />
               {alerts.length > 0 && (
                 <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full" />
@@ -134,7 +151,7 @@ export function TopBar({
         </Popover>
 
         {/* User Avatar */}
-        <div className="flex items-center gap-2 pl-3 border-l border-border/70">
+        <div className="hidden sm:flex items-center gap-2 pl-3 border-l border-border/70">
           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary">
             TK
           </div>

@@ -196,7 +196,7 @@ export function AddAssetDialog({
                     </Button>
                 </DialogTrigger>
             )}
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-hide">
                 <DialogHeader>
                     <DialogTitle>Add New Asset</DialogTitle>
                     <DialogDescription>

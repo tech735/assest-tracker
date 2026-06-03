@@ -168,7 +168,7 @@ export function EditAssetDialog({ asset, open, onOpenChange }: EditAssetDialogPr
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-hide">
                 <DialogHeader>
                     <DialogTitle>Edit Asset</DialogTitle>
                     <DialogDescription>
