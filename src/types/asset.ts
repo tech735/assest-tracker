@@ -24,6 +24,12 @@ export interface Asset {
   warrantyStart?: string;
   warrantyEnd?: string;
   notes?: string;
+  repairVendor?: string;
+  repairEstReturn?: string;
+  repairCost?: number;
+  repairNotes?: string;
+  lostReference?: string;
+  lostNotes?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -38,8 +44,9 @@ export interface Employee {
   locationId?: string;
   avatarUrl?: string;
   assetsCount: number;
-  status: 'active' | 'inactive' | 'on-leave' | 'remote';
+  status: 'active' | 'inactive' | 'on-leave' | 'remote' | 'offboarded';
   joinDate: string;
+  exitDate?: string;
 }
 
 export interface Location {
@@ -51,16 +58,22 @@ export interface Location {
   employeesCount: number;
 }
 
+export type AssignmentEventType = 'assign' | 'return' | 'repair_start' | 'repair_end' | 'lost' | 'found';
+
 export interface Assignment {
   id: string;
   assetId: string;
   assetTag: string;
   assetName: string;
-  employeeId: string;
-  employeeName: string;
+  employeeId?: string;
+  employeeName?: string;
+  eventType: AssignmentEventType;
   assignedDate: string;
   returnDate?: string;
   condition: AssetCondition;
+  handedOverBy?: string;
+  receivedBy?: string;
+  bundleId?: string;
   notes?: string;
 }
 

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { Loader2, RotateCcw, Mail, Package, User, MapPin, Briefcase } from 'lucide-react';
+import { Loader2, RotateCcw, Mail, Package, User, MapPin, Briefcase, PackagePlus } from 'lucide-react';
+import { BundleAssignDialog } from '@/components/people/BundleAssignDialog';
 import type { Asset, Employee } from '@/types/asset';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
@@ -34,6 +35,7 @@ export function EmployeeProfileDialog({ employee, open, onOpenChange }: Employee
   const { data: locations = [] } = useLocations();
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [showEmailConfirm, setShowEmailConfirm] = useState(false);
+  const [showBundleAssign, setShowBundleAssign] = useState(false);
 
   const assignedAssets = useMemo(
     () => assets.filter((a) => a.status === 'assigned' && a.assignedToId === employee.id),
@@ -45,6 +47,7 @@ export function EmployeeProfileDialog({ employee, open, onOpenChange }: Employee
       const coreOffice = locations.find(l => l.name === 'Core Office');
       await returnAsset.mutateAsync({
         assetId: asset.id,
+        condition: asset.condition,
         locationId: coreOffice?.id,
         locationName: coreOffice?.name
       });
@@ -143,9 +146,20 @@ export function EmployeeProfileDialog({ employee, open, onOpenChange }: Employee
 
           {/* Assigned Assets */}
           <section className="px-4 sm:px-6 py-4">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4 gap-2">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Assigned Assets</h3>
-              <span className="text-xs text-muted-foreground">{assignedAssets.length} assigned</span>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-muted-foreground">{assignedAssets.length} assigned</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 h-7 text-xs px-2.5"
+                  onClick={() => setShowBundleAssign(true)}
+                >
+                  <PackagePlus className="h-3.5 w-3.5" />
+                  Assign Assets
+                </Button>
+              </div>
             </div>
 
             {isLoading ? (
@@ -258,6 +272,13 @@ export function EmployeeProfileDialog({ employee, open, onOpenChange }: Employee
           </AlertDialog>
         </DialogFooter>
       </DialogContent>
+      {showBundleAssign && (
+        <BundleAssignDialog
+          employee={employee}
+          open={showBundleAssign}
+          onOpenChange={setShowBundleAssign}
+        />
+      )}
     </Dialog>
   );
 }

@@ -138,6 +138,19 @@ export function useDeleteEmployee() {
     });
 }
 
+export function useOffboardEmployee() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: supabaseService.offboardEmployee,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['employees'] });
+            queryClient.invalidateQueries({ queryKey: ['locations'] });
+            queryClient.invalidateQueries({ queryKey: ['assets'] });
+        },
+    });
+}
+
 // =====================================================
 // LOCATION HOOKS
 // =====================================================
@@ -221,6 +234,72 @@ export function useCreateAssignment() {
             queryClient.invalidateQueries({ queryKey: ['assignments'] });
             queryClient.invalidateQueries({ queryKey: ['assets'] });
             queryClient.invalidateQueries({ queryKey: ['employees'] });
+        },
+    });
+}
+
+export function useAssignAssetsBundle() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: supabaseService.assignAssetsBundle,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['assignments'] });
+            queryClient.invalidateQueries({ queryKey: ['assets'] });
+            queryClient.invalidateQueries({ queryKey: ['employees'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+        },
+    });
+}
+
+export function useStartRepair() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: supabaseService.startRepair,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['assignments'] });
+            queryClient.invalidateQueries({ queryKey: ['assets'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+        },
+    });
+}
+
+export function useEndRepair() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: supabaseService.endRepair,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['assignments'] });
+            queryClient.invalidateQueries({ queryKey: ['assets'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+        },
+    });
+}
+
+export function useMarkLost() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: supabaseService.markLost,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['assignments'] });
+            queryClient.invalidateQueries({ queryKey: ['assets'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+        },
+    });
+}
+
+export function useMarkFound() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: supabaseService.markFound,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['assignments'] });
+            queryClient.invalidateQueries({ queryKey: ['assets'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
         },
     });
 }

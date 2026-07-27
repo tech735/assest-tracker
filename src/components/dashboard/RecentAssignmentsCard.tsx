@@ -2,11 +2,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Assignment } from '@/types/asset';
+import { Assignment, AssignmentEventType } from '@/types/asset';
 
 interface RecentAssignmentsCardProps {
   assignments: Assignment[];
 }
+
+const eventLabels: Record<AssignmentEventType, string> = {
+  assign: 'Assigned',
+  return: 'Returned',
+  repair_start: 'Sent for Repair',
+  repair_end: 'Repair Completed',
+  lost: 'Marked Lost',
+  found: 'Marked Found',
+};
 
 export function RecentAssignmentsCard({ assignments }: RecentAssignmentsCardProps) {
   return (
@@ -36,19 +45,22 @@ export function RecentAssignmentsCard({ assignments }: RecentAssignmentsCardProp
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {assignments.slice(0, 5).map((assignment) => (
+                {assignments.slice(0, 5).map((assignment) => {
+                  const label = eventLabels[assignment.eventType] || 'Assigned';
+                  const who = assignment.employeeName || assignment.assetTag || '?';
+                  return (
                   <TableRow key={assignment.id} className="transition-colors">
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${assignment.employeeName}`} />
+                          <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${who}`} />
                           <AvatarFallback className="bg-muted text-primary text-xs font-medium">
-                            {assignment.employeeName.split(' ').map((n) => n[0]).join('')}
+                            {who.split(' ').map((n) => n[0]).join('').slice(0, 2)}
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">Assigned</p>
-                          <p className="text-xs text-muted-foreground truncate">{assignment.employeeName}</p>
+                          <p className="text-sm font-medium truncate">{label}</p>
+                          <p className="text-xs text-muted-foreground truncate">{assignment.employeeName || assignment.assetName}</p>
                         </div>
                       </div>
                     </TableCell>
@@ -59,15 +71,16 @@ export function RecentAssignmentsCard({ assignments }: RecentAssignmentsCardProp
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="success" className="font-normal">
-                        Success
+                      <Badge variant={assignment.eventType === 'lost' ? 'destructive' : 'success'} className="font-normal">
+                        {assignment.eventType === 'lost' ? 'Lost' : 'Success'}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right text-sm text-muted-foreground">
                       {new Date(assignment.assignedDate).toLocaleDateString()}
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </div>

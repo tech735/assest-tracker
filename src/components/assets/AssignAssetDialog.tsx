@@ -27,14 +27,20 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useCreateAssignment, useEmployees, useUpdateAsset, useAssets } from '@/hooks/useSupabaseData';
 import { useToast } from '@/hooks/use-toast';
 import { Asset } from '@/types/asset';
 
+const today = () => new Date().toISOString().split('T')[0];
+
 const assignmentSchema = z.object({
     assetId: z.string().min(1, { message: 'Asset is required.' }),
     employeeId: z.string().min(1, { message: 'Employee is required.' }),
+    handoverDate: z.string().min(1, { message: 'Handover date is required.' }),
+    handedOverBy: z.string().min(1, { message: 'Handed over by is required.' }),
+    condition: z.enum(['new', 'good', 'fair', 'poor'], { required_error: 'Condition is required.' }),
     notes: z.string().optional(),
 });
 
@@ -61,6 +67,9 @@ export function AssignAssetDialog({ asset, open, onOpenChange }: AssignAssetDial
         defaultValues: {
             assetId: asset?.id || '',
             employeeId: '',
+            handoverDate: today(),
+            handedOverBy: '',
+            condition: asset?.condition || 'good',
             notes: '',
         },
     });
@@ -71,6 +80,9 @@ export function AssignAssetDialog({ asset, open, onOpenChange }: AssignAssetDial
             form.reset({
                 assetId: asset?.id || '',
                 employeeId: '',
+                handoverDate: today(),
+                handedOverBy: '',
+                condition: asset?.condition || 'good',
                 notes: '',
             });
         }
@@ -91,16 +103,19 @@ export function AssignAssetDialog({ asset, open, onOpenChange }: AssignAssetDial
                 assetName: selectedAsset.name,
                 employeeId: values.employeeId,
                 employeeName: selectedEmployee?.name || 'Unknown',
-                assignedDate: new Date().toISOString(),
-                condition: selectedAsset.condition,
+                eventType: 'assign',
+                assignedDate: values.handoverDate,
+                condition: values.condition,
+                handedOverBy: values.handedOverBy,
                 notes: values.notes || '',
             });
 
-            // Also update the asset status and assigned_to fields
+            // Also update the asset status, condition and assigned_to fields
             await updateAsset.mutateAsync({
                 id: selectedAsset.id,
                 updates: {
                     status: 'assigned',
+                    condition: values.condition,
                     assignedTo: selectedEmployee?.name || 'Unknown',
                     assignedToId: values.employeeId,
                     location: selectedEmployee?.location,
@@ -195,6 +210,60 @@ export function AssignAssetDialog({ asset, open, onOpenChange }: AssignAssetDial
                                             ))}
                                         </SelectContent>
                                     </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="handoverDate"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Handover Date</FormLabel>
+                                        <FormControl>
+                                            <Input type="date" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="condition"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Condition</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select condition" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="new">New</SelectItem>
+                                                <SelectItem value="good">Good</SelectItem>
+                                                <SelectItem value="fair">Fair</SelectItem>
+                                                <SelectItem value="poor">Poor</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+
+                        <FormField
+                            control={form.control}
+                            name="handedOverBy"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Handed Over By</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="e.g., IT Admin name" {...field} />
+                                    </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}

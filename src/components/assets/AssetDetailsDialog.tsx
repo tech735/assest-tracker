@@ -18,9 +18,14 @@ import {
     Zap,
     Clipboard,
     Package,
-    ArrowRight
+    ArrowRight,
+    Wrench,
+    AlertTriangle,
+    CheckCircle,
+    UserPlus,
+    RotateCcw,
 } from 'lucide-react';
-import { Asset, AssetStatus, AssetCategory } from '@/types/asset';
+import { Asset, AssetStatus, AssetCategory, AssignmentEventType } from '@/types/asset';
 import { useAssetAssignments, useSettings } from '@/hooks/useSupabaseData';
 import { format } from 'date-fns';
 
@@ -55,6 +60,15 @@ const categoryLabels: Record<AssetCategory, string> = {
     monitor: 'Monitor',
     accessory: 'Accessory',
     other: 'Other',
+};
+
+const eventMeta: Record<AssignmentEventType, { icon: typeof User; label: string }> = {
+    assign: { icon: UserPlus, label: 'Assigned' },
+    return: { icon: RotateCcw, label: 'Returned' },
+    repair_start: { icon: Wrench, label: 'Sent for Repair' },
+    repair_end: { icon: Wrench, label: 'Repair Completed' },
+    lost: { icon: AlertTriangle, label: 'Marked Lost' },
+    found: { icon: CheckCircle, label: 'Marked Found' },
 };
 
 export function AssetDetailsDialog({ asset, open, onOpenChange, defaultTab = 'details' }: AssetDetailsDialogProps) {
@@ -244,36 +258,53 @@ export function AssetDetailsDialog({ asset, open, onOpenChange, defaultTab = 'de
                                 {/* Timeline title */}
                                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-5">Timeline</h3>
                                 <div className="relative pl-6 space-y-6 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-muted">
-                                    {assignments.map((assignment, index) => (
-                                        <div key={assignment.id} className="relative">
-                                            <div className={`absolute -left-6 top-1.5 w-3 h-3 rounded-full border-2 border-background ${assignment.returnDate ? 'bg-muted-foreground' : 'bg-primary'}`} />
-                                            <div className="flex flex-col gap-1">
-                                                <div className="flex items-start justify-between gap-2">
-                                                    <h4 className="font-semibold text-sm flex items-center gap-2 flex-wrap">
-                                                        {assignment.employeeName}
-                                                        {!assignment.returnDate && (
-                                                            <Badge variant="assigned" className="text-[10px] py-0 px-1.5">Current</Badge>
-                                                        )}
-                                                    </h4>
-                                                    <span className="text-xs text-muted-foreground shrink-0">
-                                                        {format(new Date(assignment.assignedDate), 'MMM d, yyyy')}
-                                                    </span>
-                                                </div>
-                                                <div className="text-xs text-muted-foreground flex items-center gap-1.5">
-                                                    <ArrowRight className="w-3 h-3 shrink-0" />
-                                                    {assignment.returnDate
-                                                        ? `Returned on ${format(new Date(assignment.returnDate), 'MMM d, yyyy')}`
-                                                        : 'Status: In possession'
-                                                    }
-                                                </div>
-                                                {assignment.notes && (
-                                                    <div className="mt-2 text-xs bg-muted/40 px-3 py-2 rounded-lg italic text-muted-foreground">
-                                                        "{assignment.notes}"
+                                    {assignments.map((assignment) => {
+                                        const isAssignCycle = assignment.eventType === 'assign' || assignment.eventType === 'return';
+                                        const isOpenAssignment = assignment.eventType === 'assign' && !assignment.returnDate;
+                                        const meta = isAssignCycle
+                                            ? (isOpenAssignment ? eventMeta.assign : eventMeta.return)
+                                            : (eventMeta[assignment.eventType] || eventMeta.assign);
+                                        const EventIcon = meta.icon;
+                                        return (
+                                            <div key={assignment.id} className="relative">
+                                                <div className={`absolute -left-6 top-1.5 w-3 h-3 rounded-full border-2 border-background ${isOpenAssignment ? 'bg-primary' : 'bg-muted-foreground'}`} />
+                                                <div className="flex flex-col gap-1">
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <h4 className="font-semibold text-sm flex items-center gap-2 flex-wrap">
+                                                            <EventIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                                                            {meta.label}
+                                                            {assignment.employeeName && ` — ${assignment.employeeName}`}
+                                                            {isOpenAssignment && (
+                                                                <Badge variant="assigned" className="text-[10px] py-0 px-1.5">Current</Badge>
+                                                            )}
+                                                        </h4>
+                                                        <span className="text-xs text-muted-foreground shrink-0">
+                                                            {format(new Date(assignment.assignedDate), 'MMM d, yyyy')}
+                                                        </span>
                                                     </div>
-                                                )}
+                                                    {isAssignCycle && (
+                                                        <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                                            <ArrowRight className="w-3 h-3 shrink-0" />
+                                                            {assignment.returnDate
+                                                                ? `Returned on ${format(new Date(assignment.returnDate), 'MMM d, yyyy')}`
+                                                                : 'Status: In possession'
+                                                            }
+                                                        </div>
+                                                    )}
+                                                    <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1">
+                                                        <span>Condition: <span className="capitalize">{assignment.condition}</span></span>
+                                                        {assignment.handedOverBy && <span>Handed over by: {assignment.handedOverBy}</span>}
+                                                        {assignment.receivedBy && <span>Received by: {assignment.receivedBy}</span>}
+                                                    </div>
+                                                    {assignment.notes && (
+                                                        <div className="mt-2 text-xs bg-muted/40 px-3 py-2 rounded-lg italic text-muted-foreground">
+                                                            "{assignment.notes}"
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                         )}

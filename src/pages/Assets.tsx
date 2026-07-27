@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, Download, Plus, MoreHorizontal, Eye, Edit, Trash2, Edit2, History, Copy, ChevronRight } from 'lucide-react';
+import { Search, Filter, Download, Plus, MoreHorizontal, Eye, Edit, Trash2, Edit2, History, Copy, ChevronRight, Wrench, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -42,6 +42,8 @@ import { DeleteAssetDialog } from '@/components/assets/DeleteAssetDialog';
 import { AssignAssetDialog } from '@/components/assets/AssignAssetDialog';
 import { AssetDetailsDialog } from '@/components/assets/AssetDetailsDialog';
 import { ReturnAssetDialog } from '@/components/assets/ReturnAssetDialog';
+import { RepairAssetDialog } from '@/components/assets/RepairAssetDialog';
+import { LostAssetDialog } from '@/components/assets/LostAssetDialog';
 import { Asset, AssetStatus, AssetCategory } from '@/types/asset';
 import { exportToCSV } from '@/lib/exportUtils';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
@@ -98,6 +100,8 @@ const Assets = () => {
   const [deletingAsset, setDeletingAsset] = useState<Asset | null>(null);
   const [assigningAsset, setAssigningAsset] = useState<Asset | null>(null);
   const [returningAsset, setReturningAsset] = useState<Asset | null>(null);
+  const [repairingAsset, setRepairingAsset] = useState<Asset | null>(null);
+  const [losingAsset, setLosingAsset] = useState<Asset | null>(null);
   const [viewingAsset, setViewingAsset] = useState<{ asset: Asset; tab: 'details' | 'history' } | null>(null);
   const [cloningAsset, setCloningAsset] = useState<Asset | null>(null);
   const [searchParams] = useSearchParams();
@@ -539,6 +543,22 @@ const Assets = () => {
                                 <Edit className="w-4 h-4 text-muted-foreground" />Return asset
                               </DropdownMenuItem>
                             )}
+                            {(asset.status === 'available' || asset.status === 'assigned' || asset.status === 'repair') && (
+                              <DropdownMenuItem className="gap-2" onClick={() => setRepairingAsset(asset)}>
+                                <Wrench className="w-4 h-4 text-muted-foreground" />
+                                {asset.status === 'repair' ? 'Complete repair' : 'Send for repair'}
+                              </DropdownMenuItem>
+                            )}
+                            {asset.status !== 'lost' && asset.status !== 'retired' && (
+                              <DropdownMenuItem className="gap-2" onClick={() => setLosingAsset(asset)}>
+                                <AlertTriangle className="w-4 h-4 text-muted-foreground" />Mark as lost
+                              </DropdownMenuItem>
+                            )}
+                            {asset.status === 'lost' && (
+                              <DropdownMenuItem className="gap-2" onClick={() => setLosingAsset(asset)}>
+                                <CheckCircle className="w-4 h-4 text-muted-foreground" />Mark as found
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem className="gap-2" onClick={() => setViewingAsset({ asset, tab: 'history' })}>
                               <History className="w-4 h-4 text-muted-foreground" />View history
                             </DropdownMenuItem>
@@ -615,6 +635,20 @@ const Assets = () => {
           open={!!returningAsset}
           onOpenChange={(open) => !open && setReturningAsset(null)}
           assetId={returningAsset.id}
+        />
+      )}
+      {repairingAsset && (
+        <RepairAssetDialog
+          asset={repairingAsset}
+          open={!!repairingAsset}
+          onOpenChange={(open) => !open && setRepairingAsset(null)}
+        />
+      )}
+      {losingAsset && (
+        <LostAssetDialog
+          asset={losingAsset}
+          open={!!losingAsset}
+          onOpenChange={(open) => !open && setLosingAsset(null)}
         />
       )}
     </div>

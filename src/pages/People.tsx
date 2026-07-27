@@ -37,6 +37,12 @@ import { Employee } from '@/types/asset';
 import { exportToCSV } from '@/lib/exportUtils';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 
+const statusBadgeVariant = (status: Employee['status']) =>
+  status === 'active' ? 'success' : status === 'offboarded' ? 'destructive' : 'secondary';
+
+const statusLabel = (status: Employee['status']) =>
+  status.charAt(0).toUpperCase() + status.slice(1);
+
 const People = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -165,6 +171,7 @@ const People = () => {
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="offboarded">Offboarded</SelectItem>
               </SelectContent>
             </Select>
 
@@ -208,8 +215,8 @@ const People = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-medium text-[15px] text-foreground leading-snug truncate">{employee.name}</span>
-                      <Badge variant={employee.status === 'active' ? 'success' : 'secondary'} className="shrink-0 text-[11px]">
-                        {employee.status === 'active' ? 'Active' : 'Inactive'}
+                      <Badge variant={statusBadgeVariant(employee.status)} className="shrink-0 text-[11px]">
+                        {statusLabel(employee.status)}
                       </Badge>
                     </div>
                     <p className="text-[13px] text-muted-foreground mt-0.5 leading-snug truncate">{employee.email}</p>
@@ -300,8 +307,8 @@ const People = () => {
                       {assets.filter(a => a.assignedToId === employee.id).length} assets
                     </TableCell>
                     <TableCell>
-                      <Badge variant={employee.status === 'active' ? 'success' : 'secondary'}>
-                        {employee.status === 'active' ? 'Active' : 'Inactive'}
+                      <Badge variant={statusBadgeVariant(employee.status)}>
+                        {statusLabel(employee.status)}
                       </Badge>
                     </TableCell>
                     <TableCell>

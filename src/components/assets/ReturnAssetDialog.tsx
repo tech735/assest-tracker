@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -27,11 +26,16 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useAssets, useReturnAsset, useLocations } from '@/hooks/useSupabaseData';
 import { useToast } from '@/hooks/use-toast';
 
 const returnSchema = z.object({
     assetId: z.string().min(1, { message: 'Asset is required.' }),
+    condition: z.enum(['new', 'good', 'fair', 'poor'], { required_error: 'Condition is required.' }),
+    receivedBy: z.string().min(1, { message: 'Received by is required.' }),
+    notes: z.string().optional(),
 });
 
 type ReturnFormValues = z.infer<typeof returnSchema>;
@@ -55,6 +59,9 @@ export function ReturnAssetDialog({ open, onOpenChange, assetId }: ReturnAssetDi
         resolver: zodResolver(returnSchema),
         defaultValues: {
             assetId: assetId || '',
+            condition: preselectedAsset?.condition || 'good',
+            receivedBy: '',
+            notes: '',
         },
     });
 
@@ -67,6 +74,9 @@ export function ReturnAssetDialog({ open, onOpenChange, assetId }: ReturnAssetDi
 
             await returnAsset.mutateAsync({
                 assetId: values.assetId,
+                condition: values.condition,
+                receivedBy: values.receivedBy,
+                notes: values.notes,
                 locationId: coreOffice?.id,
                 locationName: coreOffice?.name
             });
@@ -146,6 +156,62 @@ export function ReturnAssetDialog({ open, onOpenChange, assetId }: ReturnAssetDi
                                 )}
                             />
                         )}
+
+                        <FormField
+                            control={form.control}
+                            name="condition"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Condition on Return</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select condition" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="new">New</SelectItem>
+                                            <SelectItem value="good">Good</SelectItem>
+                                            <SelectItem value="fair">Fair</SelectItem>
+                                            <SelectItem value="poor">Poor</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="receivedBy"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Received By</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="e.g., IT Admin name" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="notes"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Return Notes (Optional)</FormLabel>
+                                    <FormControl>
+                                        <Textarea
+                                            placeholder="e.g., Minor scratch on lid"
+                                            className="resize-none"
+                                            {...field}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
 
                         <DialogFooter className="pt-4">
                             <Button

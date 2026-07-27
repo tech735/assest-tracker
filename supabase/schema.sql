@@ -31,8 +31,9 @@ CREATE TABLE IF NOT EXISTS employees (
   location_id UUID REFERENCES locations(id) ON DELETE SET NULL,
   avatar_url TEXT,
   assets_count INTEGER DEFAULT 0,
-  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'on-leave', 'remote')),
+  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'on-leave', 'remote', 'offboarded')),
   join_date DATE NOT NULL,
+  exit_date DATE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -60,23 +61,34 @@ CREATE TABLE IF NOT EXISTS assets (
   warranty_start DATE,
   warranty_end DATE,
   notes TEXT,
+  repair_vendor TEXT,
+  repair_est_return DATE,
+  repair_cost DECIMAL(10, 2),
+  repair_notes TEXT,
+  lost_reference TEXT,
+  lost_notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- =====================================================
--- ASSIGNMENTS TABLE
+-- ASSIGNMENTS TABLE (also serves as the general asset event log:
+-- assign, return, repair_start, repair_end, lost, found)
 -- =====================================================
 CREATE TABLE IF NOT EXISTS assignments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   asset_id UUID NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
   asset_tag TEXT NOT NULL,
   asset_name TEXT NOT NULL,
-  employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
-  employee_name TEXT NOT NULL,
-  assigned_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  employee_id UUID REFERENCES employees(id) ON DELETE CASCADE,
+  employee_name TEXT,
+  event_type TEXT NOT NULL DEFAULT 'assign' CHECK (event_type IN ('assign', 'return', 'repair_start', 'repair_end', 'lost', 'found')),
+  assigned_date DATE NOT NULL DEFAULT CURRENT_DATE, -- event date for this row
   return_date DATE,
   condition TEXT NOT NULL DEFAULT 'good' CHECK (condition IN ('new', 'good', 'fair', 'poor')),
+  handed_over_by TEXT,
+  received_by TEXT,
+  bundle_id UUID,
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -108,6 +120,8 @@ CREATE INDEX IF NOT EXISTS idx_employees_email ON employees(email);
 CREATE INDEX IF NOT EXISTS idx_employees_status ON employees(status);
 CREATE INDEX IF NOT EXISTS idx_assignments_asset_id ON assignments(asset_id);
 CREATE INDEX IF NOT EXISTS idx_assignments_employee_id ON assignments(employee_id);
+CREATE INDEX IF NOT EXISTS idx_assignments_event_type ON assignments(event_type);
+CREATE INDEX IF NOT EXISTS idx_assignments_bundle_id ON assignments(bundle_id);
 CREATE INDEX IF NOT EXISTS idx_alerts_type ON alerts(type);
 CREATE INDEX IF NOT EXISTS idx_alerts_severity ON alerts(severity);
 CREATE INDEX IF NOT EXISTS idx_alerts_is_resolved ON alerts(is_resolved);
