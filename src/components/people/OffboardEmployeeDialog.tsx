@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { DatePicker } from '@/components/ui/date-picker';
 import { useAssets, useReturnAsset, useLocations, useOffboardEmployee } from '@/hooks/useSupabaseData';
 import { useToast } from '@/hooks/use-toast';
 import { Employee } from '@/types/asset';
@@ -107,11 +108,10 @@ export function OffboardEmployeeDialog({ employee, open, onOpenChange }: Offboar
                             )}
                             <div className="space-y-1.5">
                                 <Label htmlFor="exit-date" className="text-foreground">Exit Date</Label>
-                                <Input
+                                <DatePicker
                                     id="exit-date"
-                                    type="date"
                                     value={exitDate}
-                                    onChange={(e) => setExitDate(e.target.value)}
+                                    onChange={setExitDate}
                                 />
                             </div>
                         </div>

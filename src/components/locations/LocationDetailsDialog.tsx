@@ -1,23 +1,19 @@
 import { useState } from 'react';
-import { MapPin, Building2, Users, Package, Clock, TrendingUp, AlertTriangle, CheckCircle, XCircle, Wrench } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { MapPin, Building2, Users, Package, TrendingUp, AlertTriangle, CheckCircle, Wrench } from 'lucide-react';
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Location } from '@/types/asset';
 import { useAssets, useEmployees } from '@/hooks/useSupabaseData';
+import { InfoCard, Field, DetailNavHeader } from '@/components/ui/detail-card';
 
 interface LocationDetailsDialogProps {
-  location: Location;
+  locations: Location[];
+  currentIndex: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onNavigate: (index: number) => void;
 }
 
 const typeIcons = {
@@ -34,28 +30,31 @@ const typeLabels = {
   outlet: 'Outlet',
 };
 
-const statusColors = {
-  available: 'bg-green-100 text-green-800',
-  assigned: 'bg-blue-100 text-blue-800',
-  repair: 'bg-yellow-100 text-yellow-800',
-  lost: 'bg-red-100 text-red-800',
-  retired: 'bg-gray-100 text-gray-800',
+const statusVariants: Record<string, 'available' | 'assigned' | 'repair' | 'lost' | 'retired'> = {
+  available: 'available',
+  assigned: 'assigned',
+  repair: 'repair',
+  lost: 'lost',
+  retired: 'retired',
 };
 
-export function LocationDetailsDialog({ location, open, onOpenChange }: LocationDetailsDialogProps) {
+export function LocationDetailsDialog({ locations, currentIndex, open, onOpenChange, onNavigate }: LocationDetailsDialogProps) {
+  const location = locations[currentIndex];
   const { data: assets = [] } = useAssets();
   const { data: employees = [] } = useEmployees();
   const [activeTab, setActiveTab] = useState('overview');
+
+  if (!location) return null;
 
   // Get assets and employees for this location
   const locationAssets = assets.filter(asset => {
     // Filter by location name (text field) instead of locationId
     const assetLocation = asset.location?.toLowerCase().trim();
     const locationName = location.name.toLowerCase().trim();
-    
-    return assetLocation === locationName || 
-           (locationName === 'warehouse' && assetLocation === 'central warehouse') ||
-           (locationName === 'central warehouse' && assetLocation === 'warehouse');
+
+    return assetLocation === locationName ||
+      (locationName === 'warehouse' && assetLocation === 'central warehouse') ||
+      (locationName === 'central warehouse' && assetLocation === 'warehouse');
   });
   const locationEmployees = employees.filter(employee => employee.locationId === location.id);
 
@@ -65,7 +64,6 @@ export function LocationDetailsDialog({ location, open, onOpenChange }: Location
   const availableAssets = locationAssets.filter(asset => asset.status === 'available').length;
   const repairAssets = locationAssets.filter(asset => asset.status === 'repair').length;
   const lostAssets = locationAssets.filter(asset => asset.status === 'lost').length;
-  const retiredAssets = locationAssets.filter(asset => asset.status === 'retired').length;
 
   const utilizationRate = totalAssets > 0 ? (assignedAssets / totalAssets) * 100 : 0;
 
@@ -83,159 +81,121 @@ export function LocationDetailsDialog({ location, open, onOpenChange }: Location
   const Icon = typeIcons[location.type];
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-4xl max-h-[90vh] overflow-y-auto scrollbar-hide">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-brand-blue/10">
-              <Icon className="w-5 h-5 text-brand-blue" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold">
-                {location.name === 'Warehouse' ? 'Central Warehouse' : location.name}
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                {typeLabels[location.type]}
-              </p>
-            </div>
-          </DialogTitle>
-          <DialogDescription>
-            Detailed view of location assets, employees, and utilization metrics
-          </DialogDescription>
-        </DialogHeader>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col gap-0">
+        <DetailNavHeader index={currentIndex} total={locations.length} onNavigate={onNavigate} />
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="assets">Assets</TabsTrigger>
-            <TabsTrigger value="employees">Employees</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+        {/* Identity row */}
+        <div className="px-4 sm:px-6 py-4 flex items-start gap-3 border-b border-border shrink-0">
+          <div className="w-11 h-11 rounded-xl bg-muted flex items-center justify-center shrink-0">
+            <Icon className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0 pr-1">
+            <SheetTitle className="text-base font-medium leading-tight truncate">
+              {location.name === 'Warehouse' ? 'Central Warehouse' : location.name}
+            </SheetTitle>
+            <SheetDescription asChild>
+              <p className="text-xs text-muted-foreground mt-0.5">{typeLabels[location.type]}</p>
+            </SheetDescription>
+          </div>
+        </div>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
+          <TabsList className="grid w-full grid-cols-4 rounded-none border-b border-border bg-transparent h-auto px-4 sm:px-6 shrink-0">
+            <TabsTrigger value="overview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3 text-xs">Overview</TabsTrigger>
+            <TabsTrigger value="assets" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3 text-xs">Assets</TabsTrigger>
+            <TabsTrigger value="employees" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3 text-xs">Employees</TabsTrigger>
+            <TabsTrigger value="analytics" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3 text-xs">Analytics</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-6">
-            {/* Location Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <MapPin className="w-5 h-5" />
-                  Location Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+          <TabsContent value="overview" className="flex-1 overflow-y-auto scrollbar-hide">
+            <div className="p-4 sm:p-6 space-y-4">
+              <InfoCard title="Location Information" icon={MapPin}>
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Type</p>
-                    <Badge variant="outline">{typeLabels[location.type]}</Badge>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Total Assets</p>
-                    <p className="text-2xl font-bold">{totalAssets}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Total Employees</p>
-                    <p className="text-2xl font-bold">{locationEmployees.length}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Utilization Rate</p>
-                    <div className="flex items-center gap-2">
-                      <Progress value={utilizationRate} className="flex-1" />
-                      <span className="text-sm font-medium">{utilizationRate.toFixed(1)}%</span>
-                    </div>
-                  </div>
+                  <Field label="Type" value={<Badge variant="outline" className="text-xs">{typeLabels[location.type]}</Badge>} />
+                  <Field label="Total Assets" value={totalAssets} />
+                  <Field label="Total Employees" value={locationEmployees.length} />
+                  <Field
+                    label="Utilization Rate"
+                    value={
+                      <div className="flex items-center gap-2">
+                        <Progress value={utilizationRate} className="flex-1" />
+                        <span className="text-sm font-medium">{utilizationRate.toFixed(1)}%</span>
+                      </div>
+                    }
+                  />
                 </div>
                 {location.address && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-2">Address</p>
-                    <p className="text-sm">{location.address}</p>
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <Field label="Address" value={location.address} />
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </InfoCard>
 
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <CheckCircle className="w-8 h-8 text-green-600 mx-auto mb-2" />
-                  <p className="text-2xl font-bold">{availableAssets}</p>
-                  <p className="text-sm text-muted-foreground">Available</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <Users className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-                  <p className="text-2xl font-bold">{assignedAssets}</p>
-                  <p className="text-sm text-muted-foreground">Assigned</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <Wrench className="w-8 h-8 text-yellow-600 mx-auto mb-2" />
-                  <p className="text-2xl font-bold">{repairAssets}</p>
-                  <p className="text-sm text-muted-foreground">In Repair</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <AlertTriangle className="w-8 h-8 text-red-600 mx-auto mb-2" />
-                  <p className="text-2xl font-bold">{lostAssets}</p>
-                  <p className="text-sm text-muted-foreground">Lost</p>
-                </CardContent>
-              </Card>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl border border-border bg-card p-4 text-center">
+                  <CheckCircle className="w-6 h-6 text-success mx-auto mb-2" />
+                  <p className="text-xl font-semibold">{availableAssets}</p>
+                  <p className="text-xs text-muted-foreground">Available</p>
+                </div>
+                <div className="rounded-xl border border-border bg-card p-4 text-center">
+                  <Users className="w-6 h-6 text-info mx-auto mb-2" />
+                  <p className="text-xl font-semibold">{assignedAssets}</p>
+                  <p className="text-xs text-muted-foreground">Assigned</p>
+                </div>
+                <div className="rounded-xl border border-border bg-card p-4 text-center">
+                  <Wrench className="w-6 h-6 text-warning mx-auto mb-2" />
+                  <p className="text-xl font-semibold">{repairAssets}</p>
+                  <p className="text-xs text-muted-foreground">In Repair</p>
+                </div>
+                <div className="rounded-xl border border-border bg-card p-4 text-center">
+                  <AlertTriangle className="w-6 h-6 text-destructive mx-auto mb-2" />
+                  <p className="text-xl font-semibold">{lostAssets}</p>
+                  <p className="text-xs text-muted-foreground">Lost</p>
+                </div>
+              </div>
             </div>
           </TabsContent>
 
-          <TabsContent value="assets" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Assets at this Location</CardTitle>
-              </CardHeader>
-              <CardContent>
+          <TabsContent value="assets" className="flex-1 overflow-y-auto scrollbar-hide">
+            <div className="p-4 sm:p-6">
+              <InfoCard title="Assets at this Location" icon={Package}>
                 {locationAssets.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">No assets at this location</p>
+                  <p className="text-center text-muted-foreground py-8 text-sm">No assets at this location</p>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="rounded-xl overflow-hidden border border-border divide-y divide-border -mx-1">
                     {locationAssets.map((asset) => (
-                      <div key={asset.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div className="flex items-center gap-4">
-                          <div>
-                            <p className="font-medium">{asset.name}</p>
-                            <p className="text-sm text-muted-foreground">{asset.assetTag}</p>
-                          </div>
-                          <Badge variant="outline">{asset.category}</Badge>
-                          <Badge className={statusColors[asset.status]}>
-                            {asset.status}
-                          </Badge>
+                      <div key={asset.id} className="px-3 py-2.5 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{asset.name}</p>
+                          <p className="text-xs text-muted-foreground font-mono">{asset.assetTag}</p>
                         </div>
-                        <div className="text-right">
-                          <p className="text-sm font-medium">{asset.assignedTo || 'Unassigned'}</p>
-                          <p className="text-xs text-muted-foreground">{asset.brand} {asset.model}</p>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge variant="outline" className="text-xs capitalize">{asset.category}</Badge>
+                          <Badge variant={statusVariants[asset.status] ?? 'secondary'} className="text-xs capitalize">{asset.status}</Badge>
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </InfoCard>
+            </div>
           </TabsContent>
 
-          <TabsContent value="employees" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Employees at this Location</CardTitle>
-              </CardHeader>
-              <CardContent>
+          <TabsContent value="employees" className="flex-1 overflow-y-auto scrollbar-hide">
+            <div className="p-4 sm:p-6">
+              <InfoCard title="Employees at this Location" icon={Users}>
                 {locationEmployees.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">No employees at this location</p>
+                  <p className="text-center text-muted-foreground py-8 text-sm">No employees at this location</p>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="rounded-xl overflow-hidden border border-border divide-y divide-border">
                     {locationEmployees.map((employee) => (
-                      <div key={employee.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div>
-                          <p className="font-medium">{employee.name}</p>
-                          <p className="text-sm text-muted-foreground">{employee.email}</p>
+                      <div key={employee.id} className="px-3 py-2.5 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{employee.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{employee.email}</p>
                         </div>
-                        <div className="text-right">
+                        <div className="text-right shrink-0">
                           <p className="text-sm font-medium">{employee.department}</p>
                           <p className="text-xs text-muted-foreground">{employee.position}</p>
                         </div>
@@ -243,64 +203,53 @@ export function LocationDetailsDialog({ location, open, onOpenChange }: Location
                     ))}
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </InfoCard>
+            </div>
           </TabsContent>
 
-          <TabsContent value="analytics" className="space-y-6">
-            {/* Category Breakdown */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Asset Categories</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {Object.entries(categoryBreakdown).map(([category, count]) => (
-                    <div key={category} className="flex items-center justify-between">
-                      <span className="capitalize">{category}</span>
-                      <div className="flex items-center gap-2">
-                        <Progress 
-                          value={totalAssets > 0 ? (count / totalAssets) * 100 : 0} 
-                          className="w-24" 
-                        />
-                        <span className="text-sm font-medium w-8">{count}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Recent Assets */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Recently Added Assets</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {recentAssets.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">No recent assets</p>
+          <TabsContent value="analytics" className="flex-1 overflow-y-auto scrollbar-hide">
+            <div className="p-4 sm:p-6 space-y-4">
+              <InfoCard title="Asset Categories" icon={TrendingUp}>
+                {Object.keys(categoryBreakdown).length === 0 ? (
+                  <p className="text-center text-muted-foreground py-4 text-sm">No assets to break down</p>
                 ) : (
                   <div className="space-y-3">
-                    {recentAssets.map((asset) => (
-                      <div key={asset.id} className="flex items-center justify-between text-sm">
-                        <div>
-                          <p className="font-medium">{asset.name}</p>
-                          <p className="text-muted-foreground">{asset.assetTag}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-muted-foreground">
-                            Added {new Date(asset.createdAt || '').toLocaleDateString()}
-                          </p>
+                    {Object.entries(categoryBreakdown).map(([category, count]) => (
+                      <div key={category} className="flex items-center justify-between gap-3">
+                        <span className="text-sm capitalize">{category}</span>
+                        <div className="flex items-center gap-2">
+                          <Progress value={totalAssets > 0 ? (count / totalAssets) * 100 : 0} className="w-24" />
+                          <span className="text-sm font-medium w-6 text-right">{count}</span>
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </InfoCard>
+
+              <InfoCard title="Recently Added Assets" icon={Package}>
+                {recentAssets.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-4 text-sm">No recent assets</p>
+                ) : (
+                  <div className="space-y-3">
+                    {recentAssets.map((asset) => (
+                      <div key={asset.id} className="flex items-center justify-between gap-3 text-sm">
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{asset.name}</p>
+                          <p className="text-muted-foreground text-xs font-mono">{asset.assetTag}</p>
+                        </div>
+                        <p className="text-muted-foreground text-xs shrink-0">
+                          Added {new Date(asset.createdAt || '').toLocaleDateString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </InfoCard>
+            </div>
           </TabsContent>
         </Tabs>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

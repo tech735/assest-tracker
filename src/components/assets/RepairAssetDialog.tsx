@@ -28,6 +28,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { DatePicker } from '@/components/ui/date-picker';
 import { useStartRepair, useEndRepair } from '@/hooks/useSupabaseData';
 import { useToast } from '@/hooks/use-toast';
 import { Asset } from '@/types/asset';
@@ -196,7 +197,7 @@ export function RepairAssetDialog({ asset, open, onOpenChange }: RepairAssetDial
                                         <FormItem>
                                             <FormLabel>Est. Return Date</FormLabel>
                                             <FormControl>
-                                                <Input type="date" {...field} />
+                                                <DatePicker value={field.value} onChange={field.onChange} onBlur={field.onBlur} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>

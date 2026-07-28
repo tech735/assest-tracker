@@ -54,10 +54,10 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+      {/* Page Header — desktop shows this in the top bar instead (see NewLayout) */}
+      <div className="lg:hidden flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div className="space-y-1">
-          <h1 className="text-2xl lg:text-3xl mt-2 font-semibold tracking-tight">Dashboard</h1>
+          <h1 className="text-xl lg:text-2xl font-medium tracking-tight">Dashboard</h1>
           <p className="text-sm text-muted-foreground">Overview of your asset inventory</p>
         </div>
       </div>

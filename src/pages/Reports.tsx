@@ -332,7 +332,7 @@ const Reports = () => {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Reports</h1>
+          <h1 className="text-xl font-semibold tracking-tight">Reports</h1>
           <p className="text-muted-foreground">
             Generate and download asset management reports
           </p>

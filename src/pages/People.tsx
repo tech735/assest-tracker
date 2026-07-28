@@ -51,7 +51,7 @@ const People = () => {
 
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [offboardingEmployee, setOffboardingEmployee] = useState<Employee | null>(null);
-  const [viewingEmployee, setViewingEmployee] = useState<Employee | null>(null);
+  const [viewingEmployeeId, setViewingEmployeeId] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -64,7 +64,7 @@ const People = () => {
     const viewId = searchParams.get('view');
     if (viewId && employees.length > 0) {
       const employee = employees.find(e => e.id === viewId);
-      if (employee) setViewingEmployee(employee);
+      if (employee) setViewingEmployeeId(employee.id);
     }
   }, [searchParams, employees]);
 
@@ -132,7 +132,7 @@ const People = () => {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">People</h1>
+          <h1 className="text-xl lg:text-2xl font-semibold tracking-tight">People</h1>
           <p className="text-muted-foreground text-sm mt-1">Manage employees and their asset assignments</p>
         </div>
         <div className="flex items-center gap-3">
@@ -150,45 +150,43 @@ const People = () => {
       </div>
 
       {/* Filters */}
-      <Card className="p-4 border shadow-card">
-        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
-          <div className="relative flex-1 min-w-0 sm:min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search people..."
-              className="pl-10 w-full"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[130px]">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-                <SelectItem value="offboarded">Offboarded</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="All Departments" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Departments</SelectItem>
-                {departments.map((dept) => (
-                  <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2">
+        <div className="relative w-full sm:w-64 shrink-0">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search people..."
+            className="pl-10 w-full rounded-full bg-card border-border/60 shadow-sm"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
-      </Card>
+        <div className="flex flex-wrap gap-2">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[130px] rounded-full bg-card border-border/60 shadow-sm">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+              <SelectItem value="offboarded">Offboarded</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+            <SelectTrigger className="w-[160px] rounded-full bg-card border-border/60 shadow-sm">
+              <SelectValue placeholder="All Departments" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Departments</SelectItem>
+              {departments.map((dept) => (
+                <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
       {/* ── Mobile card list (< lg) ───────────────────────── */}
       <div className="block lg:hidden rounded-xl overflow-hidden border border-border bg-card">
@@ -204,7 +202,7 @@ const People = () => {
                 <div
                   key={employee.id}
                   className={`px-4 py-3 flex items-center gap-3 cursor-pointer active:bg-muted/50 transition-colors ${idx < currentEmployees.length - 1 ? 'border-b border-border' : ''}`}
-                  onClick={() => setViewingEmployee(employee)}
+                  onClick={() => setViewingEmployeeId(employee.id)}
                 >
                   <Avatar className="w-10 h-10 shrink-0">
                     <AvatarImage src={employee.avatarUrl} />
@@ -319,7 +317,7 @@ const People = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem className="gap-2" onClick={() => setViewingEmployee(employee)}>
+                          <DropdownMenuItem className="gap-2" onClick={() => setViewingEmployeeId(employee.id)}>
                             <Eye className="w-4 h-4" /> View Profile
                           </DropdownMenuItem>
                           <DropdownMenuItem className="gap-2" onClick={() => setEditingEmployee(employee)}>
@@ -372,13 +370,19 @@ const People = () => {
           onOpenChange={(open) => !open && setOffboardingEmployee(null)}
         />
       )}
-      {viewingEmployee && (
-        <EmployeeProfileDialog
-          employee={viewingEmployee}
-          open={!!viewingEmployee}
-          onOpenChange={(open) => !open && setViewingEmployee(null)}
-        />
-      )}
+      {viewingEmployeeId && (() => {
+        const viewingIndex = sortedEmployees.findIndex(e => e.id === viewingEmployeeId);
+        if (viewingIndex === -1) return null;
+        return (
+          <EmployeeProfileDialog
+            employees={sortedEmployees}
+            currentIndex={viewingIndex}
+            open={!!viewingEmployeeId}
+            onOpenChange={(open) => !open && setViewingEmployeeId(null)}
+            onNavigate={(index) => setViewingEmployeeId(sortedEmployees[index].id)}
+          />
+        );
+      })()}
     </div>
   );
 };

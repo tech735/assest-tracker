@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAssets, useAssignAssetsBundle } from '@/hooks/useSupabaseData';
@@ -173,7 +174,7 @@ export function BundleAssignDialog({ employee, open, onOpenChange }: BundleAssig
                                     <FormItem>
                                         <FormLabel>Handover Date</FormLabel>
                                         <FormControl>
-                                            <Input type="date" {...field} />
+                                            <DatePicker value={field.value} onChange={field.onChange} onBlur={field.onBlur} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>

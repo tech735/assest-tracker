@@ -1,5 +1,11 @@
+import { Pie, PieChart } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import {
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  type ChartConfig,
+} from '@/components/ui/chart';
 import { ArrowUpRight } from 'lucide-react';
 
 interface AssetsByCategory {
@@ -13,8 +19,15 @@ interface CategoryChartProps {
 }
 
 export function CategoryChart({ data }: CategoryChartProps) {
+  const chartData = data.map((item) => ({ ...item, fill: item.color }));
+
+  const chartConfig = data.reduce((config, item) => {
+    config[item.name] = { label: item.name, color: item.color };
+    return config;
+  }, {} as ChartConfig);
+
   return (
-    <Card className="border shadow-card">
+    <Card className="border shadow-card flex flex-col">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-accent-foreground">
@@ -23,42 +36,17 @@ export function CategoryChart({ data }: CategoryChartProps) {
           <CardTitle className="text-lg font-semibold">Overview</CardTitle>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="h-[280px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={data}
-                cx="50%"
-                cy="45%"
-                innerRadius={60}
-                outerRadius={90}
-                paddingAngle={3}
-                dataKey="value"
-              >
-                {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: 'hsl(var(--card))',
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '8px',
-                  padding: '8px 12px',
-                }}
-              />
-              <Legend
-                layout="horizontal"
-                verticalAlign="bottom"
-                align="center"
-                wrapperStyle={{ paddingTop: '20px' }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
+      <CardContent className="flex-1 pb-0">
+        <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[280px]">
+          <PieChart>
+            <Pie data={chartData} dataKey="value" nameKey="name" />
+            <ChartLegend
+              content={<ChartLegendContent nameKey="name" />}
+              className="-translate-y-2 flex-wrap gap-2 *:basis-1/4 *:justify-center"
+            />
+          </PieChart>
+        </ChartContainer>
       </CardContent>
     </Card>
   );
 }
-

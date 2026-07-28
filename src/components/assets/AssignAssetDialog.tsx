@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Textarea } from '@/components/ui/textarea';
 import { useCreateAssignment, useEmployees, useUpdateAsset, useAssets } from '@/hooks/useSupabaseData';
 import { useToast } from '@/hooks/use-toast';
@@ -223,7 +224,7 @@ export function AssignAssetDialog({ asset, open, onOpenChange }: AssignAssetDial
                                     <FormItem>
                                         <FormLabel>Handover Date</FormLabel>
                                         <FormControl>
-                                            <Input type="date" {...field} />
+                                            <DatePicker value={field.value} onChange={field.onChange} onBlur={field.onBlur} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>

@@ -44,7 +44,7 @@ export function StatCard({ title, value, icon: Icon, trend, variant = 'default' 
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1.5">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</p>
-            <p className="text-2xl font-semibold tracking-tight">{value.toLocaleString()}</p>
+            <p className="text-xl font-medium tracking-tight">{value.toLocaleString()}</p>
             {trend && (
               <div className="flex items-center gap-1 text-xs">
                 {trend.isPositive ? (

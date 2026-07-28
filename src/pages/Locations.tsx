@@ -43,7 +43,7 @@ const Locations = () => {
   // State for edit/delete/details dialogs
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
   const [deletingLocation, setDeletingLocation] = useState<Location | null>(null);
-  const [viewingLocation, setViewingLocation] = useState<Location | null>(null);
+  const [viewingLocationId, setViewingLocationId] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
 
   const { data: locations = [], isLoading: isLoadingLocations } = useLocations();
@@ -55,7 +55,7 @@ const Locations = () => {
     if (viewId && locations.length > 0) {
       const location = locations.find(l => l.id === viewId);
       if (location) {
-        setViewingLocation(location);
+        setViewingLocationId(location.id);
       }
     }
   }, [searchParams, locations]);
@@ -192,7 +192,7 @@ const Locations = () => {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">Locations</h1>
+          <h1 className="text-xl lg:text-2xl font-semibold tracking-tight">Locations</h1>
           <p className="text-muted-foreground text-sm mt-1">Manage offices, warehouses, and remote locations</p>
         </div>
         <div className="flex items-center gap-3">
@@ -210,21 +210,21 @@ const Locations = () => {
       </div>
 
       {/* Search */}
-      <Card className="p-4 border shadow-card">
-        <div className="relative w-full sm:max-w-md">
+      <div className="flex flex-col gap-2">
+        <div className="relative w-full sm:w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             type="search"
             placeholder="Search locations..."
-            className="pl-10 w-full"
+            className="pl-10 w-full rounded-full bg-card border-border/60 shadow-sm"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <div className="flex items-center justify-between text-sm text-muted-foreground mt-4">
-          <span>Showing {filteredLocations.length} of {locations.length} locations</span>
-        </div>
-      </Card>
+        <span className="text-sm text-muted-foreground">
+          Showing {filteredLocations.length} of {locations.length} locations
+        </span>
+      </div>
 
       {/* Locations Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -273,7 +273,7 @@ const Locations = () => {
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem
                           className="gap-2"
-                          onClick={() => setViewingLocation(location)}
+                          onClick={() => setViewingLocationId(location.id)}
                         >
                           <Eye className="w-4 h-4 text-muted-foreground" />
                           View details
@@ -312,14 +312,14 @@ const Locations = () => {
 
                   <div className="flex items-center justify-between pt-4 border-t border-border">
                     <div className="text-center flex-1">
-                      <p className="text-2xl font-bold">
+                      <p className="text-xl font-semibold">
                         {locationAssets.length}
                       </p>
                       <p className="text-xs text-muted-foreground">Assets</p>
                     </div>
                     <div className="w-px h-8 bg-border"></div>
                     <div className="text-center flex-1">
-                      <p className="text-2xl font-bold">
+                      <p className="text-xl font-semibold">
                         {employees.filter(e => e.locationId === location.id).length}
                       </p>
                       <p className="text-xs text-muted-foreground">Employees</p>
@@ -347,13 +347,19 @@ const Locations = () => {
           onOpenChange={(open) => !open && setDeletingLocation(null)}
         />
       )}
-      {viewingLocation && (
-        <LocationDetailsDialog
-          location={viewingLocation}
-          open={!!viewingLocation}
-          onOpenChange={(open) => !open && setViewingLocation(null)}
-        />
-      )}
+      {viewingLocationId && (() => {
+        const viewingIndex = filteredLocations.findIndex(l => l.id === viewingLocationId);
+        if (viewingIndex === -1) return null;
+        return (
+          <LocationDetailsDialog
+            locations={filteredLocations}
+            currentIndex={viewingIndex}
+            open={!!viewingLocationId}
+            onOpenChange={(open) => !open && setViewingLocationId(null)}
+            onNavigate={(index) => setViewingLocationId(filteredLocations[index].id)}
+          />
+        );
+      })()}
     </div>
   );
 };

@@ -98,7 +98,7 @@ const Settings = () => {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+          <h1 className="text-xl font-semibold tracking-tight">Settings</h1>
           <p className="text-muted-foreground">
             Manage your asset portal configuration and preferences
           </p>

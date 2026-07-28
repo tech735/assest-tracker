@@ -67,12 +67,11 @@ export function AddEmployeeDialog() {
         try {
             const selectedLocation = locations.find(l => l.id === values.locationId);
 
-            const avatarSeed = values.name.replace(/\s+/g, '-').toLowerCase();
             const finalValues = {
                 ...values,
                 location: selectedLocation?.name || 'Unknown',
                 locationId: values.locationId,
-                avatarUrl: values.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${avatarSeed}`,
+                avatarUrl: values.avatarUrl || undefined,
                 joinDate: new Date().toISOString(),
             };
 

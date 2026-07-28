@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Table,
   TableBody,
@@ -83,6 +84,16 @@ const statusLabels: Record<AssetStatus, string> = {
   retired: 'Retired',
 };
 
+const conditionVariants: Record<string, 'success' | 'info' | 'warning' | 'destructive'> = {
+  new: 'success',
+  good: 'info',
+  fair: 'warning',
+  poor: 'destructive',
+};
+
+const getInitials = (name: string) =>
+  name.split(' ').filter(Boolean).map((n) => n[0]).slice(0, 2).join('').toUpperCase();
+
 
 
 const Assets = () => {
@@ -102,7 +113,7 @@ const Assets = () => {
   const [returningAsset, setReturningAsset] = useState<Asset | null>(null);
   const [repairingAsset, setRepairingAsset] = useState<Asset | null>(null);
   const [losingAsset, setLosingAsset] = useState<Asset | null>(null);
-  const [viewingAsset, setViewingAsset] = useState<{ asset: Asset; tab: 'details' | 'history' } | null>(null);
+  const [viewingAsset, setViewingAsset] = useState<{ assetId: string; tab: 'details' | 'history' } | null>(null);
   const [cloningAsset, setCloningAsset] = useState<Asset | null>(null);
   const [searchParams] = useSearchParams();
 
@@ -118,7 +129,7 @@ const Assets = () => {
     if (viewId && assets.length > 0) {
       const asset = assets.find(a => a.id === viewId);
       if (asset) {
-        setViewingAsset({ asset, tab: 'details' });
+        setViewingAsset({ assetId: asset.id, tab: 'details' });
       }
     }
   }, [searchParams, assets]);
@@ -228,7 +239,7 @@ const Assets = () => {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">Assets</h1>
+          <h1 className="text-xl lg:text-2xl font-semibold tracking-tight">Assets</h1>
           <p className="text-muted-foreground text-sm mt-1">Manage and track all organizational assets</p>
         </div>
         <div className="flex items-center gap-3">
@@ -246,71 +257,70 @@ const Assets = () => {
       </div>
 
       {/* Filters */}
-      <Card className="p-4 border shadow-card">
-        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
-          <div className="relative flex-1 min-w-0 sm:min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search assets..."
-              className="pl-10 w-full"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+      <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2">
+        <div className="relative w-full sm:w-64 shrink-0">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search assets..."
+            className="pl-10 w-full rounded-full bg-card border-border/60 shadow-sm"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
 
-          <div className="flex flex-wrap gap-2">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[130px]">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="available">Available</SelectItem>
-                <SelectItem value="assigned">Assigned</SelectItem>
-                <SelectItem value="repair">In Repair</SelectItem>
-                <SelectItem value="lost">Lost</SelectItem>
-                <SelectItem value="retired">Retired</SelectItem>
-              </SelectContent>
-            </Select>
+        <div className="flex flex-wrap gap-2">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[130px] rounded-full bg-card border-border/60 shadow-sm">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="available">Available</SelectItem>
+              <SelectItem value="assigned">Assigned</SelectItem>
+              <SelectItem value="repair">In Repair</SelectItem>
+              <SelectItem value="lost">Lost</SelectItem>
+              <SelectItem value="retired">Retired</SelectItem>
+            </SelectContent>
+          </Select>
 
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map((cat: string) => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-[140px] rounded-full bg-card border-border/60 shadow-sm">
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map((cat: string) => (
+                <SelectItem key={cat} value={cat}>
+                  {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-            <Select value={locationFilter} onValueChange={setLocationFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="All Locations" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Locations</SelectItem>
-                {locations.map((location) => (
-                  <SelectItem key={location.id} value={location.id}>
-                    {location.name === 'Warehouse' ? 'Central Warehouse' : location.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <Select value={locationFilter} onValueChange={setLocationFilter}>
+            <SelectTrigger className="w-[150px] rounded-full bg-card border-border/60 shadow-sm">
+              <SelectValue placeholder="All Locations" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Locations</SelectItem>
+              {locations.map((location) => (
+                <SelectItem key={location.id} value={location.id}>
+                  {location.name === 'Warehouse' ? 'Central Warehouse' : location.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="icon" className="relative shrink-0">
-                  <Filter className="w-4 h-4" />
-                  {(vendorFilter !== 'all' || brandFilter !== 'all' || conditionFilter !== 'all' || assignedToFilter !== 'all') && (
-                    <div className="w-2 h-2 rounded-full bg-primary absolute -top-1 -right-1" />
-                  )}
-                </Button>
-              </PopoverTrigger>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="icon" className="relative shrink-0 rounded-full bg-card border-border/60 shadow-sm">
+                <Filter className="w-4 h-4" />
+                {(vendorFilter !== 'all' || brandFilter !== 'all' || conditionFilter !== 'all' || assignedToFilter !== 'all') && (
+                  <div className="w-2 h-2 rounded-full bg-primary absolute -top-1 -right-1" />
+                )}
+              </Button>
+            </PopoverTrigger>
               <PopoverContent className="w-80 p-4" align="start">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -381,9 +391,8 @@ const Assets = () => {
                 </div>
               </PopoverContent>
             </Popover>
-          </div>
         </div>
-      </Card>
+      </div>
 
       {/* ── Mobile card list (< lg) ───────────────────────── */}
       <div className="block lg:hidden rounded-xl overflow-hidden border border-border bg-card">
@@ -399,7 +408,7 @@ const Assets = () => {
                 <div
                   key={asset.id}
                   className={`px-4 py-3 flex items-center gap-3 cursor-pointer active:bg-muted/50 transition-colors ${idx < currentAssets.length - 1 ? 'border-b border-border' : ''}`}
-                  onClick={() => setViewingAsset({ asset, tab: 'details' })}
+                  onClick={() => setViewingAsset({ assetId: asset.id, tab: 'details' })}
                 >
                   <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-muted shrink-0">
                     <Icon className="w-4 h-4 text-primary" />
@@ -493,8 +502,8 @@ const Assets = () => {
                       </TableCell>
                       <TableCell>
                         <div>
-                          <p className="font-mono text-sm">{asset.assetTag}</p>
-                          <p className="text-xs text-muted-foreground font-mono">{asset.serialNumber}</p>
+                          <p className="font-mono tabular-nums text-sm">{asset.assetTag}</p>
+                          <p className="text-xs text-muted-foreground font-mono tabular-nums">{asset.serialNumber}</p>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -507,13 +516,22 @@ const Assets = () => {
                       </TableCell>
                       <TableCell>
                         {asset.assignedTo ? (
-                          <span>{asset.assignedTo}</span>
+                          <div className="flex items-center gap-2.5">
+                            <Avatar className="w-7 h-7">
+                              <AvatarFallback className="bg-muted text-primary text-[11px] font-medium">
+                                {getInitials(asset.assignedTo)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm">{asset.assignedTo}</span>
+                          </div>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}
                       </TableCell>
                       <TableCell>
-                        <span className="capitalize text-muted-foreground">{asset.condition}</span>
+                        <Badge variant={conditionVariants[asset.condition] ?? 'secondary'} className="capitalize">
+                          {asset.condition}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -524,7 +542,7 @@ const Assets = () => {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem className="gap-2" onClick={() => setViewingAsset({ asset, tab: 'details' })}>
+                            <DropdownMenuItem className="gap-2" onClick={() => setViewingAsset({ assetId: asset.id, tab: 'details' })}>
                               <Eye className="w-4 h-4 text-muted-foreground" />View details
                             </DropdownMenuItem>
                             <DropdownMenuItem className="gap-2" onClick={() => setEditingAsset(asset)}>
@@ -559,7 +577,7 @@ const Assets = () => {
                                 <CheckCircle className="w-4 h-4 text-muted-foreground" />Mark as found
                               </DropdownMenuItem>
                             )}
-                            <DropdownMenuItem className="gap-2" onClick={() => setViewingAsset({ asset, tab: 'history' })}>
+                            <DropdownMenuItem className="gap-2" onClick={() => setViewingAsset({ assetId: asset.id, tab: 'history' })}>
                               <History className="w-4 h-4 text-muted-foreground" />View history
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
@@ -614,14 +632,27 @@ const Assets = () => {
           onOpenChange={(open) => !open && setAssigningAsset(null)}
         />
       )}
-      {viewingAsset && (
-        <AssetDetailsDialog
-          asset={viewingAsset.asset}
-          open={!!viewingAsset}
-          onOpenChange={(open) => !open && setViewingAsset(null)}
-          defaultTab={viewingAsset.tab}
-        />
-      )}
+      {viewingAsset && (() => {
+        const viewingIndex = filteredAssets.findIndex(a => a.id === viewingAsset.assetId);
+        if (viewingIndex === -1) return null;
+        return (
+          <AssetDetailsDialog
+            assets={filteredAssets}
+            currentIndex={viewingIndex}
+            open={!!viewingAsset}
+            onOpenChange={(open) => !open && setViewingAsset(null)}
+            onNavigate={(index) => setViewingAsset({ assetId: filteredAssets[index].id, tab: viewingAsset.tab })}
+            defaultTab={viewingAsset.tab}
+            onEdit={setEditingAsset}
+            onClone={handleCloneAsset}
+            onAssign={setAssigningAsset}
+            onReturn={setReturningAsset}
+            onRepair={setRepairingAsset}
+            onLost={setLosingAsset}
+            onDelete={setDeletingAsset}
+          />
+        );
+      })()}
       {cloningAsset && (
         <AddAssetDialog
           asset={cloningAsset}

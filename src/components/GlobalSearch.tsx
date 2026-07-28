@@ -145,7 +145,7 @@ export function GlobalSearch() {
     };
 
     return (
-        <div ref={wrapperRef} className="relative max-w-md flex-1 z-50">
+        <div ref={wrapperRef} className="relative w-64 shrink-0 z-50">
             <Command shouldFilter={false} className="overflow-visible bg-transparent">
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />

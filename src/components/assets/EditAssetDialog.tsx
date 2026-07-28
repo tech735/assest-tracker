@@ -29,6 +29,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { DatePicker } from '@/components/ui/date-picker';
 import { useUpdateAsset, useLocations, useAssets, useSettings } from '@/hooks/useSupabaseData';
 import { useToast } from '@/hooks/use-toast';
 import { Asset, AssetCategory, AssetCondition, AssetStatus } from '@/types/asset';
@@ -378,7 +379,7 @@ export function EditAssetDialog({ asset, open, onOpenChange }: EditAssetDialogPr
                                     <FormItem>
                                         <FormLabel>Purchase Date</FormLabel>
                                         <FormControl>
-                                            <Input type="date" {...field} />
+                                            <DatePicker value={field.value} onChange={field.onChange} onBlur={field.onBlur} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -391,7 +392,7 @@ export function EditAssetDialog({ asset, open, onOpenChange }: EditAssetDialogPr
                                     <FormItem>
                                         <FormLabel>Warranty Expiry</FormLabel>
                                         <FormControl>
-                                            <Input type="date" {...field} value={field.value || ''} />
+                                            <DatePicker value={field.value || ''} onChange={field.onChange} onBlur={field.onBlur} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>

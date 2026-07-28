@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
-import { Loader2, RotateCcw, Mail, Package, User, MapPin, Briefcase, PackagePlus } from 'lucide-react';
+import { Loader2, RotateCcw, Mail, Package, Briefcase, PackagePlus } from 'lucide-react';
 import { BundleAssignDialog } from '@/components/people/BundleAssignDialog';
 import type { Asset, Employee } from '@/types/asset';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,17 +18,22 @@ import { supabase } from '@/lib/supabase';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAssets, useReturnAsset, useLocations } from '@/hooks/useSupabaseData';
 import { useToast } from '@/hooks/use-toast';
+import { InfoCard, Field, DetailNavHeader } from '@/components/ui/detail-card';
 
 interface EmployeeProfileDialogProps {
-  employee: Employee;
+  employees: Employee[];
+  currentIndex: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onNavigate: (index: number) => void;
 }
 
-export function EmployeeProfileDialog({ employee, open, onOpenChange }: EmployeeProfileDialogProps) {
+const getInitials = (name: string) => name.split(' ').filter(Boolean).map((n) => n[0]).slice(0, 2).join('').toUpperCase();
+
+export function EmployeeProfileDialog({ employees, currentIndex, open, onOpenChange, onNavigate }: EmployeeProfileDialogProps) {
+  const employee = employees[currentIndex];
   const { toast } = useToast();
   const { data: assets = [], isLoading } = useAssets();
   const returnAsset = useReturnAsset();
@@ -38,9 +43,11 @@ export function EmployeeProfileDialog({ employee, open, onOpenChange }: Employee
   const [showBundleAssign, setShowBundleAssign] = useState(false);
 
   const assignedAssets = useMemo(
-    () => assets.filter((a) => a.status === 'assigned' && a.assignedToId === employee.id),
-    [assets, employee.id]
+    () => (employee ? assets.filter((a) => a.status === 'assigned' && a.assignedToId === employee.id) : []),
+    [assets, employee]
   );
+
+  if (!employee) return null;
 
   const handleReturn = async (asset: Asset) => {
     try {
@@ -89,67 +96,78 @@ export function EmployeeProfileDialog({ employee, open, onOpenChange }: Employee
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-[calc(100%-2rem)] sm:max-w-2xl max-h-[88vh] overflow-hidden flex flex-col p-0">
-        {/* Header */}
-        <DialogHeader className="px-4 sm:px-6 pt-5 pb-4 border-b border-border shrink-0">
-          <div className="flex items-center gap-3 pr-8">
-            <Avatar className="h-12 w-12 shrink-0">
-              <AvatarImage src={employee.avatarUrl} />
-              <AvatarFallback className="bg-muted text-primary text-sm">
-                {employee.name.split(' ').map((n) => n[0]).join('')}
-              </AvatarFallback>
-            </Avatar>
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <DialogTitle className="text-lg leading-tight">{employee.name}</DialogTitle>
-                <Badge variant={employee.status === 'active' ? 'success' : 'secondary'} className="text-xs">
-                  {employee.status === 'active' ? 'Active' : employee.status}
-                </Badge>
-              </div>
-              <DialogDescription className="text-sm truncate mt-0.5">{employee.email}</DialogDescription>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col gap-0">
+        <DetailNavHeader index={currentIndex} total={employees.length} onNavigate={onNavigate} />
+
+        {/* Identity row */}
+        <div className="px-4 sm:px-6 py-4 flex items-start gap-3 border-b border-border shrink-0">
+          <Avatar className="h-11 w-11 shrink-0">
+            <AvatarImage src={employee.avatarUrl} />
+            <AvatarFallback className="bg-muted text-primary text-sm font-medium">
+              {getInitials(employee.name)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0 pr-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <SheetTitle className="text-base font-medium leading-tight truncate">{employee.name}</SheetTitle>
+              <Badge variant={employee.status === 'active' ? 'success' : 'secondary'} className="text-xs">
+                {employee.status === 'active' ? 'Active' : employee.status}
+              </Badge>
             </div>
+            <SheetDescription asChild>
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">{employee.email}</p>
+            </SheetDescription>
           </div>
-        </DialogHeader>
+          <div className="shrink-0">
+            <AlertDialog open={showEmailConfirm} onOpenChange={setShowEmailConfirm}>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" className="gap-1.5">
+                  <Mail className="h-4 w-4" />
+                  Send Summary
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Send Asset Summary?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will send an email to <strong>{employee.email}</strong> containing a list of all assets currently assigned to them.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isSendingEmail}>Cancel</AlertDialogCancel>
+                  <Button onClick={(e) => { e.preventDefault(); handleSendEmail(); }} disabled={isSendingEmail}>
+                    {isSendingEmail && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isSendingEmail ? 'Sending...' : 'Send Email'}
+                  </Button>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
 
         {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto scrollbar-hide divide-y divide-border">
-          {/* Employee Info */}
-          <section className="px-4 sm:px-6 py-4">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Profile</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="flex items-center gap-2.5 p-3 rounded-xl bg-muted/40">
-                <Briefcase className="w-4 h-4 text-muted-foreground shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">Department</p>
-                  <p className="text-sm font-medium truncate">{employee.department}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2.5 p-3 rounded-xl bg-muted/40">
-                <User className="w-4 h-4 text-muted-foreground shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">Position</p>
-                  <p className="text-sm font-medium truncate">{employee.position}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2.5 p-3 rounded-xl bg-muted/40">
-                <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">Location</p>
-                  <p className="text-sm font-medium truncate">
-                    {employee.location === 'Warehouse' ? 'Central Warehouse' : employee.location}
-                  </p>
-                </div>
-              </div>
+        <div className="flex-1 overflow-y-auto scrollbar-hide p-4 sm:p-6 space-y-4">
+          {/* Profile */}
+          <InfoCard title="Profile" icon={Briefcase}>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Department" value={employee.department} />
+              <Field label="Position" value={employee.position} />
+              <Field
+                label="Location"
+                value={employee.location === 'Warehouse' ? 'Central Warehouse' : employee.location}
+              />
+              <Field label="Status" value={<Badge variant={employee.status === 'active' ? 'success' : 'secondary'} className="text-xs capitalize">{employee.status}</Badge>} />
             </div>
-          </section>
+          </InfoCard>
 
           {/* Assigned Assets */}
-          <section className="px-4 sm:px-6 py-4">
-            <div className="flex items-center justify-between mb-4 gap-2">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Assigned Assets</h3>
+          <InfoCard
+            title="Assigned Assets"
+            icon={Package}
+            action={
               <div className="flex items-center gap-3">
-                <span className="text-xs text-muted-foreground">{assignedAssets.length} assigned</span>
+                <span className="text-xs text-muted-foreground normal-case tracking-normal font-normal">{assignedAssets.length} assigned</span>
                 <Button
                   variant="outline"
                   size="sm"
@@ -160,8 +178,8 @@ export function EmployeeProfileDialog({ employee, open, onOpenChange }: Employee
                   Assign Assets
                 </Button>
               </div>
-            </div>
-
+            }
+          >
             {isLoading ? (
               <div className="flex items-center justify-center py-8 text-muted-foreground text-sm">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -172,106 +190,35 @@ export function EmployeeProfileDialog({ employee, open, onOpenChange }: Employee
                 No assets currently assigned to this employee
               </div>
             ) : (
-              <>
-                {/* Mobile card list */}
-                <div className="block sm:hidden rounded-xl overflow-hidden border border-border">
-                  {assignedAssets.map((asset, idx) => (
-                    <div
-                      key={asset.id}
-                      className={`px-4 py-3 flex items-center gap-3 ${idx < assignedAssets.length - 1 ? 'border-b border-border' : ''}`}
-                    >
-                      <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-muted shrink-0">
-                        <Package className="w-4 h-4 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{asset.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {asset.brand} · <span className="font-mono">{asset.assetTag}</span>
-                        </p>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-1.5 shrink-0 h-8 text-xs px-2.5"
-                        onClick={() => handleReturn(asset)}
-                        disabled={returnAsset.isPending}
-                      >
-                        <RotateCcw className="h-3 w-3" />
-                        Return
-                      </Button>
+              <div className="rounded-xl overflow-hidden border border-border divide-y divide-border">
+                {assignedAssets.map((asset) => (
+                  <div key={asset.id} className="px-3 py-2.5 flex items-center gap-3">
+                    <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-muted shrink-0">
+                      <Package className="w-4 h-4 text-primary" />
                     </div>
-                  ))}
-                </div>
-
-                {/* Desktop table */}
-                <div className="hidden sm:block rounded-xl overflow-hidden border border-border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Asset</TableHead>
-                        <TableHead>Tag</TableHead>
-                        <TableHead className="w-[120px]">Status</TableHead>
-                        <TableHead className="w-[120px] text-right">Action</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {assignedAssets.map((asset) => (
-                        <TableRow key={asset.id}>
-                          <TableCell>
-                            <div className="font-medium">{asset.name}</div>
-                            <div className="text-xs text-muted-foreground">{asset.brand} · {asset.category}</div>
-                          </TableCell>
-                          <TableCell className="font-mono text-sm">{asset.assetTag}</TableCell>
-                          <TableCell><Badge variant="assigned">Assigned</Badge></TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="outline" size="sm" className="gap-2"
-                              onClick={() => handleReturn(asset)}
-                              disabled={returnAsset.isPending}
-                            >
-                              <RotateCcw className="h-4 w-4" />Return
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{asset.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {asset.brand} · <span className="font-mono">{asset.assetTag}</span>
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 shrink-0 h-8 text-xs px-2.5"
+                      onClick={() => handleReturn(asset)}
+                      disabled={returnAsset.isPending}
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      Return
+                    </Button>
+                  </div>
+                ))}
+              </div>
             )}
-          </section>
+          </InfoCard>
         </div>
-
-        {/* Footer */}
-        <DialogFooter className="px-4 sm:px-6 py-4 border-t border-border shrink-0 flex-col sm:flex-row gap-2">
-          <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => onOpenChange(false)}>
-            Close
-          </Button>
-          <AlertDialog open={showEmailConfirm} onOpenChange={setShowEmailConfirm}>
-            <AlertDialogTrigger asChild>
-              <Button variant="secondary" className="gap-2 w-full sm:w-auto">
-                <Mail className="h-4 w-4" />
-                Send Asset Summary
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Send Asset Summary?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will send an email to <strong>{employee.email}</strong> containing a list of all assets currently assigned to them.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={isSendingEmail}>Cancel</AlertDialogCancel>
-                <Button onClick={(e) => { e.preventDefault(); handleSendEmail(); }} disabled={isSendingEmail}>
-                  {isSendingEmail && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {isSendingEmail ? 'Sending...' : 'Send Email'}
-                </Button>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </DialogFooter>
-      </DialogContent>
+      </SheetContent>
       {showBundleAssign && (
         <BundleAssignDialog
           employee={employee}
@@ -279,6 +226,6 @@ export function EmployeeProfileDialog({ employee, open, onOpenChange }: Employee
           onOpenChange={setShowBundleAssign}
         />
       )}
-    </Dialog>
+    </Sheet>
   );
 }
