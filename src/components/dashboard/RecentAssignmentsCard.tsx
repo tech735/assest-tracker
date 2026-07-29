@@ -38,10 +38,10 @@ export function RecentAssignmentsCard({ assignments }: RecentAssignmentsCardProp
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[200px] sm:w-[260px]">Type</TableHead>
-                  <TableHead className="min-w-[150px]">Asset</TableHead>
-                  <TableHead className="w-[80px]">Status</TableHead>
-                  <TableHead className="w-[100px] text-right">Date</TableHead>
+                  <TableHead className="w-[200px] sm:w-[260px] h-8 py-2 text-[11px]">Type</TableHead>
+                  <TableHead className="min-w-[150px] h-8 py-2 text-[11px]">Asset</TableHead>
+                  <TableHead className="w-[80px] h-8 py-2 text-[11px]">Status</TableHead>
+                  <TableHead className="w-[100px] h-8 py-2 text-[11px] text-right">Date</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -50,31 +50,31 @@ export function RecentAssignmentsCard({ assignments }: RecentAssignmentsCardProp
                   const who = assignment.employeeName || assignment.assetTag || '?';
                   return (
                   <TableRow key={assignment.id} className="transition-colors">
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="bg-muted text-primary text-xs font-medium">
+                    <TableCell className="py-2">
+                      <div className="flex items-center gap-2.5">
+                        <Avatar className="h-7 w-7">
+                          <AvatarFallback className="bg-muted text-primary text-[11px] font-medium">
                             {who.split(' ').map((n) => n[0]).join('').slice(0, 2)}
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{label}</p>
-                          <p className="text-xs text-muted-foreground truncate">{assignment.employeeName || assignment.assetName}</p>
+                          <p className="text-xs font-medium truncate">{label}</p>
+                          <p className="text-[11px] text-muted-foreground truncate">{assignment.employeeName || assignment.assetName}</p>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-2">
                       <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{assignment.assetName}</p>
-                        <p className="text-xs text-muted-foreground truncate">{assignment.assetTag}</p>
+                        <p className="text-xs font-medium truncate">{assignment.assetName}</p>
+                        <p className="text-[11px] text-muted-foreground truncate">{assignment.assetTag}</p>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <Badge variant={assignment.eventType === 'lost' ? 'destructive' : 'success'} className="font-normal">
+                    <TableCell className="py-2">
+                      <Badge variant={assignment.eventType === 'lost' ? 'destructive' : 'success'} className="font-normal text-[11px]">
                         {assignment.eventType === 'lost' ? 'Lost' : 'Success'}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right text-sm text-muted-foreground">
+                    <TableCell className="py-2 text-right text-xs text-muted-foreground">
                       {new Date(assignment.assignedDate).toLocaleDateString()}
                     </TableCell>
                   </TableRow>
