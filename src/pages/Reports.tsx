@@ -333,9 +333,6 @@ const Reports = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Reports</h1>
-          <p className="text-muted-foreground">
-            Generate and download asset management reports
-          </p>
         </div>
         <div className="flex items-center gap-3">
           <Button variant="outline" className="gap-2">

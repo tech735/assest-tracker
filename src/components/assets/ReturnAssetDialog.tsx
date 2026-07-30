@@ -5,7 +5,6 @@ import { Loader2, RotateCcw } from 'lucide-react';
 import {
     Dialog,
     DialogContent,
-    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
@@ -105,11 +104,6 @@ export function ReturnAssetDialog({ open, onOpenChange, assetId }: ReturnAssetDi
                         <RotateCcw className="w-5 h-5 text-brand-blue" />
                         <DialogTitle>Return Asset</DialogTitle>
                     </div>
-                    <DialogDescription>
-                        {assetId
-                            ? 'Confirm returning this asset to inventory.'
-                            : 'Select an assigned asset to return it to the inventory.'}
-                    </DialogDescription>
                 </DialogHeader>
 
                 <Form {...form}>

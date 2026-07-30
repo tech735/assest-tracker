@@ -54,14 +54,6 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Page Header — desktop shows this in the top bar instead (see NewLayout) */}
-      <div className="lg:hidden flex flex-col sm:flex-row sm:items-end justify-between gap-3">
-        <div className="space-y-1">
-          <h1 className="text-xl lg:text-2xl font-medium tracking-tight">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">Overview of your asset inventory</p>
-        </div>
-      </div>
-
       {/* Stats Cards */}
       {stats && <DashboardStats stats={stats} />}
 

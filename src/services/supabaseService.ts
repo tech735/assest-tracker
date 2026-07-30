@@ -345,7 +345,7 @@ export async function startRepair({
         eventType: 'repair_start',
         assignedDate: new Date().toISOString(),
         condition: asset.condition,
-        notes: [vendor && `Vendor: ${vendor}`, notes].filter(Boolean).join(' — '),
+        notes: [vendor && `Vendor: ${vendor}`, notes].filter(Boolean).join(' - '),
     });
 }
 
@@ -420,7 +420,7 @@ export async function markLost({
         eventType: 'lost',
         assignedDate: new Date().toISOString(),
         condition: asset.condition,
-        notes: [reference && `Reference: ${reference}`, notes].filter(Boolean).join(' — '),
+        notes: [reference && `Reference: ${reference}`, notes].filter(Boolean).join(' - '),
     });
 }
 

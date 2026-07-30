@@ -117,7 +117,7 @@ Used only to communicate status or trends, not decoration:
 - Highlights / Focus: Calm blue or violet
 - Dividers & borders: Very light gray
 
-No gradients or flashy effects — flat, calm surfaces dominate.
+No gradients or flashy effects - flat, calm surfaces dominate.
 
 6\. Card & Section Design
 

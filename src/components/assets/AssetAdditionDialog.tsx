@@ -3,14 +3,13 @@ import { Plus, Upload, FileText, Loader2 } from 'lucide-react';
 import {
     Dialog,
     DialogContent,
-    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AddAssetDialog } from './AddAssetDialog';
 import { BulkAssetAddDialog } from './BulkAssetAddDialog';
 
@@ -63,9 +62,6 @@ export function AssetAdditionDialog({
                 <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-2xl">
                     <DialogHeader>
                         <DialogTitle>Add Assets</DialogTitle>
-                        <DialogDescription>
-                            Choose how you want to add assets to your inventory.
-                        </DialogDescription>
                     </DialogHeader>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-6">
@@ -78,9 +74,6 @@ export function AssetAdditionDialog({
                                     <Plus className="w-6 h-6 text-brand-blue" />
                                 </div>
                                 <CardTitle className="text-lg">Single Asset</CardTitle>
-                                <CardDescription>
-                                    Add one asset at a time with detailed information
-                                </CardDescription>
                             </CardHeader>
                             <CardContent className="pt-0">
                                 <div className="text-sm text-muted-foreground space-y-1">
@@ -100,9 +93,6 @@ export function AssetAdditionDialog({
                                     <Upload className="w-6 h-6 text-green-600" />
                                 </div>
                                 <CardTitle className="text-lg">Bulk Assets</CardTitle>
-                                <CardDescription>
-                                    Add multiple assets at once via CSV or manual entry
-                                </CardDescription>
                             </CardHeader>
                             <CardContent className="pt-0">
                                 <div className="text-sm text-muted-foreground space-y-1">

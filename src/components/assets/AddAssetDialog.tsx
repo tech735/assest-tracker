@@ -6,7 +6,6 @@ import { Plus, Loader2 } from 'lucide-react';
 import {
     Dialog,
     DialogContent,
-    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
@@ -200,9 +199,6 @@ export function AddAssetDialog({
             <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-hide">
                 <DialogHeader>
                     <DialogTitle>Add New Asset</DialogTitle>
-                    <DialogDescription>
-                        Enter the details of the new organizational asset.
-                    </DialogDescription>
                 </DialogHeader>
 
                 <Form {...form}>

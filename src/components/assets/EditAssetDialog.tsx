@@ -6,7 +6,6 @@ import { Loader2 } from 'lucide-react';
 import {
     Dialog,
     DialogContent,
-    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
@@ -172,9 +171,6 @@ export function EditAssetDialog({ asset, open, onOpenChange }: EditAssetDialogPr
             <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-hide">
                 <DialogHeader>
                     <DialogTitle>Edit Asset</DialogTitle>
-                    <DialogDescription>
-                        Update the details of the asset.
-                    </DialogDescription>
                 </DialogHeader>
 
                 <Form {...form}>

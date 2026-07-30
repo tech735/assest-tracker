@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Save, Users, Tag, MapPin, Shield, Bell, Database, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -99,9 +99,6 @@ const Settings = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Settings</h1>
-          <p className="text-muted-foreground">
-            Manage your asset portal configuration and preferences
-          </p>
         </div>
         <Button
           className="gap-2 bg-brand-blue hover:bg-brand-blue/90"
@@ -134,9 +131,6 @@ const Settings = () => {
                 <Database className="w-5 h-5" />
                 Organization Settings
               </CardTitle>
-              <CardDescription>
-                Configure your organization's asset management preferences
-              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -197,9 +191,6 @@ const Settings = () => {
                 <Tag className="w-5 h-5" />
                 Asset Categories
               </CardTitle>
-              <CardDescription>
-                Manage asset categories and custom fields
-              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
@@ -248,9 +239,6 @@ const Settings = () => {
                 <Shield className="w-5 h-5" />
                 User Roles
               </CardTitle>
-              <CardDescription>
-                Define roles and their access permissions
-              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
@@ -278,9 +266,6 @@ const Settings = () => {
                 <Bell className="w-5 h-5" />
                 Notification Preferences
               </CardTitle>
-              <CardDescription>
-                Configure when and how you receive notifications
-              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">

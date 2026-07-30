@@ -53,7 +53,7 @@ export function TopBar({
 
   return (
     <header className="sticky top-0 z-10 flex items-center justify-between h-16 px-4 sm:px-6 bg-background border-b border-border/70 gap-3">
-      {/* Hamburger — mobile only */}
+      {/* Hamburger - mobile only */}
       <Button
         variant="ghost"
         size="icon"
@@ -64,7 +64,7 @@ export function TopBar({
         <Menu className="w-5 h-5" />
       </Button>
 
-      {/* Search — hidden on mobile, visible on desktop */}
+      {/* Search - hidden on mobile, visible on desktop */}
       <div className="relative hidden sm:block w-72 lg:w-96">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input

@@ -9,9 +9,11 @@ import { cn } from '@/lib/utils';
 interface UserPopoverProps {
     user: UserProfile;
     onUpdateProfile: (updatedUser: UserProfile) => void;
+    triggerClassName?: string;
+    iconClassName?: string;
 }
 
-export function UserPopover({ user, onUpdateProfile }: UserPopoverProps) {
+export function UserPopover({ user, onUpdateProfile, triggerClassName, iconClassName }: UserPopoverProps) {
     const navigate = useNavigate();
     const [open, setOpen] = useState(false); // Popover state
     const [showEditProfile, setShowEditProfile] = useState(false); // Dialog state
@@ -24,9 +26,9 @@ export function UserPopover({ user, onUpdateProfile }: UserPopoverProps) {
         <>
             <Popover open={open} onOpenChange={setOpen}>
                 <PopoverTrigger asChild>
-                    <button className="flex items-center gap-3 pl-3 border-l border-border hover:bg-muted/50 p-2 rounded-lg transition-colors outline-none">
+                    <button className={cn('flex items-center gap-3 pl-3 border-l border-border hover:bg-muted/50 p-2 rounded-lg transition-colors outline-none', triggerClassName)}>
                         <div className="w-10 h-10 rounded-full bg-sidebar-accent flex items-center justify-center">
-                            {user.avatarUrl ? <img src={user.avatarUrl} alt="Avatar" className="w-full h-full rounded-full object-cover" /> : <User className="h-4 w-4 text-sidebar-foreground" />}
+                            {user.avatarUrl ? <img src={user.avatarUrl} alt="Avatar" className="w-full h-full rounded-full object-cover" /> : <User className={cn('h-4 w-4 text-sidebar-foreground', iconClassName)} />}
                         </div>
                         <div className="text-sm text-left hidden md:block">
                             <p className="font-medium text-foreground">{user.name}</p>

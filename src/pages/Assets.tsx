@@ -240,7 +240,6 @@ const Assets = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl lg:text-2xl font-semibold tracking-tight">Assets</h1>
-          <p className="text-muted-foreground text-sm mt-1">Manage and track all organizational assets</p>
         </div>
         <div className="flex items-center gap-3">
           <Button
@@ -525,7 +524,7 @@ const Assets = () => {
                             <span className="text-sm">{asset.assignedTo}</span>
                           </div>
                         ) : (
-                          <span className="text-muted-foreground">—</span>
+                          <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
                       <TableCell>

@@ -6,7 +6,6 @@ import { Plus, Loader2, MapPin } from 'lucide-react';
 import {
     Dialog,
     DialogContent,
-    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
@@ -92,9 +91,6 @@ export function AddLocationDialog() {
                         <MapPin className="w-5 h-5 text-brand-blue" />
                         <DialogTitle>Add New Location</DialogTitle>
                     </div>
-                    <DialogDescription>
-                        Create a new office, warehouse, or remote location.
-                    </DialogDescription>
                 </DialogHeader>
 
                 <Form {...form}>

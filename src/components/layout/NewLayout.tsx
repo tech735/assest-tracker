@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, Package, Users, MapPin, BarChart3, Settings, LogOut, User, Menu, X, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { LayoutDashboard, Package, Users, MapPin, BarChart3, Settings, LogOut, User, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -29,7 +29,6 @@ const allNavItems: NavItem[] = [
 export default function NewLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [collapsed, setCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebarCollapsed');
@@ -71,9 +70,6 @@ export default function NewLayout({ children }: { children: React.ReactNode }) {
 
   const isDashboard = location.pathname === '/';
 
-  // Note: label/centering only collapse at the `lg` breakpoint via responsive
-  // classes, so the mobile drawer always shows full labels regardless of the
-  // desktop `collapsed` preference.
   const renderNavLink = (item: NavItem) => {
     const isActive = location.pathname === item.to;
     const Icon = item.icon;
@@ -83,7 +79,6 @@ export default function NewLayout({ children }: { children: React.ReactNode }) {
         <TooltipTrigger asChild>
           <Link
             to={item.to}
-            onClick={onCloseMobile}
             className={cn(
               'flex items-center gap-3 px-4 py-2.5 rounded-xl text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors duration-150',
               collapsed && 'lg:justify-center lg:w-11 lg:h-11 lg:mx-auto lg:px-0 lg:py-0 lg:gap-0',
@@ -99,45 +94,25 @@ export default function NewLayout({ children }: { children: React.ReactNode }) {
     );
   };
 
-  const onCloseMobile = () => setSidebarOpen(false);
-
   return (
     <div className="app-shell">
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
+      {/* Sidebar — desktop only; mobile uses the floating bottom nav instead */}
       <aside className={cn(
-        'fixed inset-y-0 left-0 z-50 flex flex-col transform transition-all duration-200 ease-in-out lg:relative lg:translate-x-0',
-        collapsed ? 'w-64 lg:w-16' : 'w-64',
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        'hidden lg:relative lg:flex lg:flex-col',
+        collapsed ? 'lg:w-16' : 'lg:w-64'
       )}>
         <div className="app-sidebar h-full flex flex-col">
-          <div className={cn('flex items-center justify-between h-16 shrink-0 px-5', collapsed && 'lg:justify-center lg:px-0')}>
+          <div className={cn('flex items-center h-16 shrink-0 px-5', collapsed && 'lg:justify-center lg:px-0')}>
             <div className="flex items-center gap-3 min-w-0">
               <img src="/logo.png" alt="Asset Tracker Logo" className="w-8 h-8 shrink-0 rounded-md" />
               <div className={cn('min-w-0', collapsed && 'lg:hidden')}>
                 <h1 className="font-semibold text-sm text-sidebar-foreground truncate">Asset Tracker</h1>
-                <p className="text-[11px] text-sidebar-foreground/50">Manage Assets</p>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="lg:hidden h-8 w-8 p-0 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
-              onClick={() => setSidebarOpen(false)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
           </div>
 
-          {/* Collapse toggle — desktop only */}
-          <div className={cn('hidden lg:flex px-3 pb-2', collapsed ? 'justify-center' : 'justify-end')}>
+          {/* Collapse toggle */}
+          <div className={cn('flex px-3 pb-2', collapsed ? 'justify-center' : 'justify-end')}>
             <Button
               variant="ghost"
               size="icon"
@@ -183,41 +158,52 @@ export default function NewLayout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* Mobile header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-background border-b border-border">
-        <div className="flex items-center justify-between p-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="h-4 w-4" />
-          </Button>
-          <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="Asset Tracker Logo" className="w-8 h-8" />
-            <span className="font-semibold text-sm">Asset Tracker</span>
-          </div>
-          <div className="w-8" /> {/* Spacer for centering */}
-        </div>
-      </div>
-
-      <main className="flex-1 overflow-auto lg:pt-0 pt-16 min-w-0">
+      <main className="flex-1 overflow-auto lg:pt-0 min-w-0">
         {isDashboard && (
-          <div className="hidden lg:flex items-center justify-between gap-4 px-6 py-3.5 lg:px-8 border-0 bg-background/95 backdrop-blur-sm">
+          <div className="sticky top-0 z-20 flex items-center justify-between gap-4 px-6 py-3.5 lg:px-8 border-0 bg-background/95 backdrop-blur-sm">
             <div>
               <h1 className="text-xl lg:text-2xl font-medium tracking-tight">Dashboard</h1>
-              <p className="text-sm text-muted-foreground">Overview of your asset inventory</p>
             </div>
             <div className="flex items-center gap-3 shrink-0">
-              <GlobalSearch />
-              <MessagesPopover />
-              <AlertsPopover />
-              <UserPopover user={user} onUpdateProfile={handleUpdateProfile} />
+              <div className="hidden lg:flex items-center gap-3">
+                <GlobalSearch />
+                <MessagesPopover />
+                <AlertsPopover />
+              </div>
+              <UserPopover
+                user={user}
+                onUpdateProfile={handleUpdateProfile}
+                triggerClassName="rounded-full pl-0 border-l-0 lg:rounded-lg lg:pl-3 lg:border-l"
+                iconClassName="drop-shadow-md"
+              />
             </div>
           </div>
         )}
         <div className="app-content">{children}</div>
       </main>
+
+      {/* Mobile bottom nav — glassmorphic floating bar */}
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
+        <div className="flex items-center justify-between gap-1 rounded-2xl border border-white/40 bg-white/70 backdrop-blur-xl shadow-lg px-1.5 py-2 dark:border-white/10 dark:bg-black/50">
+          {allNavItems.map((item) => {
+            const isActive = location.pathname === item.to;
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={cn(
+                  'flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[10px] font-medium transition-colors',
+                  isActive ? 'text-primary' : 'text-muted-foreground'
+                )}
+              >
+                <Icon className="h-5 w-5" />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }

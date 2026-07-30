@@ -6,7 +6,6 @@ import { Loader2 } from 'lucide-react';
 import {
     Dialog,
     DialogContent,
-    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
@@ -114,9 +113,6 @@ export function EditEmployeeDialog({ employee, open, onOpenChange }: EditEmploye
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
                     <DialogTitle>Edit Employee</DialogTitle>
-                    <DialogDescription>
-                        Update employee details and organizational information.
-                    </DialogDescription>
                 </DialogHeader>
 
                 <Form {...form}>

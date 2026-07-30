@@ -54,7 +54,7 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
             Asset Tracker
           </span>
         </div>
-        {/* Close button — mobile only */}
+        {/* Close button - mobile only */}
         <Button
           variant="ghost"
           size="icon"

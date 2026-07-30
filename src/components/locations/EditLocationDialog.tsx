@@ -6,7 +6,6 @@ import { Loader2, MapPin } from 'lucide-react';
 import {
     Dialog,
     DialogContent,
-    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
@@ -99,9 +98,6 @@ export function EditLocationDialog({ location, open, onOpenChange }: EditLocatio
                         <MapPin className="w-5 h-5 text-brand-blue" />
                         <DialogTitle>Edit Location</DialogTitle>
                     </div>
-                    <DialogDescription>
-                        Update the details for this workspace.
-                    </DialogDescription>
                 </DialogHeader>
 
                 <Form {...form}>

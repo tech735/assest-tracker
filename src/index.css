@@ -67,7 +67,7 @@
     --stage-completed: 142 76% 36%;
     --stage-denied: 0 84% 60%;
 
-    /* Modern sidebar colors — white rail, blue reserved as the single accent */
+    /* Modern sidebar colors - white rail, blue reserved as the single accent */
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 222 47% 15%;
     --sidebar-primary: 215 60% 45%;
@@ -200,7 +200,7 @@
   }
 
   .app-shell {
-    @apply min-h-screen bg-background flex;
+    @apply h-screen bg-background flex overflow-hidden;
   }
 
   .app-header {
@@ -208,7 +208,7 @@
   }
 
   .app-content {
-    @apply flex-1 px-6 py-6 lg:px-10 lg:py-8;
+    @apply flex-1 px-6 pt-4 pb-28 lg:px-10 lg:pt-8 lg:pb-8;
   }
 
   .page-shell {

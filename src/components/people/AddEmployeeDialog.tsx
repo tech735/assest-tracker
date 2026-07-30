@@ -6,7 +6,6 @@ import { Plus, Loader2, UserPlus } from 'lucide-react';
 import {
     Dialog,
     DialogContent,
-    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
@@ -104,9 +103,6 @@ export function AddEmployeeDialog() {
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
                     <DialogTitle>Add New Employee</DialogTitle>
-                    <DialogDescription>
-                        Register a new employee in the asset management system.
-                    </DialogDescription>
                 </DialogHeader>
 
                 <Form {...form}>

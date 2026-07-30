@@ -6,7 +6,6 @@ import { Loader2, PackagePlus } from 'lucide-react';
 import {
     Dialog,
     DialogContent,
-    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
@@ -117,9 +116,6 @@ export function BundleAssignDialog({ employee, open, onOpenChange }: BundleAssig
                         <PackagePlus className="w-5 h-5 text-brand-blue" />
                         <DialogTitle>Assign Multiple Assets</DialogTitle>
                     </div>
-                    <DialogDescription>
-                        Assign a bundle of assets to <span className="font-semibold text-foreground">{employee.name}</span> in a single handover.
-                    </DialogDescription>
                 </DialogHeader>
 
                 <Form {...form}>

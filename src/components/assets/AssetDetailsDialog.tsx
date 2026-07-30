@@ -330,7 +330,7 @@ export function AssetDetailsDialog({
                                                         <h4 className="font-medium text-sm flex items-center gap-2 flex-wrap">
                                                             <EventIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                                                             {meta.label}
-                                                            {assignment.employeeName && ` — ${assignment.employeeName}`}
+                                                            {assignment.employeeName && ` - ${assignment.employeeName}`}
                                                             {isOpenAssignment && (
                                                                 <Badge variant="assigned" className="text-[10px] py-0 px-1.5">Current</Badge>
                                                             )}
