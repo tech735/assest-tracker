@@ -5,6 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { EditProfileDialog, UserProfile } from './EditProfileDialog';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
+import { useUser } from '@/contexts/UserContext';
 
 interface UserPopoverProps {
     user: UserProfile;
@@ -15,10 +17,13 @@ interface UserPopoverProps {
 
 export function UserPopover({ user, onUpdateProfile, triggerClassName, iconClassName }: UserPopoverProps) {
     const navigate = useNavigate();
+    const { logout } = useUser();
     const [open, setOpen] = useState(false); // Popover state
     const [showEditProfile, setShowEditProfile] = useState(false); // Dialog state
 
-    const handleSignOut = () => {
+    const handleSignOut = async () => {
+        await supabase.auth.signOut();
+        logout();
         navigate('/login');
     };
 

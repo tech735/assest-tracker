@@ -1,9 +1,11 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { LayoutDashboard, Package, Users, MapPin, BarChart3, Settings, LogOut, User, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { supabase } from '@/lib/supabase';
+import { useUser } from '@/contexts/UserContext';
 
 import { GlobalSearch } from '@/components/GlobalSearch';
 import { AlertsPopover } from './AlertsPopover';
@@ -26,9 +28,17 @@ const allNavItems: NavItem[] = [
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
 
+const ROLE_LABELS: Record<string, string> = {
+  ADMIN: 'Administrator',
+  SUPPORT: 'Support',
+  WAREHOUSE: 'Warehouse',
+  INVOICING: 'Invoicing',
+};
+
 export default function NewLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user: authUser, logout } = useUser();
 
   const [collapsed, setCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebarCollapsed');
@@ -43,24 +53,38 @@ export default function NewLayout({ children }: { children: React.ReactNode }) {
     });
   };
 
-  // User state lifted to layout with localStorage persistence
-  const [user, setUser] = useState<UserProfile>(() => {
-    const savedUser = localStorage.getItem('userProfile');
-    return savedUser ? JSON.parse(savedUser) : {
-      name: "Admin User",
-      email: "admin@assetcompass.com",
-      role: "Administrator",
-      avatarUrl: undefined
-    };
+  // Display name/avatar can be locally overridden via Edit Profile; email and role always come
+  // from the actual signed-in account (authUser), never from this local override.
+  const [profileOverrides, setProfileOverrides] = useState<{ name?: string; avatarUrl?: string }>(() => {
+    const saved = localStorage.getItem('userProfile');
+    return saved ? JSON.parse(saved) : {};
   });
 
+  const [authAvatarUrl, setAuthAvatarUrl] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      const meta = data.user?.user_metadata as { avatar_url?: string; picture?: string } | undefined;
+      setAuthAvatarUrl(meta?.avatar_url || meta?.picture);
+    });
+  }, []);
+
+  const user: UserProfile = {
+    name: profileOverrides.name || authUser?.name || 'User',
+    email: authUser?.email || '',
+    role: ROLE_LABELS[authUser?.role || ''] || authUser?.role || 'User',
+    avatarUrl: profileOverrides.avatarUrl || authAvatarUrl,
+  };
+
   const handleUpdateProfile = (updatedUser: UserProfile) => {
-    setUser(updatedUser);
-    localStorage.setItem('userProfile', JSON.stringify(updatedUser)); // Immediate save
+    const overrides = { name: updatedUser.name, avatarUrl: updatedUser.avatarUrl };
+    setProfileOverrides(overrides);
+    localStorage.setItem('userProfile', JSON.stringify(overrides)); // Immediate save
   };
 
   const handleSignOut = async () => {
-    // Implement sign out logic here
+    await supabase.auth.signOut();
+    logout();
     navigate('/login');
   };
 

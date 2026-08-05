@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls \"c:\\\\Users\\\\Admin\\\\OneDrive\\\\Desktop\\\\Tech\\\\Projects\\\\exchange-flow-main\\\\exchange-flow-main\\\\src\")",
+      "Read(//c/Users/Admin/OneDrive/Desktop/Tech/Projects/exchange-flow-main/exchange-flow-main/src/**)",
+      "Bash(npx tsc *)"
+    ]
+  }
+}

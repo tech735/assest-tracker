@@ -29,7 +29,7 @@ const mockUsers: Record<string, User> = {
         id: '0',
         name: 'Admin',
         role: 'ADMIN',
-        email: 'admin@kotu.com',
+        email: 'tech@kotu.co.in',
     },
 };
 

@@ -91,6 +91,7 @@ export function EditProfileDialog({
                                 onChange={handleChange}
                                 className="col-span-3"
                                 required
+                                disabled // Email reflects the signed-in account and isn't user-editable
                             />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
