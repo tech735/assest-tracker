@@ -13,6 +13,8 @@ import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import PrintHandover from "./pages/PrintHandover";
 import Auth from "./pages/Auth";
+import AuthCallback from "./pages/AuthCallback";
+import ProtectedRoute from "./components/ProtectedRoute";
 import { UserProvider } from "@/contexts/UserContext";
 
 const queryClient = new QueryClient();
@@ -27,21 +29,24 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Auth />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route
               path="/*"
               element={
-                <NewLayout>
-                  <Routes>
-                    <Route path="/" element={<Dashboard />} />
-                    <Route path="/assets" element={<Assets />} />
-                    <Route path="/people" element={<People />} />
-                    <Route path="/locations" element={<Locations />} />
-                    <Route path="/reports" element={<Reports />} />
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="/print-handover/:type/:id" element={<PrintHandover />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </NewLayout>
+                <ProtectedRoute>
+                  <NewLayout>
+                    <Routes>
+                      <Route path="/" element={<Dashboard />} />
+                      <Route path="/assets" element={<Assets />} />
+                      <Route path="/people" element={<People />} />
+                      <Route path="/locations" element={<Locations />} />
+                      <Route path="/reports" element={<Reports />} />
+                      <Route path="/settings" element={<Settings />} />
+                      <Route path="/print-handover/:type/:id" element={<PrintHandover />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </NewLayout>
+                </ProtectedRoute>
               }
             />
           </Routes>
