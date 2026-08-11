@@ -23,6 +23,8 @@ export interface Asset {
   vendor?: string;
   warrantyStart?: string;
   warrantyEnd?: string;
+  amcStartDate?: string;
+  amcEndDate?: string;
   notes?: string;
   repairVendor?: string;
   repairEstReturn?: string;

@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Table,
@@ -48,6 +49,13 @@ import { LostAssetDialog } from '@/components/assets/LostAssetDialog';
 import { Asset, AssetStatus, AssetCategory } from '@/types/asset';
 import { exportToCSV } from '@/lib/exportUtils';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
+import { BulkActionToolbar, BulkAction } from '@/components/ui/bulk-action-toolbar';
+import { BulkAssignAssetsDialog } from '@/components/assets/BulkAssignAssetsDialog';
+import { BulkChangeStatusDialog } from '@/components/assets/BulkChangeStatusDialog';
+import { BulkChangeLocationDialog } from '@/components/assets/BulkChangeLocationDialog';
+import { BulkAmcUpdateDialog } from '@/components/assets/BulkAmcUpdateDialog';
+import { BulkUpdateCategoryDialog } from '@/components/assets/BulkUpdateCategoryDialog';
+import { BulkDeleteAssetsDialog } from '@/components/assets/BulkDeleteAssetsDialog';
 import {
   Laptop,
   Smartphone,
@@ -115,7 +123,16 @@ const Assets = () => {
   const [losingAsset, setLosingAsset] = useState<Asset | null>(null);
   const [viewingAsset, setViewingAsset] = useState<{ assetId: string; tab: 'details' | 'history' } | null>(null);
   const [cloningAsset, setCloningAsset] = useState<Asset | null>(null);
+  const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set());
   const [searchParams] = useSearchParams();
+
+  // Bulk action dialogs
+  const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
+  const [bulkStatusOpen, setBulkStatusOpen] = useState(false);
+  const [bulkLocationOpen, setBulkLocationOpen] = useState(false);
+  const [bulkAmcOpen, setBulkAmcOpen] = useState(false);
+  const [bulkCategoryOpen, setBulkCategoryOpen] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -192,6 +209,7 @@ const Assets = () => {
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
+    setSelectedAssetIds(new Set());
   }, [searchQuery, statusFilter, categoryFilter, locationFilter, vendorFilter, brandFilter, conditionFilter, assignedToFilter]);
 
   // Pagination Logic
@@ -199,6 +217,49 @@ const Assets = () => {
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentAssets = filteredAssets.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredAssets.length / itemsPerPage);
+
+  const selectAllOnPage = currentAssets.length > 0 && currentAssets.every((asset) => selectedAssetIds.has(asset.id));
+
+  const handleSelectAllOnPage = (checked: boolean) => {
+    setSelectedAssetIds((prev) => {
+      const next = new Set(prev);
+      currentAssets.forEach((asset) => (checked ? next.add(asset.id) : next.delete(asset.id)));
+      return next;
+    });
+  };
+
+  const handleSelectAsset = (id: string, checked: boolean) => {
+    setSelectedAssetIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const handleSelectAllMatching = () => {
+    setSelectedAssetIds(new Set(filteredAssets.map((a) => a.id)));
+  };
+
+  const clearSelection = () => setSelectedAssetIds(new Set());
+
+  const selectedAssetIdsArray = Array.from(selectedAssetIds);
+
+  const bulkPrimaryActions: BulkAction[] = [
+    { label: 'Assign', onClick: () => setBulkAssignOpen(true) },
+    { label: 'Change Status', onClick: () => setBulkStatusOpen(true) },
+    { label: 'Change Location', onClick: () => setBulkLocationOpen(true) },
+    { label: 'AMC Update', onClick: () => setBulkAmcOpen(true) },
+  ];
+
+  const bulkOverflowActions: BulkAction[] = [
+    { label: 'Update Category', onClick: () => setBulkCategoryOpen(true) },
+    {
+      label: 'Export Selected',
+      onClick: () => exportToCSV(assets.filter((a) => selectedAssetIds.has(a.id)), 'assets_export_selected'),
+    },
+    { label: 'Delete Assets', onClick: () => setBulkDeleteOpen(true), destructive: true },
+  ];
 
   const handleCloneAsset = (asset: Asset) => {
     const clonedAsset = {
@@ -464,20 +525,45 @@ const Assets = () => {
         <Card className="border shadow-card overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead className="w-[250px]">Asset</TableHead>
-                <TableHead>Tag / Serial</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Assigned To</TableHead>
-                <TableHead>Condition</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
-              </TableRow>
+              {selectedAssetIds.size > 0 ? (
+                <TableRow>
+                  <TableHead colSpan={8} className="p-2">
+                    <BulkActionToolbar
+                      selectedCount={selectedAssetIds.size}
+                      totalMatching={filteredAssets.length}
+                      onSelectAllMatching={handleSelectAllMatching}
+                      onClearSelection={clearSelection}
+                      primaryActions={bulkPrimaryActions}
+                      overflowActions={bulkOverflowActions}
+                      itemLabel="selected"
+                    />
+                  </TableHead>
+                </TableRow>
+              ) : (
+                <TableRow>
+                  <TableHead className="w-8">
+                    <Checkbox
+                      id="select-all-assets"
+                      name="select-all-assets"
+                      checked={selectAllOnPage}
+                      onCheckedChange={(checked) => handleSelectAllOnPage(checked === true)}
+                      aria-label="Select all assets on this page"
+                    />
+                  </TableHead>
+                  <TableHead className="w-[250px]">Asset</TableHead>
+                  <TableHead>Tag / Serial</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead>Assigned To</TableHead>
+                  <TableHead>Condition</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
+                </TableRow>
+              )}
             </TableHeader>
             <TableBody>
               {currentAssets.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
                     No assets found matching your criteria
                   </TableCell>
                 </TableRow>
@@ -485,7 +571,20 @@ const Assets = () => {
                 currentAssets.map((asset) => {
                   const Icon = categoryIcons[asset.category.toLowerCase()] || Package;
                   return (
-                    <TableRow key={asset.id} className="transition-colors">
+                    <TableRow
+                      key={asset.id}
+                      className="transition-colors"
+                      data-state={selectedAssetIds.has(asset.id) ? 'selected' : undefined}
+                    >
+                      <TableCell>
+                        <Checkbox
+                          id={`select-asset-${asset.id}`}
+                          name={`select-asset-${asset.id}`}
+                          checked={selectedAssetIds.has(asset.id)}
+                          onCheckedChange={(checked) => handleSelectAsset(asset.id, checked === true)}
+                          aria-label={`Select ${asset.name}`}
+                        />
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-muted">
@@ -681,6 +780,44 @@ const Assets = () => {
           onOpenChange={(open) => !open && setLosingAsset(null)}
         />
       )}
+
+      {/* Bulk action dialogs */}
+      <BulkAssignAssetsDialog
+        assetIds={selectedAssetIdsArray}
+        open={bulkAssignOpen}
+        onOpenChange={setBulkAssignOpen}
+        onDone={clearSelection}
+      />
+      <BulkChangeStatusDialog
+        assetIds={selectedAssetIdsArray}
+        open={bulkStatusOpen}
+        onOpenChange={setBulkStatusOpen}
+        onDone={clearSelection}
+      />
+      <BulkChangeLocationDialog
+        assetIds={selectedAssetIdsArray}
+        open={bulkLocationOpen}
+        onOpenChange={setBulkLocationOpen}
+        onDone={clearSelection}
+      />
+      <BulkAmcUpdateDialog
+        assetIds={selectedAssetIdsArray}
+        open={bulkAmcOpen}
+        onOpenChange={setBulkAmcOpen}
+        onDone={clearSelection}
+      />
+      <BulkUpdateCategoryDialog
+        assetIds={selectedAssetIdsArray}
+        open={bulkCategoryOpen}
+        onOpenChange={setBulkCategoryOpen}
+        onDone={clearSelection}
+      />
+      <BulkDeleteAssetsDialog
+        assetIds={selectedAssetIdsArray}
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        onDone={clearSelection}
+      />
     </div>
   );
 };

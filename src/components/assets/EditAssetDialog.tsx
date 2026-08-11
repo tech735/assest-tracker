@@ -46,6 +46,8 @@ const assetSchema = z.object({
     vendor: z.string().min(1, { message: 'Vendor is required.' }),
     warrantyStart: z.string().optional().nullable(),
     warrantyEnd: z.string().optional().nullable(),
+    amcStartDate: z.string().optional().nullable(),
+    amcEndDate: z.string().optional().nullable(),
     notes: z.string().optional().nullable(),
     condition: z.string().default('good'),
     status: z.string().default('available'),
@@ -96,6 +98,8 @@ export function EditAssetDialog({ asset, open, onOpenChange }: EditAssetDialogPr
             vendor: asset.vendor || '',
             warrantyStart: asset.warrantyStart ? new Date(asset.warrantyStart).toISOString().split('T')[0] : '',
             warrantyEnd: asset.warrantyEnd ? new Date(asset.warrantyEnd).toISOString().split('T')[0] : '',
+            amcStartDate: asset.amcStartDate ? new Date(asset.amcStartDate).toISOString().split('T')[0] : '',
+            amcEndDate: asset.amcEndDate ? new Date(asset.amcEndDate).toISOString().split('T')[0] : '',
             notes: asset.notes || '',
             condition: asset.condition,
             status: asset.status,
@@ -118,6 +122,8 @@ export function EditAssetDialog({ asset, open, onOpenChange }: EditAssetDialogPr
                 vendor: asset.vendor || '',
                 warrantyStart: asset.warrantyStart ? new Date(asset.warrantyStart).toISOString().split('T')[0] : '',
                 warrantyEnd: asset.warrantyEnd ? new Date(asset.warrantyEnd).toISOString().split('T')[0] : '',
+                amcStartDate: asset.amcStartDate ? new Date(asset.amcStartDate).toISOString().split('T')[0] : '',
+                amcEndDate: asset.amcEndDate ? new Date(asset.amcEndDate).toISOString().split('T')[0] : '',
                 notes: asset.notes || '',
                 condition: asset.condition,
                 status: asset.status,
@@ -146,6 +152,8 @@ export function EditAssetDialog({ asset, open, onOpenChange }: EditAssetDialogPr
                     purchaseCost: Number(values.purchaseCost),
                     warrantyStart: values.warrantyStart || null,
                     warrantyEnd: values.warrantyEnd || null,
+                    amcStartDate: values.amcStartDate || null,
+                    amcEndDate: values.amcEndDate || null,
                     notes: values.notes || null,
                 } as Partial<Asset>,
             });
@@ -387,6 +395,35 @@ export function EditAssetDialog({ asset, open, onOpenChange }: EditAssetDialogPr
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Warranty Expiry</FormLabel>
+                                        <FormControl>
+                                            <DatePicker value={field.value || ''} onChange={field.onChange} onBlur={field.onBlur} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="amcStartDate"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>AMC Start Date</FormLabel>
+                                        <FormControl>
+                                            <DatePicker value={field.value || ''} onChange={field.onChange} onBlur={field.onBlur} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="amcEndDate"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>AMC End Date</FormLabel>
                                         <FormControl>
                                             <DatePicker value={field.value || ''} onChange={field.onChange} onBlur={field.onBlur} />
                                         </FormControl>

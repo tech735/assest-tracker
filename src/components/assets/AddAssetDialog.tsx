@@ -48,6 +48,8 @@ const assetSchema = z.object({
     vendor: z.string().min(1, { message: 'Vendor is required.' }),
     warrantyStart: z.string().optional(),
     warrantyEnd: z.string().optional(),
+    amcStartDate: z.string().optional(),
+    amcEndDate: z.string().optional(),
     notes: z.string().optional(),
     condition: z.string().default('good'),
     status: z.string().default('available'),
@@ -109,6 +111,8 @@ export function AddAssetDialog({
             vendor: asset?.vendor || '',
             warrantyStart: asset?.warrantyStart ? new Date(asset.warrantyStart).toISOString().split('T')[0] : '',
             warrantyEnd: asset?.warrantyEnd ? new Date(asset.warrantyEnd).toISOString().split('T')[0] : '',
+            amcStartDate: asset?.amcStartDate ? new Date(asset.amcStartDate).toISOString().split('T')[0] : '',
+            amcEndDate: asset?.amcEndDate ? new Date(asset.amcEndDate).toISOString().split('T')[0] : '',
             notes: asset?.notes || '',
             condition: asset?.condition || 'good',
             status: asset?.status || 'available',
@@ -130,6 +134,8 @@ export function AddAssetDialog({
             vendor: asset?.vendor || '',
             warrantyStart: asset?.warrantyStart ? new Date(asset.warrantyStart).toISOString().split('T')[0] : '',
             warrantyEnd: asset?.warrantyEnd ? new Date(asset.warrantyEnd).toISOString().split('T')[0] : '',
+            amcStartDate: asset?.amcStartDate ? new Date(asset.amcStartDate).toISOString().split('T')[0] : '',
+            amcEndDate: asset?.amcEndDate ? new Date(asset.amcEndDate).toISOString().split('T')[0] : '',
             notes: asset?.notes || '',
             condition: asset?.condition || 'good',
             status: asset?.status || 'available',
@@ -166,6 +172,8 @@ export function AddAssetDialog({
                 vendor: values.vendor,
                 warrantyStart: values.warrantyStart || undefined,
                 warrantyEnd: values.warrantyEnd || undefined,
+                amcStartDate: values.amcStartDate || undefined,
+                amcEndDate: values.amcEndDate || undefined,
                 notes: values.notes || undefined,
             });
 
@@ -392,6 +400,35 @@ export function AddAssetDialog({
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Warranty Expiry</FormLabel>
+                                        <FormControl>
+                                            <DatePicker value={field.value} onChange={field.onChange} onBlur={field.onBlur} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="amcStartDate"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>AMC Start Date</FormLabel>
+                                        <FormControl>
+                                            <DatePicker value={field.value} onChange={field.onChange} onBlur={field.onBlur} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="amcEndDate"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>AMC End Date</FormLabel>
                                         <FormControl>
                                             <DatePicker value={field.value} onChange={field.onChange} onBlur={field.onBlur} />
                                         </FormControl>

@@ -13,6 +13,9 @@ export default {
       },
     },
     extend: {
+      aria: {
+        invalid: 'invalid="true"',
+      },
       fontFamily: {
         sans: ['DM Sans', 'system-ui', 'sans-serif'],
       },

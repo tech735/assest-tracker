@@ -60,6 +60,8 @@ CREATE TABLE IF NOT EXISTS assets (
   vendor TEXT NOT NULL,
   warranty_start DATE,
   warranty_end DATE,
+  amc_start_date DATE,
+  amc_end_date DATE,
   notes TEXT,
   repair_vendor TEXT,
   repair_est_return DATE,
@@ -110,12 +112,29 @@ CREATE TABLE IF NOT EXISTS alerts (
 );
 
 -- =====================================================
+-- AMC NOTIFICATIONS TABLE
+-- Tracks which reminder stages (e.g. 30/15/7 days before expiry) have already
+-- been emailed for a given asset/contract-end-date, so the scheduled AMC
+-- expiry check can run repeatedly without sending duplicate emails.
+-- =====================================================
+CREATE TABLE IF NOT EXISTS amc_notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  asset_id UUID NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+  reminder_days INTEGER NOT NULL,
+  amc_end_date DATE NOT NULL,
+  sent_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (asset_id, reminder_days, amc_end_date)
+);
+
+-- =====================================================
 -- INDEXES
 -- =====================================================
 CREATE INDEX IF NOT EXISTS idx_assets_status ON assets(status);
 CREATE INDEX IF NOT EXISTS idx_assets_category ON assets(category);
 CREATE INDEX IF NOT EXISTS idx_assets_location_id ON assets(location_id);
 CREATE INDEX IF NOT EXISTS idx_assets_assigned_to_id ON assets(assigned_to_id);
+CREATE INDEX IF NOT EXISTS idx_assets_amc_end_date ON assets(amc_end_date);
+CREATE INDEX IF NOT EXISTS idx_amc_notifications_asset_id ON amc_notifications(asset_id);
 CREATE INDEX IF NOT EXISTS idx_employees_email ON employees(email);
 CREATE INDEX IF NOT EXISTS idx_employees_status ON employees(status);
 CREATE INDEX IF NOT EXISTS idx_assignments_asset_id ON assignments(asset_id);
@@ -357,6 +376,11 @@ CREATE POLICY "Allow all operations on assignments" ON assignments
   FOR ALL USING (true) WITH CHECK (true);
 
 CREATE POLICY "Allow all operations on alerts" ON alerts
+  FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE amc_notifications ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow all operations on amc_notifications" ON amc_notifications
   FOR ALL USING (true) WITH CHECK (true);
 
 -- =====================================================

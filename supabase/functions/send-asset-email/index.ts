@@ -1,9 +1,10 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { sendEmail } from "../_shared/mailer.ts";
 
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const RESEND_API_KEY_ASSET_SUMMARY = Deno.env.get("RESEND_API_KEY_ASSET_SUMMARY");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -110,38 +111,20 @@ serve(async (req: Request) => {
       </html>
     `;
 
-    // 4. Send Email via Resend
-    if (!RESEND_API_KEY) {
-      console.log("Mocking email send (No API Key found):", emailHtml);
-      return new Response(
-        JSON.stringify({ message: "Email simulation successful (See logs)", mock: true }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-      },
-      body: JSON.stringify({
-        from: "Asset Compass <notifications@asset.kotu.co.in>", // Adjust the email address if your verified domain is different
-        to: [employee.email],
-        subject: `Your Assigned Company Assets - Asset Compass`,
-        html: emailHtml,
-      }),
+    // 4. Send Email via the shared SMTP mailer (see supabase/functions/_shared/mailer.ts)
+    const result = await sendEmail({
+      to: [employee.email],
+      subject: "Your Assigned Company Assets - Asset Compass",
+      html: emailHtml,
+      apiKey: RESEND_API_KEY_ASSET_SUMMARY,
     });
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(`Resend API Error: ${JSON.stringify(data)}`);
-    }
-
-    return new Response(JSON.stringify(data), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify(result.mock
+        ? { message: "Email simulation successful (See logs)", mock: true }
+        : { message: "Email sent", mock: false }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);

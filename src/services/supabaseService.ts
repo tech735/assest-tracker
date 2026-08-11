@@ -25,6 +25,8 @@ const mapAsset = (data: any): Asset => ({
     vendor: data.vendor,
     warrantyStart: data.warranty_start,
     warrantyEnd: data.warranty_end,
+    amcStartDate: data.amc_start_date,
+    amcEndDate: data.amc_end_date,
     notes: data.notes,
     repairVendor: data.repair_vendor,
     repairEstReturn: data.repair_est_return,
@@ -135,6 +137,8 @@ export async function createAsset(asset: Omit<Asset, 'id' | 'createdAt' | 'updat
             vendor: asset.vendor,
             warranty_start: asset.warrantyStart,
             warranty_end: asset.warrantyEnd,
+            amc_start_date: asset.amcStartDate,
+            amc_end_date: asset.amcEndDate,
             notes: asset.notes,
             repair_vendor: asset.repairVendor,
             repair_est_return: asset.repairEstReturn,
@@ -171,6 +175,8 @@ export async function updateAsset(id: string, updates: Partial<Asset>): Promise<
             vendor: updates.vendor,
             warranty_start: updates.warrantyStart,
             warranty_end: updates.warrantyEnd,
+            amc_start_date: updates.amcStartDate,
+            amc_end_date: updates.amcEndDate,
             notes: updates.notes,
             repair_vendor: updates.repairVendor,
             repair_est_return: updates.repairEstReturn,
@@ -194,6 +200,43 @@ export async function deleteAsset(id: string): Promise<void> {
         .eq('id', id);
 
     if (error) throw error;
+}
+
+// =====================================================
+// BULK ASSET OPERATIONS
+// =====================================================
+
+// Applies the same field(s) to every asset in `ids` in a single round trip.
+// Only intended for simple, side-effect-free field changes (location, category,
+// vendor, AMC dates, or clearing assignment when marking available). Status
+// transitions that need an assignment-log entry (assign, lost) go through their
+// own bulk functions below instead, so the assignment history / employee asset
+// counts stay correct.
+export async function bulkUpdateAssets(ids: string[], updates: Partial<Asset>): Promise<void> {
+    const payload: Record<string, unknown> = {};
+    if ('status' in updates) payload.status = updates.status;
+    if ('category' in updates) payload.category = updates.category;
+    if ('location' in updates) payload.location = updates.location;
+    if ('locationId' in updates) payload.location_id = updates.locationId;
+    if ('vendor' in updates) payload.vendor = updates.vendor;
+    if ('amcStartDate' in updates) payload.amc_start_date = updates.amcStartDate;
+    if ('amcEndDate' in updates) payload.amc_end_date = updates.amcEndDate;
+    if ('assignedTo' in updates) payload.assigned_to = updates.assignedTo;
+    if ('assignedToId' in updates) payload.assigned_to_id = updates.assignedToId;
+
+    const { error } = await supabase.from('assets').update(payload).in('id', ids);
+    if (error) throw error;
+}
+
+export async function deleteAssets(ids: string[]): Promise<void> {
+    const { error } = await supabase.from('assets').delete().in('id', ids);
+    if (error) throw error;
+}
+
+// Reuses markLost per asset so each one gets its own assignment-log "lost" entry,
+// exactly like the single-asset flow (see LostAssetDialog).
+export async function bulkMarkAssetsLost(ids: string[], { reference, notes }: { reference?: string; notes?: string }): Promise<void> {
+    await Promise.all(ids.map((assetId) => markLost({ assetId, reference, notes })));
 }
 
 export async function returnAsset({
@@ -545,6 +588,53 @@ export async function deleteEmployee(id: string): Promise<void> {
         .eq('id', id);
 
     if (error) throw error;
+}
+
+// =====================================================
+// BULK EMPLOYEE OPERATIONS
+// =====================================================
+
+export async function bulkUpdateEmployees(ids: string[], updates: Partial<Employee>): Promise<void> {
+    const payload: Record<string, unknown> = {};
+    if ('status' in updates) payload.status = updates.status;
+    if ('department' in updates) payload.department = updates.department;
+    if ('location' in updates) payload.location = updates.location;
+    if ('locationId' in updates) payload.location_id = updates.locationId;
+
+    const { error } = await supabase.from('employees').update(payload).in('id', ids);
+    if (error) throw error;
+}
+
+export async function deleteEmployees(ids: string[]): Promise<void> {
+    const { error } = await supabase.from('employees').delete().in('id', ids);
+    if (error) throw error;
+}
+
+// Mirrors OffboardEmployeeDialog's single-employee flow for each employee: return
+// any assets currently assigned to them, then mark them offboarded.
+export async function bulkOffboardEmployees(ids: string[], exitDate: string): Promise<void> {
+    const { data: locationRows } = await supabase.from('locations').select('*').eq('name', 'Core Office').limit(1);
+    const coreOffice = locationRows && locationRows[0] ? mapLocation(locationRows[0]) : undefined;
+
+    const { data: assetRows, error: assetsError } = await supabase
+        .from('assets')
+        .select('*')
+        .eq('status', 'assigned')
+        .in('assigned_to_id', ids);
+    if (assetsError) throw assetsError;
+
+    const activeAssets = (assetRows || []).map(mapAsset);
+
+    await Promise.all(activeAssets.map((asset) => returnAsset({
+        assetId: asset.id,
+        condition: asset.condition,
+        receivedBy: 'IT (Bulk Offboarding)',
+        notes: `Collected as part of bulk offboarding.`,
+        locationId: coreOffice?.id,
+        locationName: coreOffice?.name,
+    })));
+
+    await Promise.all(ids.map((id) => offboardEmployee({ id, exitDate })));
 }
 
 // =====================================================

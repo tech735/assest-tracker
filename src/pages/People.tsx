@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Table,
@@ -36,6 +37,12 @@ import { EmployeeProfileDialog } from '@/components/people/EmployeeProfileDialog
 import { Employee } from '@/types/asset';
 import { exportToCSV } from '@/lib/exportUtils';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
+import { BulkActionToolbar, BulkAction } from '@/components/ui/bulk-action-toolbar';
+import { BulkChangeStatusDialog } from '@/components/people/BulkChangeStatusDialog';
+import { BulkChangeDepartmentDialog } from '@/components/people/BulkChangeDepartmentDialog';
+import { BulkChangeLocationDialog } from '@/components/people/BulkChangeLocationDialog';
+import { BulkOffboardDialog } from '@/components/people/BulkOffboardDialog';
+import { BulkDeleteEmployeesDialog } from '@/components/people/BulkDeleteEmployeesDialog';
 
 const statusBadgeVariant = (status: Employee['status']) =>
   status === 'active' ? 'success' : status === 'offboarded' ? 'destructive' : 'secondary';
@@ -52,7 +59,15 @@ const People = () => {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [offboardingEmployee, setOffboardingEmployee] = useState<Employee | null>(null);
   const [viewingEmployeeId, setViewingEmployeeId] = useState<string | null>(null);
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<Set<string>>(new Set());
   const [searchParams] = useSearchParams();
+
+  // Bulk action dialogs
+  const [bulkStatusOpen, setBulkStatusOpen] = useState(false);
+  const [bulkDepartmentOpen, setBulkDepartmentOpen] = useState(false);
+  const [bulkLocationOpen, setBulkLocationOpen] = useState(false);
+  const [bulkOffboardOpen, setBulkOffboardOpen] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -96,12 +111,58 @@ const People = () => {
     return 0;
   });
 
-  useEffect(() => { setCurrentPage(1); }, [searchQuery, statusFilter, departmentFilter, sortConfig]);
+  useEffect(() => {
+    setCurrentPage(1);
+    setSelectedEmployeeIds(new Set());
+  }, [searchQuery, statusFilter, departmentFilter, sortConfig]);
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentEmployees = sortedEmployees.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(sortedEmployees.length / itemsPerPage);
+
+  const selectAllOnPage = currentEmployees.length > 0 && currentEmployees.every((employee) => selectedEmployeeIds.has(employee.id));
+
+  const handleSelectAllOnPage = (checked: boolean) => {
+    setSelectedEmployeeIds((prev) => {
+      const next = new Set(prev);
+      currentEmployees.forEach((employee) => (checked ? next.add(employee.id) : next.delete(employee.id)));
+      return next;
+    });
+  };
+
+  const handleSelectEmployee = (id: string, checked: boolean) => {
+    setSelectedEmployeeIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const handleSelectAllMatching = () => {
+    setSelectedEmployeeIds(new Set(sortedEmployees.map((e) => e.id)));
+  };
+
+  const clearSelection = () => setSelectedEmployeeIds(new Set());
+
+  const selectedEmployeeIdsArray = Array.from(selectedEmployeeIds);
+  const selectedEmployeesData = sortedEmployees.filter((e) => selectedEmployeeIds.has(e.id));
+
+  const bulkPrimaryActions: BulkAction[] = [
+    { label: 'Change Status', onClick: () => setBulkStatusOpen(true) },
+    { label: 'Change Department', onClick: () => setBulkDepartmentOpen(true) },
+    { label: 'Change Location', onClick: () => setBulkLocationOpen(true) },
+  ];
+
+  const bulkOverflowActions: BulkAction[] = [
+    {
+      label: 'Export Selected',
+      onClick: () => exportToCSV(selectedEmployeesData, 'people_export_selected'),
+    },
+    { label: 'Offboard', onClick: () => setBulkOffboardOpen(true), destructive: true },
+    { label: 'Delete Employees', onClick: () => setBulkDeleteOpen(true), destructive: true },
+  ];
 
   const requestSort = (key: string) => {
     let direction: 'asc' | 'desc' = 'asc';
@@ -249,38 +310,76 @@ const People = () => {
         <Card className="border shadow-card overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead className="w-[300px] cursor-pointer hover:bg-muted/60 transition-colors" onClick={() => requestSort('name')}>
-                  <div className="flex items-center">Employee <SortIcon columnKey="name" /></div>
-                </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/60 transition-colors" onClick={() => requestSort('department')}>
-                  <div className="flex items-center">Department <SortIcon columnKey="department" /></div>
-                </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/60 transition-colors" onClick={() => requestSort('position')}>
-                  <div className="flex items-center">Position <SortIcon columnKey="position" /></div>
-                </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/60 transition-colors" onClick={() => requestSort('location')}>
-                  <div className="flex items-center">Location <SortIcon columnKey="location" /></div>
-                </TableHead>
-                <TableHead className="text-center cursor-pointer hover:bg-muted/60 transition-colors" onClick={() => requestSort('assets')}>
-                  <div className="flex items-center justify-center">Assets <SortIcon columnKey="assets" /></div>
-                </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/60 transition-colors" onClick={() => requestSort('status')}>
-                  <div className="flex items-center">Status <SortIcon columnKey="status" /></div>
-                </TableHead>
-                <TableHead className="w-[50px]"></TableHead>
-              </TableRow>
+              {selectedEmployeeIds.size > 0 ? (
+                <TableRow>
+                  <TableHead colSpan={8} className="p-2">
+                    <BulkActionToolbar
+                      selectedCount={selectedEmployeeIds.size}
+                      totalMatching={sortedEmployees.length}
+                      onSelectAllMatching={handleSelectAllMatching}
+                      onClearSelection={clearSelection}
+                      primaryActions={bulkPrimaryActions}
+                      overflowActions={bulkOverflowActions}
+                      itemLabel="selected"
+                    />
+                  </TableHead>
+                </TableRow>
+              ) : (
+                <TableRow>
+                  <TableHead className="w-8">
+                    <Checkbox
+                      id="select-all-employees"
+                      name="select-all-employees"
+                      checked={selectAllOnPage}
+                      onCheckedChange={(checked) => handleSelectAllOnPage(checked === true)}
+                      aria-label="Select all people on this page"
+                    />
+                  </TableHead>
+                  <TableHead className="w-[300px] cursor-pointer hover:bg-muted/60 transition-colors" onClick={() => requestSort('name')}>
+                    <div className="flex items-center">Employee <SortIcon columnKey="name" /></div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer hover:bg-muted/60 transition-colors" onClick={() => requestSort('department')}>
+                    <div className="flex items-center">Department <SortIcon columnKey="department" /></div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer hover:bg-muted/60 transition-colors" onClick={() => requestSort('position')}>
+                    <div className="flex items-center">Position <SortIcon columnKey="position" /></div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer hover:bg-muted/60 transition-colors" onClick={() => requestSort('location')}>
+                    <div className="flex items-center">Location <SortIcon columnKey="location" /></div>
+                  </TableHead>
+                  <TableHead className="text-center cursor-pointer hover:bg-muted/60 transition-colors" onClick={() => requestSort('assets')}>
+                    <div className="flex items-center justify-center">Assets <SortIcon columnKey="assets" /></div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer hover:bg-muted/60 transition-colors" onClick={() => requestSort('status')}>
+                    <div className="flex items-center">Status <SortIcon columnKey="status" /></div>
+                  </TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
+                </TableRow>
+              )}
             </TableHeader>
             <TableBody>
               {currentEmployees.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
                     No employees found matching your criteria
                   </TableCell>
                 </TableRow>
               ) : (
                 currentEmployees.map((employee) => (
-                  <TableRow key={employee.id} className="transition-colors">
+                  <TableRow
+                    key={employee.id}
+                    className="transition-colors"
+                    data-state={selectedEmployeeIds.has(employee.id) ? 'selected' : undefined}
+                  >
+                    <TableCell>
+                      <Checkbox
+                        id={`select-employee-${employee.id}`}
+                        name={`select-employee-${employee.id}`}
+                        checked={selectedEmployeeIds.has(employee.id)}
+                        onCheckedChange={(checked) => handleSelectEmployee(employee.id, checked === true)}
+                        aria-label={`Select ${employee.name}`}
+                      />
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="w-9 h-9">
@@ -382,6 +481,38 @@ const People = () => {
           />
         );
       })()}
+
+      {/* Bulk action dialogs */}
+      <BulkChangeStatusDialog
+        employeeIds={selectedEmployeeIdsArray}
+        open={bulkStatusOpen}
+        onOpenChange={setBulkStatusOpen}
+        onDone={clearSelection}
+      />
+      <BulkChangeDepartmentDialog
+        employeeIds={selectedEmployeeIdsArray}
+        open={bulkDepartmentOpen}
+        onOpenChange={setBulkDepartmentOpen}
+        onDone={clearSelection}
+      />
+      <BulkChangeLocationDialog
+        employeeIds={selectedEmployeeIdsArray}
+        open={bulkLocationOpen}
+        onOpenChange={setBulkLocationOpen}
+        onDone={clearSelection}
+      />
+      <BulkOffboardDialog
+        employees={selectedEmployeesData}
+        open={bulkOffboardOpen}
+        onOpenChange={setBulkOffboardOpen}
+        onDone={clearSelection}
+      />
+      <BulkDeleteEmployeesDialog
+        employeeIds={selectedEmployeeIdsArray}
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        onDone={clearSelection}
+      />
     </div>
   );
 };

@@ -17,6 +17,13 @@ function Calendar({
   buttonVariant = "ghost",
   formatters,
   components,
+  // react-day-picker's dropdown caption only lists years between startMonth and
+  // endMonth — without bounds it silently shows just the current year (no past
+  // or future options). Default to a wide range so every field using
+  // captionLayout="dropdown" (see DatePicker) gets a real year picker; callers
+  // can still override either bound via props.
+  startMonth = new Date(new Date().getFullYear() - 100, 0),
+  endMonth = new Date(new Date().getFullYear() + 20, 11),
   ...props
 }: React.ComponentProps<typeof DayPicker> & {
   buttonVariant?: React.ComponentProps<typeof Button>["variant"]
@@ -33,6 +40,8 @@ function Calendar({
         className
       )}
       captionLayout={captionLayout}
+      startMonth={startMonth}
+      endMonth={endMonth}
       formatters={{
         formatMonthDropdown: (date) =>
           date.toLocaleString("default", { month: "short" }),

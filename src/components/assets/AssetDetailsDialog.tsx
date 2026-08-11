@@ -38,11 +38,13 @@ import {
     Monitor,
     Tablet,
     Headphones,
+    ShieldCheck,
 } from 'lucide-react';
 import { Asset, AssetStatus, AssetCategory, AssignmentEventType } from '@/types/asset';
 import { useAssetAssignments, useEmployees, useSettings } from '@/hooks/useSupabaseData';
 import { format } from 'date-fns';
 import { InfoCard, Field, DetailNavHeader } from '@/components/ui/detail-card';
+import { getAmcStatus, amcStatusLabels, AmcStatus } from '@/lib/amc';
 
 interface AssetDetailsDialogProps {
     assets: Asset[];
@@ -96,6 +98,13 @@ const categoryLabels: Record<AssetCategory, string> = {
     other: 'Other',
 };
 
+const amcStatusVariants: Record<AmcStatus, 'success' | 'warning' | 'destructive' | 'outline'> = {
+    active: 'success',
+    expiring_soon: 'warning',
+    expired: 'destructive',
+    not_configured: 'outline',
+};
+
 const eventMeta: Record<AssignmentEventType, { icon: typeof User; label: string }> = {
     assign: { icon: UserPlus, label: 'Assigned' },
     return: { icon: RotateCcw, label: 'Returned' },
@@ -138,6 +147,7 @@ export function AssetDetailsDialog({
         currency: settings?.currency || 'USD',
     });
     const warrantyExpired = asset.warrantyEnd ? new Date(asset.warrantyEnd) < new Date() : false;
+    const amcStatus = getAmcStatus(asset.amcEndDate);
 
     const primaryAction = (() => {
         switch (asset.status) {
@@ -265,6 +275,26 @@ export function AssetDetailsDialog({
                                                 : 'N/A'
                                         }
                                         className={warrantyExpired ? 'text-destructive' : ''}
+                                    />
+                                </div>
+                            </InfoCard>
+
+                            {/* AMC Information */}
+                            <InfoCard title="AMC Information" icon={ShieldCheck}>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <Field
+                                        label="AMC Start Date"
+                                        value={asset.amcStartDate ? format(new Date(asset.amcStartDate), 'PP') : 'Not set'}
+                                    />
+                                    <Field
+                                        label="AMC End Date"
+                                        value={asset.amcEndDate ? format(new Date(asset.amcEndDate), 'PP') : 'Not set'}
+                                        className={amcStatus === 'expired' ? 'text-destructive' : ''}
+                                    />
+                                    <Field
+                                        label="AMC Status"
+                                        value={<Badge variant={amcStatusVariants[amcStatus]}>{amcStatusLabels[amcStatus]}</Badge>}
+                                        className="col-span-2"
                                     />
                                 </div>
                             </InfoCard>

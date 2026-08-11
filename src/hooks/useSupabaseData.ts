@@ -65,6 +65,49 @@ export function useDeleteAsset() {
     });
 }
 
+export function useBulkUpdateAssets() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ ids, updates }: { ids: string[]; updates: Partial<Asset> }) =>
+            supabaseService.bulkUpdateAssets(ids, updates),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['assets'] });
+            queryClient.invalidateQueries({ queryKey: ['locations'] });
+            queryClient.invalidateQueries({ queryKey: ['employees'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+        },
+    });
+}
+
+export function useBulkDeleteAssets() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: supabaseService.deleteAssets,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['assets'] });
+            queryClient.invalidateQueries({ queryKey: ['locations'] });
+            queryClient.invalidateQueries({ queryKey: ['employees'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+        },
+    });
+}
+
+export function useBulkMarkAssetsLost() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ ids, reference, notes }: { ids: string[]; reference?: string; notes?: string }) =>
+            supabaseService.bulkMarkAssetsLost(ids, { reference, notes }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['assignments'] });
+            queryClient.invalidateQueries({ queryKey: ['assets'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+        },
+    });
+}
+
 export function useReturnAsset() {
     const queryClient = useQueryClient();
 
@@ -134,6 +177,49 @@ export function useDeleteEmployee() {
             queryClient.invalidateQueries({ queryKey: ['employees'] });
             queryClient.invalidateQueries({ queryKey: ['locations'] });
             queryClient.invalidateQueries({ queryKey: ['assets'] }); // Unassigning might have happened
+        },
+    });
+}
+
+export function useBulkUpdateEmployees() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ ids, updates }: { ids: string[]; updates: Partial<Employee> }) =>
+            supabaseService.bulkUpdateEmployees(ids, updates),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['employees'] });
+            queryClient.invalidateQueries({ queryKey: ['locations'] });
+            queryClient.invalidateQueries({ queryKey: ['assets'] });
+        },
+    });
+}
+
+export function useBulkDeleteEmployees() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: supabaseService.deleteEmployees,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['employees'] });
+            queryClient.invalidateQueries({ queryKey: ['locations'] });
+            queryClient.invalidateQueries({ queryKey: ['assets'] });
+        },
+    });
+}
+
+export function useBulkOffboardEmployees() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ ids, exitDate }: { ids: string[]; exitDate: string }) =>
+            supabaseService.bulkOffboardEmployees(ids, exitDate),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['employees'] });
+            queryClient.invalidateQueries({ queryKey: ['locations'] });
+            queryClient.invalidateQueries({ queryKey: ['assets'] });
+            queryClient.invalidateQueries({ queryKey: ['assignments'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
         },
     });
 }
