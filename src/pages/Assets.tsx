@@ -1,825 +1,579 @@
-import { useState, useEffect } from 'react';
-import { Search, Filter, Download, Plus, MoreHorizontal, Eye, Edit, Trash2, Edit2, History, Copy, ChevronRight, Wrench, AlertTriangle, CheckCircle } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  ArrowLeftRight,
+  ArrowUpDown,
+  Columns3,
+  Download,
+  MapPin,
+  MoreHorizontal,
+  Package,
+  Plus,
+  SlidersHorizontal,
+  Tag,
+  Trash2,
+  Upload,
+  Wrench,
+  X,
+} from 'lucide-react';
+import { useAssets, useEmployees, useLocations, useSettings } from '@/hooks/useSupabaseData';
+import type { Asset, AssetStatus } from '@/types/asset';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Label } from '@/components/ui/label';
-import { Card } from '@/components/ui/card';
-import { useAssets, useLocations, useSettings } from '@/hooks/useSupabaseData';
-import { AssetAdditionDialog } from '@/components/assets/AssetAdditionDialog';
-import { AddAssetDialog } from '@/components/assets/AddAssetDialog';
-import { EditAssetDialog } from '@/components/assets/EditAssetDialog';
-import { DeleteAssetDialog } from '@/components/assets/DeleteAssetDialog';
-import { AssignAssetDialog } from '@/components/assets/AssignAssetDialog';
-import { AssetDetailsDialog } from '@/components/assets/AssetDetailsDialog';
-import { ReturnAssetDialog } from '@/components/assets/ReturnAssetDialog';
-import { RepairAssetDialog } from '@/components/assets/RepairAssetDialog';
-import { LostAssetDialog } from '@/components/assets/LostAssetDialog';
-import { Asset, AssetStatus, AssetCategory } from '@/types/asset';
-import { exportToCSV } from '@/lib/exportUtils';
-import { DataTablePagination } from '@/components/ui/data-table-pagination';
-import { BulkActionToolbar, BulkAction } from '@/components/ui/bulk-action-toolbar';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
+import { BulkBar, FilterChip, PaginationFooter, SearchField, ViewTabs } from '@/components/app/controls';
+import { AssetThumb, EmptyState, PageHeader, PageLoader, PersonAvatar, StatusBadge, toneClasses } from '@/components/app/primitives';
+import { AssetQuickView, AssetRowMenu } from '@/components/assets/AssetPanels';
+import { useAssetActions } from '@/components/assets/useAssetActions';
 import { BulkAssignAssetsDialog } from '@/components/assets/BulkAssignAssetsDialog';
 import { BulkChangeStatusDialog } from '@/components/assets/BulkChangeStatusDialog';
 import { BulkChangeLocationDialog } from '@/components/assets/BulkChangeLocationDialog';
 import { BulkAmcUpdateDialog } from '@/components/assets/BulkAmcUpdateDialog';
 import { BulkUpdateCategoryDialog } from '@/components/assets/BulkUpdateCategoryDialog';
 import { BulkDeleteAssetsDialog } from '@/components/assets/BulkDeleteAssetsDialog';
-import {
-  Laptop,
-  Smartphone,
-  Monitor,
-  Tablet,
-  Headphones,
-  Package,
-  UserPlus,
-} from 'lucide-react';
+import { amcExpiring, coverage, displayLocation, formatDate, STATUS_META, STATUS_ORDER, titleCase } from '@/lib/assetMeta';
+import { exportToCSV } from '@/lib/exportUtils';
+import { cn } from '@/lib/utils';
 
-const categoryIcons: Record<string, React.ElementType> = {
-  laptop: Laptop,
-  desktop: Monitor,
-  phone: Smartphone,
-  tablet: Tablet,
-  monitor: Monitor,
-  accessory: Headphones,
-  other: Package,
-};
+type View = 'all' | AssetStatus | 'amc' | 'overdue';
+type Sort = 'updated' | 'name' | 'tag' | 'amc';
+type Col = 'tag' | 'location' | 'assignee' | 'condition' | 'coverage';
+const COL_LABELS: Record<Col, string> = { tag: 'Tag / Serial', location: 'Location', assignee: 'Assigned to', condition: 'Condition', coverage: 'AMC / Warranty' };
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const statusVariants: Record<AssetStatus, 'available' | 'assigned' | 'repair' | 'lost' | 'retired'> = {
-  available: 'available',
-  assigned: 'assigned',
-  repair: 'repair',
-  lost: 'lost',
-  retired: 'retired',
-};
+const list = (v: string | null) => (v ? v.split(',').filter(Boolean) : []);
 
-const statusLabels: Record<AssetStatus, string> = {
-  available: 'Available',
-  assigned: 'Assigned',
-  repair: 'In Repair',
-  lost: 'Lost',
-  retired: 'Retired',
-};
-
-const conditionVariants: Record<string, 'success' | 'info' | 'warning' | 'destructive'> = {
-  new: 'success',
-  good: 'info',
-  fair: 'warning',
-  poor: 'destructive',
-};
-
-const getInitials = (name: string) =>
-  name.split(' ').filter(Boolean).map((n) => n[0]).slice(0, 2).join('').toUpperCase();
-
-
-
-const Assets = () => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [locationFilter, setLocationFilter] = useState<string>('all');
-  const [vendorFilter, setVendorFilter] = useState<string>('all');
-  const [brandFilter, setBrandFilter] = useState<string>('all');
-  const [conditionFilter, setConditionFilter] = useState<string>('all');
-  const [assignedToFilter, setAssignedToFilter] = useState<string>('all');
-
-  // State for edit/delete/assign dialogs
-  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
-  const [deletingAsset, setDeletingAsset] = useState<Asset | null>(null);
-  const [assigningAsset, setAssigningAsset] = useState<Asset | null>(null);
-  const [returningAsset, setReturningAsset] = useState<Asset | null>(null);
-  const [repairingAsset, setRepairingAsset] = useState<Asset | null>(null);
-  const [losingAsset, setLosingAsset] = useState<Asset | null>(null);
-  const [viewingAsset, setViewingAsset] = useState<{ assetId: string; tab: 'details' | 'history' } | null>(null);
-  const [cloningAsset, setCloningAsset] = useState<Asset | null>(null);
-  const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set());
-  const [searchParams] = useSearchParams();
-
-  // Bulk action dialogs
-  const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
-  const [bulkStatusOpen, setBulkStatusOpen] = useState(false);
-  const [bulkLocationOpen, setBulkLocationOpen] = useState(false);
-  const [bulkAmcOpen, setBulkAmcOpen] = useState(false);
-  const [bulkCategoryOpen, setBulkCategoryOpen] = useState(false);
-  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
-
-  // Pagination State
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-
-  const { data: assets = [], isLoading: assetsLoading } = useAssets();
-  const { data: locations = [], isLoading: locationsLoading } = useLocations();
-
-  useEffect(() => {
-    const viewId = searchParams.get('view');
-    if (viewId && assets.length > 0) {
-      const asset = assets.find(a => a.id === viewId);
-      if (asset) {
-        setViewingAsset({ assetId: asset.id, tab: 'details' });
-      }
-    }
-  }, [searchParams, assets]);
-
-  // Derive unique categories from actual asset data and settings
+export default function Assets() {
+  const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
+  const { data: assets = [], isLoading } = useAssets();
+  const { data: locations = [] } = useLocations();
+  const { data: employees = [] } = useEmployees();
   const { data: settings } = useSettings();
-  const settingsCategories = settings?.categories || [];
-  const assetCategories = Array.from(new Set(assets.map(a => a.category).filter(Boolean)));
+  const currency = settings?.currency;
+  const { open: act, dialogs } = useAssetActions();
 
-  const categories = Array.from(new Set([
-    ...settingsCategories,
-    ...assetCategories
-  ].map(cat => cat.charAt(0).toUpperCase() + cat.slice(1).toLowerCase())))
-    .sort();
+  // --- URL-synced filters (shareable views) ---
+  const rawView = params.get('view') || 'all';
+  const view = (UUID.test(rawView) ? 'all' : rawView) as View;
+  const checkoutMode = params.get('checkout') === '1';
+  const q = params.get('q') || '';
+  const cats = list(params.get('category'));
+  const locs = list(params.get('location'));
+  const people = list(params.get('assignee'));
+  const conds = list(params.get('condition'));
+  const brands = list(params.get('brand'));
+  const sort = (params.get('sort') || 'updated') as Sort;
+  const setParam = (key: string, value: string | string[] | null) => {
+    const next = new URLSearchParams(params);
+    const v = Array.isArray(value) ? value.join(',') : value;
+    if (!v || v === 'all') next.delete(key);
+    else next.set(key, v);
+    setParams(next, { replace: true });
+  };
 
-  const vendors = Array.from(new Set(assets.map(a => a.vendor).filter(Boolean))).sort();
-  const brands = Array.from(new Set(assets.map(a => a.brand).filter(Boolean))).sort();
-  const assignees = Array.from(new Set(assets.map(a => a.assignedTo).filter(Boolean))).sort();
-
-  const isLoading = assetsLoading || locationsLoading;
-
-  const filteredAssets = assets.filter((asset) => {
-    const searchFields = [
-      asset.name,
-      asset.assetTag,
-      asset.serialNumber,
-      asset.category,
-      asset.brand,
-      asset.model,
-      asset.location,
-      asset.vendor,
-      asset.notes,
-      asset.status,
-      asset.condition,
-      asset.assignedTo,
-    ];
-
-    const matchesSearch = searchQuery === '' || searchFields.some(field =>
-      field?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    const matchesStatus = statusFilter === 'all' || asset.status === statusFilter;
-    const matchesCategory = categoryFilter === 'all' || asset.category.toLowerCase() === categoryFilter.toLowerCase();
-    const selectedLocation = locations.find(l => l.id === locationFilter);
-    const matchesLocation = locationFilter === 'all' ||
-      asset.locationId === locationFilter ||
-      (selectedLocation && (
-        asset.location === selectedLocation.name ||
-        (selectedLocation.name === 'Warehouse' && asset.location === 'Central Warehouse') ||
-        (selectedLocation.name === 'Central Warehouse' && asset.location === 'Warehouse')
-      ));
-    const matchesVendor = vendorFilter === 'all' || asset.vendor === vendorFilter;
-    const matchesBrand = brandFilter === 'all' || asset.brand === brandFilter;
-    const matchesCondition = conditionFilter === 'all' || asset.condition === conditionFilter;
-    const matchesAssignedTo = assignedToFilter === 'all' || asset.assignedTo === assignedToFilter;
-
-    return matchesSearch && matchesStatus && matchesCategory && matchesLocation && matchesVendor && matchesBrand && matchesCondition && matchesAssignedTo;
-  });
-
-  // Reset to first page when filters change
+  // Legacy deep link /assets?view=<uuid> → full page
   useEffect(() => {
-    setCurrentPage(1);
-    setSelectedAssetIds(new Set());
-  }, [searchQuery, statusFilter, categoryFilter, locationFilter, vendorFilter, brandFilter, conditionFilter, assignedToFilter]);
+    if (UUID.test(rawView)) navigate(`/assets/${rawView}`, { replace: true });
+  }, [rawView, navigate]);
 
-  // Pagination Logic
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentAssets = filteredAssets.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredAssets.length / itemsPerPage);
-
-  const selectAllOnPage = currentAssets.length > 0 && currentAssets.every((asset) => selectedAssetIds.has(asset.id));
-
-  const handleSelectAllOnPage = (checked: boolean) => {
-    setSelectedAssetIds((prev) => {
-      const next = new Set(prev);
-      currentAssets.forEach((asset) => (checked ? next.add(asset.id) : next.delete(asset.id)));
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [quickView, setQuickView] = useState<Asset | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [bulk, setBulk] = useState<null | 'assign' | 'status' | 'location' | 'amc' | 'category' | 'delete'>(null);
+  const [cols, setCols] = useState<Record<Col, boolean>>(() => {
+    try {
+      return { tag: true, location: true, assignee: true, condition: false, coverage: true, ...JSON.parse(localStorage.getItem('assetColumns') || '{}') };
+    } catch {
+      return { tag: true, location: true, assignee: true, condition: false, coverage: true };
+    }
+  });
+  const toggleCol = (c: Col) =>
+    setCols((prev) => {
+      const next = { ...prev, [c]: !prev[c] };
+      localStorage.setItem('assetColumns', JSON.stringify(next));
       return next;
     });
-  };
 
-  const handleSelectAsset = (id: string, checked: boolean) => {
-    setSelectedAssetIds((prev) => {
-      const next = new Set(prev);
-      if (checked) next.add(id);
-      else next.delete(id);
-      return next;
+  const offboarded = useMemo(() => new Set(employees.filter((e) => e.status === 'offboarded').map((e) => e.id)), [employees]);
+  const isOverdue = (a: Asset) => a.status === 'assigned' && !!a.assignedToId && offboarded.has(a.assignedToId);
+
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { all: assets.length, amc: 0, overdue: 0 };
+    STATUS_ORDER.forEach((s) => (c[s] = 0));
+    assets.forEach((a) => {
+      c[a.status] = (c[a.status] || 0) + 1;
+      if (amcExpiring(a)) c.amc++;
+      if (isOverdue(a)) c.overdue++;
     });
-  };
+    return c;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assets, offboarded]);
 
-  const handleSelectAllMatching = () => {
-    setSelectedAssetIds(new Set(filteredAssets.map((a) => a.id)));
-  };
-
-  const clearSelection = () => setSelectedAssetIds(new Set());
-
-  const selectedAssetIdsArray = Array.from(selectedAssetIds);
-
-  const bulkPrimaryActions: BulkAction[] = [
-    { label: 'Assign', onClick: () => setBulkAssignOpen(true) },
-    { label: 'Change Status', onClick: () => setBulkStatusOpen(true) },
-    { label: 'Change Location', onClick: () => setBulkLocationOpen(true) },
-    { label: 'AMC Update', onClick: () => setBulkAmcOpen(true) },
-  ];
-
-  const bulkOverflowActions: BulkAction[] = [
-    { label: 'Update Category', onClick: () => setBulkCategoryOpen(true) },
-    {
-      label: 'Export Selected',
-      onClick: () => exportToCSV(assets.filter((a) => selectedAssetIds.has(a.id)), 'assets_export_selected'),
-    },
-    { label: 'Delete Assets', onClick: () => setBulkDeleteOpen(true), destructive: true },
-  ];
-
-  const handleCloneAsset = (asset: Asset) => {
-    const clonedAsset = {
-      name: `${asset.name} (Copy)`,
-      brand: asset.brand,
-      model: asset.model,
-      serialNumber: '',
-      category: asset.category,
-      status: 'available' as AssetStatus,
-      condition: asset.condition as 'new' | 'good' | 'fair' | 'poor',
-      location: asset.location,
-      locationId: asset.locationId,
-      assignedTo: undefined,
-      assignedToId: undefined,
-      purchaseDate: asset.purchaseDate,
-      purchaseCost: asset.purchaseCost || 0,
-      vendor: asset.vendor || 'Unknown',
-      warrantyStart: asset.warrantyStart,
-      warrantyEnd: asset.warrantyEnd,
-      notes: asset.notes ? `Cloned from: ${asset.name}\n${asset.notes}` : `Cloned from: ${asset.name}`,
+  const options = useMemo(() => {
+    const tally = (vals: (string | undefined)[]) => {
+      const m = new Map<string, number>();
+      vals.forEach((v) => v && m.set(v, (m.get(v) || 0) + 1));
+      return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
     };
-    setCloningAsset(clonedAsset as Asset);
+    const settingCats: string[] = settings?.categories || [];
+    const catTally = tally(assets.map((a) => a.category?.toLowerCase()));
+    settingCats.forEach((c) => !catTally.some(([k]) => k === c.toLowerCase()) && catTally.push([c.toLowerCase(), 0]));
+    return {
+      category: catTally.map(([v, n]) => ({ value: v, label: titleCase(v), count: n })),
+      location: locations.map((l) => ({ value: l.id, label: displayLocation(l.name), count: l.assetsCount })),
+      assignee: tally(assets.map((a) => a.assignedTo)).map(([v, n]) => ({ value: v, label: v, count: n })),
+      condition: ['new', 'good', 'fair', 'poor'].map((v) => ({ value: v, label: titleCase(v), count: assets.filter((a) => a.condition === v).length })),
+      brand: tally(assets.map((a) => a.brand)).map(([v, n]) => ({ value: v, label: v, count: n })),
+    };
+  }, [assets, locations, settings]);
+
+  const filtered = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    const locNames = new Map(locations.map((l) => [l.id, l.name]));
+    const rows = assets.filter((a) => {
+      if (view === 'amc' ? !amcExpiring(a) : view === 'overdue' ? !isOverdue(a) : view !== 'all' && a.status !== view) return false;
+      if (needle && ![a.name, a.assetTag, a.serialNumber, a.brand, a.model, a.assignedTo, a.location, a.vendor].some((f) => f?.toLowerCase().includes(needle))) return false;
+      if (cats.length && !cats.includes(a.category?.toLowerCase())) return false;
+      if (locs.length && !locs.some((id) => a.locationId === id || a.location === locNames.get(id))) return false;
+      if (people.length && !people.includes(a.assignedTo || '')) return false;
+      if (conds.length && !conds.includes(a.condition)) return false;
+      if (brands.length && !brands.includes(a.brand)) return false;
+      return true;
+    });
+    const by: Record<Sort, (a: Asset, b: Asset) => number> = {
+      updated: (a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''),
+      name: (a, b) => a.name.localeCompare(b.name),
+      tag: (a, b) => a.assetTag.localeCompare(b.assetTag, undefined, { numeric: true }),
+      amc: (a, b) => (a.amcEndDate || '9999').localeCompare(b.amcEndDate || '9999'),
+    };
+    return rows.sort(by[sort]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assets, locations, view, q, params, offboarded]);
+
+  useEffect(() => {
+    setPage(1);
+    setSelected(new Set());
+  }, [view, q, params]);
+
+  const pageRows = filtered.slice((page - 1) * pageSize, page * pageSize);
+  const allOnPage = pageRows.length > 0 && pageRows.every((a) => selected.has(a.id));
+  const someOnPage = pageRows.some((a) => selected.has(a.id));
+  const toggle = (id: string, on: boolean) =>
+    setSelected((s) => {
+      const n = new Set(s);
+      if (on) n.add(id);
+      else n.delete(id);
+      return n;
+    });
+  const togglePage = (on: boolean) =>
+    setSelected((s) => {
+      const n = new Set(s);
+      pageRows.forEach((a) => (on ? n.add(a.id) : n.delete(a.id)));
+      return n;
+    });
+  const activeFilters = cats.length + locs.length + people.length + conds.length + brands.length;
+  const clearFilters = () => {
+    const next = new URLSearchParams();
+    if (params.get('view')) next.set('view', params.get('view')!);
+    setParams(next, { replace: true });
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading assets...</p>
-        </div>
-      </div>
-    );
-  }
+  // Row click: drawer on md+, full page on phone. In check-out mode, open the check-out dialog.
+  const openRow = (a: Asset) => {
+    if (checkoutMode && a.status === 'available') return act('assign', a);
+    if (window.matchMedia('(min-width: 768px)').matches) setQuickView(a);
+    else navigate(`/assets/${a.id}`);
+  };
+
+  if (isLoading) return <PageLoader label="Loading assets" />;
+
+  const ids = [...selected];
+  const statusMix = STATUS_ORDER.map((s) => ({ s, n: counts[s] || 0 })).filter((x) => x.n > 0);
+
+  const filterChips = (
+    <>
+      <FilterChip label="Category" options={options.category} selected={cats} onChange={(v) => setParam('category', v)} />
+      <FilterChip label="Location" options={options.location} selected={locs} onChange={(v) => setParam('location', v)} />
+      <FilterChip label="Assignee" options={options.assignee} selected={people} onChange={(v) => setParam('assignee', v)} searchable />
+      <FilterChip label="Condition" options={options.condition} selected={conds} onChange={(v) => setParam('condition', v)} />
+      <FilterChip label="Brand" options={options.brand} selected={brands} onChange={(v) => setParam('brand', v)} searchable />
+    </>
+  );
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl lg:text-2xl font-semibold tracking-tight">Assets</h1>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            className="gap-2"
-            onClick={() => exportToCSV(filteredAssets, 'assets_export')}
-            disabled={filteredAssets.length === 0}
-          >
-            <Download className="w-4 h-4" />
-            <span className="hidden sm:inline">Export</span>
-          </Button>
-          <AssetAdditionDialog />
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2">
-        <div className="relative w-full sm:w-64 shrink-0">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search assets..."
-            className="pl-10 w-full rounded-full bg-card border-border/60 shadow-sm"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[130px] rounded-full bg-card border-border/60 shadow-sm">
-              <SelectValue placeholder="All Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="available">Available</SelectItem>
-              <SelectItem value="assigned">Assigned</SelectItem>
-              <SelectItem value="repair">In Repair</SelectItem>
-              <SelectItem value="lost">Lost</SelectItem>
-              <SelectItem value="retired">Retired</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-[140px] rounded-full bg-card border-border/60 shadow-sm">
-              <SelectValue placeholder="All Categories" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {categories.map((cat: string) => (
-                <SelectItem key={cat} value={cat}>
-                  {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={locationFilter} onValueChange={setLocationFilter}>
-            <SelectTrigger className="w-[150px] rounded-full bg-card border-border/60 shadow-sm">
-              <SelectValue placeholder="All Locations" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Locations</SelectItem>
-              {locations.map((location) => (
-                <SelectItem key={location.id} value={location.id}>
-                  {location.name === 'Warehouse' ? 'Central Warehouse' : location.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="icon" className="relative shrink-0 rounded-full bg-card border-border/60 shadow-sm">
-                <Filter className="w-4 h-4" />
-                {(vendorFilter !== 'all' || brandFilter !== 'all' || conditionFilter !== 'all' || assignedToFilter !== 'all') && (
-                  <div className="w-2 h-2 rounded-full bg-primary absolute -top-1 -right-1" />
-                )}
-              </Button>
-            </PopoverTrigger>
-              <PopoverContent className="w-80 p-4" align="start">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium leading-none">Additional Filters</h4>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-auto p-0 text-muted-foreground hover:text-primary"
-                      onClick={() => {
-                        setVendorFilter('all');
-                        setBrandFilter('all');
-                        setConditionFilter('all');
-                        setAssignedToFilter('all');
-                      }}
-                    >
-                      Reset
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Assigned To</Label>
-                    <Select value={assignedToFilter} onValueChange={setAssignedToFilter}>
-                      <SelectTrigger><SelectValue placeholder="All Assignees" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Assignees</SelectItem>
-                        {assignees.map((assignee: string) => (
-                          <SelectItem key={assignee} value={assignee}>{assignee}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Vendor</Label>
-                    <Select value={vendorFilter} onValueChange={setVendorFilter}>
-                      <SelectTrigger><SelectValue placeholder="All Vendors" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Vendors</SelectItem>
-                        {vendors.map((vendor: string) => (
-                          <SelectItem key={vendor} value={vendor}>{vendor}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Brand</Label>
-                    <Select value={brandFilter} onValueChange={setBrandFilter}>
-                      <SelectTrigger><SelectValue placeholder="All Brands" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Brands</SelectItem>
-                        {brands.map((brand: string) => (
-                          <SelectItem key={brand} value={brand}>{brand}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Condition</Label>
-                    <Select value={conditionFilter} onValueChange={setConditionFilter}>
-                      <SelectTrigger><SelectValue placeholder="All Conditions" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Conditions</SelectItem>
-                        <SelectItem value="new">New</SelectItem>
-                        <SelectItem value="good">Good</SelectItem>
-                        <SelectItem value="fair">Fair</SelectItem>
-                        <SelectItem value="poor">Poor</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
-        </div>
-      </div>
-
-      {/* ── Mobile card list (< lg) ───────────────────────── */}
-      <div className="block lg:hidden rounded-xl overflow-hidden border border-border bg-card">
-        {currentAssets.length === 0 ? (
-          <p className="py-10 text-center text-sm text-muted-foreground">
-            No assets found matching your criteria
-          </p>
-        ) : (
+    <div className="space-y-4 md:space-y-5">
+      <PageHeader
+        title="Assets"
+        description={`${assets.length.toLocaleString()} assets across ${locations.length} locations`}
+        actions={
           <>
-            {currentAssets.map((asset, idx) => {
-              const Icon = categoryIcons[asset.category.toLowerCase()] || Package;
-              return (
-                <div
-                  key={asset.id}
-                  className={`px-4 py-3 flex items-center gap-3 cursor-pointer active:bg-muted/50 transition-colors ${idx < currentAssets.length - 1 ? 'border-b border-border' : ''}`}
-                  onClick={() => setViewingAsset({ assetId: asset.id, tab: 'details' })}
-                >
-                  <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-muted shrink-0">
-                    <Icon className="w-4 h-4 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium text-[15px] text-foreground leading-snug truncate">{asset.name}</span>
-                      <Badge variant={statusVariants[asset.status]} className="shrink-0 text-[11px]">
-                        {statusLabels[asset.status]}
-                      </Badge>
-                    </div>
-                    <p className="text-[13px] text-muted-foreground mt-0.5 leading-snug">
-                      {asset.brand} · <span className="font-mono">{asset.assetTag}</span>
-                    </p>
-                    <p className="text-[12px] text-muted-foreground leading-snug">
-                      {asset.assignedTo ? asset.assignedTo : (asset.location === 'Warehouse' ? 'Central Warehouse' : asset.location)}
-                    </p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground/50 shrink-0" />
-                </div>
-              );
-            })}
-
-            {/* Mobile pagination */}
-            <div className="flex items-center justify-between px-4 py-3 border-t border-border">
-              <span className="text-xs text-muted-foreground">
-                {indexOfFirstItem + 1}–{Math.min(indexOfLastItem, filteredAssets.length)} of {filteredAssets.length}
-              </span>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline" size="sm"
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="h-8 w-8 p-0"
-                >
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-                </Button>
-                <Button
-                  variant="outline" size="sm"
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="h-8 w-8 p-0"
-                >
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                </Button>
-              </div>
-            </div>
+            <Button variant="secondary" asChild className="hidden md:inline-flex">
+              <Link to="/assets/import">
+                <Upload /> Import
+              </Link>
+            </Button>
+            <Button variant="secondary" className="hidden md:inline-flex" onClick={() => exportToCSV(filtered, 'assets_export')} disabled={!filtered.length}>
+              <Download /> Export
+            </Button>
+            <Button asChild>
+              <Link to="/assets/new">
+                <Plus /> <span className="hidden sm:inline">Add asset</span>
+                <span className="sm:hidden">Add</span>
+              </Link>
+            </Button>
           </>
-        )}
+        }
+      />
+
+      {checkoutMode && (
+        <div className="flex items-center gap-3 rounded-xl border border-ring/30 bg-primary-soft px-4 py-3 text-sm text-link">
+          <ArrowLeftRight className="h-4 w-4 shrink-0" />
+          <span className="flex-1">Pick an available asset to check out — click a row to open the check-out form.</span>
+          <button onClick={() => setParam('checkout', null)} className="rounded p-1 hover:bg-primary/10" aria-label="Exit check-out mode">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Saved views */}
+      <ViewTabs<View>
+        value={view}
+        onChange={(v) => setParam('view', v)}
+        tabs={[
+          { value: 'all', label: 'All assets', count: counts.all.toLocaleString() },
+          { value: 'available', label: 'In stock', count: counts.available },
+          { value: 'assigned', label: 'Assigned', count: counts.assigned },
+          { value: 'repair', label: 'In repair', count: counts.repair },
+          { value: 'amc', label: 'AMC expiring', count: counts.amc },
+          ...(counts.overdue ? [{ value: 'overdue' as View, label: 'Overdue', count: counts.overdue }] : []),
+          { value: 'lost', label: 'Lost', count: counts.lost },
+          { value: 'retired', label: 'Retired', count: counts.retired },
+        ]}
+      />
+
+      {/* Status mix (tablet & desktop) */}
+      {assets.length > 0 && (
+        <div className="hidden rounded-xl border bg-card px-5 py-3.5 md:block">
+          <div className="mb-2.5 flex items-center gap-4">
+            <p className="text-[13px] font-medium">Status mix</p>
+            <div className="ml-auto flex flex-wrap justify-end gap-x-4 gap-y-1">
+              {statusMix.map(({ s, n }) => (
+                <button key={s} onClick={() => setParam('view', s)} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+                  <span className={cn('h-2 w-2 rounded-full', toneClasses(STATUS_META[s].tone).dot)} />
+                  {STATUS_META[s].label} {n.toLocaleString()}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex h-2 gap-0.5 overflow-hidden rounded-full">
+            {statusMix.map(({ s, n }) => (
+              <span key={s} className={cn('h-full first:rounded-l-full last:rounded-r-full', toneClasses(STATUS_META[s].tone).dot)} style={{ flexGrow: n, minWidth: 6 }} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ---------- Phone toolbar ---------- */}
+      <div className="flex items-center gap-2 md:hidden">
+        <SearchField value={q} onChange={(v) => setParam('q', v)} placeholder="Name, tag or serial" className="h-10 flex-1" />
+        <Button variant="secondary" size="icon" onClick={() => setFiltersOpen(true)} aria-label="Filters" className="relative h-10 w-10">
+          <SlidersHorizontal />
+          {activeFilters > 0 && <span className="absolute -right-1 -top-1 min-w-[18px] rounded-full bg-primary px-1 text-[10px] font-semibold leading-[18px] text-white">{activeFilters}</span>}
+        </Button>
       </div>
 
-      {/* ── Desktop table (≥ lg) ─────────────────────────── */}
-      <div className="hidden lg:block">
-        <Card className="border shadow-card overflow-hidden">
-          <Table>
-            <TableHeader>
-              {selectedAssetIds.size > 0 ? (
-                <TableRow>
-                  <TableHead colSpan={8} className="p-2">
-                    <BulkActionToolbar
-                      selectedCount={selectedAssetIds.size}
-                      totalMatching={filteredAssets.length}
-                      onSelectAllMatching={handleSelectAllMatching}
-                      onClearSelection={clearSelection}
-                      primaryActions={bulkPrimaryActions}
-                      overflowActions={bulkOverflowActions}
-                      itemLabel="selected"
-                    />
-                  </TableHead>
-                </TableRow>
+      {filtered.length === 0 ? (
+        <div className="rounded-xl border bg-card">
+          <EmptyState
+            icon={Package}
+            title={assets.length ? 'No assets match these filters' : 'No assets yet'}
+            description={assets.length ? 'Try removing a filter or searching for a serial number.' : 'Add your first asset or import a spreadsheet.'}
+            action={
+              assets.length ? (
+                <Button variant="secondary" onClick={clearFilters}>Clear filters</Button>
               ) : (
-                <TableRow>
-                  <TableHead className="w-8">
-                    <Checkbox
-                      id="select-all-assets"
-                      name="select-all-assets"
-                      checked={selectAllOnPage}
-                      onCheckedChange={(checked) => handleSelectAllOnPage(checked === true)}
-                      aria-label="Select all assets on this page"
-                    />
-                  </TableHead>
-                  <TableHead className="w-[250px]">Asset</TableHead>
-                  <TableHead>Tag / Serial</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Assigned To</TableHead>
-                  <TableHead>Condition</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
-                </TableRow>
-              )}
-            </TableHeader>
-            <TableBody>
-              {currentAssets.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
-                    No assets found matching your criteria
-                  </TableCell>
-                </TableRow>
-              ) : (
-                currentAssets.map((asset) => {
-                  const Icon = categoryIcons[asset.category.toLowerCase()] || Package;
-                  return (
-                    <TableRow
-                      key={asset.id}
-                      className="transition-colors"
-                      data-state={selectedAssetIds.has(asset.id) ? 'selected' : undefined}
-                    >
-                      <TableCell>
-                        <Checkbox
-                          id={`select-asset-${asset.id}`}
-                          name={`select-asset-${asset.id}`}
-                          checked={selectedAssetIds.has(asset.id)}
-                          onCheckedChange={(checked) => handleSelectAsset(asset.id, checked === true)}
-                          aria-label={`Select ${asset.name}`}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-muted">
-                            <Icon className="w-4 h-4 text-primary" />
-                          </div>
-                          <div>
-                            <p className="font-medium">{asset.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {asset.brand} · {asset.category.charAt(0).toUpperCase() + asset.category.slice(1)}
-                            </p>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-mono tabular-nums text-sm">{asset.assetTag}</p>
-                          <p className="text-xs text-muted-foreground font-mono tabular-nums">{asset.serialNumber}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={statusVariants[asset.status]}>
-                          {statusLabels[asset.status]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {asset.location === 'Warehouse' ? 'Central Warehouse' : asset.location}
-                      </TableCell>
-                      <TableCell>
-                        {asset.assignedTo ? (
-                          <div className="flex items-center gap-2.5">
-                            <Avatar className="w-7 h-7">
-                              <AvatarFallback className="bg-muted text-primary text-[11px] font-medium">
-                                {getInitials(asset.assignedTo)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="text-sm">{asset.assignedTo}</span>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={conditionVariants[asset.condition] ?? 'secondary'} className="capitalize">
-                          {asset.condition}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem className="gap-2" onClick={() => setViewingAsset({ assetId: asset.id, tab: 'details' })}>
-                              <Eye className="w-4 h-4 text-muted-foreground" />View details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="gap-2" onClick={() => setEditingAsset(asset)}>
-                              <Edit2 className="w-4 h-4 text-muted-foreground" />Edit asset
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="gap-2" onClick={() => handleCloneAsset(asset)}>
-                              <Copy className="w-4 h-4 text-muted-foreground" />Clone asset
-                            </DropdownMenuItem>
-                            {asset.status === 'available' && (
-                              <DropdownMenuItem className="gap-2" onClick={() => setAssigningAsset(asset)}>
-                                <UserPlus className="w-4 h-4 text-muted-foreground" />Assign asset
-                              </DropdownMenuItem>
-                            )}
-                            {asset.status === 'assigned' && (
-                              <DropdownMenuItem className="gap-2" onClick={() => setReturningAsset(asset)}>
-                                <Edit className="w-4 h-4 text-muted-foreground" />Return asset
-                              </DropdownMenuItem>
-                            )}
-                            {(asset.status === 'available' || asset.status === 'assigned' || asset.status === 'repair') && (
-                              <DropdownMenuItem className="gap-2" onClick={() => setRepairingAsset(asset)}>
-                                <Wrench className="w-4 h-4 text-muted-foreground" />
-                                {asset.status === 'repair' ? 'Complete repair' : 'Send for repair'}
-                              </DropdownMenuItem>
-                            )}
-                            {asset.status !== 'lost' && asset.status !== 'retired' && (
-                              <DropdownMenuItem className="gap-2" onClick={() => setLosingAsset(asset)}>
-                                <AlertTriangle className="w-4 h-4 text-muted-foreground" />Mark as lost
-                              </DropdownMenuItem>
-                            )}
-                            {asset.status === 'lost' && (
-                              <DropdownMenuItem className="gap-2" onClick={() => setLosingAsset(asset)}>
-                                <CheckCircle className="w-4 h-4 text-muted-foreground" />Mark as found
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem className="gap-2" onClick={() => setViewingAsset({ assetId: asset.id, tab: 'history' })}>
-                              <History className="w-4 h-4 text-muted-foreground" />View history
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="gap-2 text-destructive focus:text-destructive" onClick={() => setDeletingAsset(asset)}>
-                              <Trash2 className="w-4 h-4" />Delete asset
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </Card>
-
-        {/* Desktop Footer Stats and Pagination */}
-        <div className="flex items-center justify-between mt-4">
-          <div className="text-sm text-muted-foreground">
-            Showing {currentAssets.length > 0 ? indexOfFirstItem + 1 : 0} to {Math.min(indexOfLastItem, filteredAssets.length)} of {filteredAssets.length} assets
-          </div>
-          <DataTablePagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            pageSize={itemsPerPage}
-            setPageSize={setItemsPerPage}
+                <Button asChild>
+                  <Link to="/assets/new"><Plus /> Add asset</Link>
+                </Button>
+              )
+            }
           />
         </div>
-      </div>
+      ) : (
+        <>
+          {/* ---------- Phone: card list ---------- */}
+          <div className="space-y-2 md:hidden">
+            <div className="flex items-center justify-between px-0.5 text-[13px] text-muted-foreground">
+              <span>{filtered.length.toLocaleString()} results</span>
+              <SortMenu sort={sort} onChange={(v) => setParam('sort', v === 'updated' ? null : v)} />
+            </div>
+            {filtered.slice(0, page * pageSize).map((a) => (
+              <button key={a.id} onClick={() => openRow(a)} className="flex w-full items-center gap-3 rounded-[14px] border bg-card px-3.5 py-3 text-left active:bg-subtle">
+                <AssetThumb category={a.category} size="lg" className="h-11 w-11" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[15px] font-medium">{a.name}</span>
+                  <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                    <span className="font-mono">{a.assetTag}</span> · {a.assignedTo || displayLocation(a.location)}
+                  </span>
+                </span>
+                <StatusBadge status={a.status} />
+              </button>
+            ))}
+            {filtered.length > page * pageSize && (
+              <Button variant="secondary" className="w-full" onClick={() => setPage((p) => p + 1)}>
+                Load more
+              </Button>
+            )}
+          </div>
 
-      {/* Dialogs */}
-      {editingAsset && (
-        <EditAssetDialog
-          asset={editingAsset}
-          open={!!editingAsset}
-          onOpenChange={(open) => !open && setEditingAsset(null)}
-        />
-      )}
-      {deletingAsset && (
-        <DeleteAssetDialog
-          asset={deletingAsset}
-          open={!!deletingAsset}
-          onOpenChange={(open) => !open && setDeletingAsset(null)}
-        />
-      )}
-      {assigningAsset && (
-        <AssignAssetDialog
-          asset={assigningAsset}
-          open={!!assigningAsset}
-          onOpenChange={(open) => !open && setAssigningAsset(null)}
-        />
-      )}
-      {viewingAsset && (() => {
-        const viewingIndex = filteredAssets.findIndex(a => a.id === viewingAsset.assetId);
-        if (viewingIndex === -1) return null;
-        return (
-          <AssetDetailsDialog
-            assets={filteredAssets}
-            currentIndex={viewingIndex}
-            open={!!viewingAsset}
-            onOpenChange={(open) => !open && setViewingAsset(null)}
-            onNavigate={(index) => setViewingAsset({ assetId: filteredAssets[index].id, tab: viewingAsset.tab })}
-            defaultTab={viewingAsset.tab}
-            onEdit={setEditingAsset}
-            onClone={handleCloneAsset}
-            onAssign={setAssigningAsset}
-            onReturn={setReturningAsset}
-            onRepair={setRepairingAsset}
-            onLost={setLosingAsset}
-            onDelete={setDeletingAsset}
-          />
-        );
-      })()}
-      {cloningAsset && (
-        <AddAssetDialog
-          asset={cloningAsset}
-          open={!!cloningAsset}
-          onOpenChange={(open) => !open && setCloningAsset(null)}
-          showTrigger={false}
-        />
-      )}
-      {returningAsset && (
-        <ReturnAssetDialog
-          open={!!returningAsset}
-          onOpenChange={(open) => !open && setReturningAsset(null)}
-          assetId={returningAsset.id}
-        />
-      )}
-      {repairingAsset && (
-        <RepairAssetDialog
-          asset={repairingAsset}
-          open={!!repairingAsset}
-          onOpenChange={(open) => !open && setRepairingAsset(null)}
-        />
-      )}
-      {losingAsset && (
-        <LostAssetDialog
-          asset={losingAsset}
-          open={!!losingAsset}
-          onOpenChange={(open) => !open && setLosingAsset(null)}
-        />
+          {/* ---------- Tablet & desktop: table ---------- */}
+          <div className="hidden overflow-hidden rounded-xl border bg-card md:block">
+            <div className="flex items-center gap-2 overflow-x-auto px-4 py-3 scrollbar-hide">
+              <SearchField value={q} onChange={(v) => setParam('q', v)} placeholder="Search name, tag or serial" className="w-[220px] shrink-0 lg:w-[260px]" />
+              <div className="hidden items-center gap-2 lg:flex">{filterChips}</div>
+              <Button variant="ghost" size="sm" className="lg:hidden" onClick={() => setFiltersOpen(true)}>
+                <SlidersHorizontal /> Filters {activeFilters > 0 && `(${activeFilters})`}
+              </Button>
+              {activeFilters > 0 && (
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="hidden lg:inline-flex">
+                  Clear all
+                </Button>
+              )}
+              <div className="flex-1" />
+              <SortMenu sort={sort} onChange={(v) => setParam('sort', v === 'updated' ? null : v)} />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="hidden lg:inline-flex">
+                    <Columns3 /> Columns
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Show columns</DropdownMenuLabel>
+                  {(Object.keys(COL_LABELS) as Col[]).map((c) => (
+                    <DropdownMenuCheckboxItem key={c} checked={cols[c]} onCheckedChange={() => toggleCol(c)} onSelect={(e) => e.preventDefault()} className="pl-8">
+                      {COL_LABELS[c]}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-y bg-subtle text-left text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    <th className="w-10 py-2.5 pl-4">
+                      <Checkbox checked={allOnPage ? true : someOnPage ? 'indeterminate' : false} onCheckedChange={(c) => togglePage(c === true)} aria-label="Select all on this page" />
+                    </th>
+                    <th className="px-3 py-2.5">Asset</th>
+                    {cols.tag && <th className="hidden px-3 py-2.5 lg:table-cell">Tag / Serial</th>}
+                    <th className="px-3 py-2.5">Status</th>
+                    {cols.location && <th className="hidden px-3 py-2.5 lg:table-cell">Location</th>}
+                    {cols.assignee && <th className="px-3 py-2.5">Assigned to</th>}
+                    {cols.condition && <th className="hidden px-3 py-2.5 lg:table-cell">Condition</th>}
+                    {cols.coverage && <th className="hidden px-3 py-2.5 xl:table-cell">AMC / Warranty</th>}
+                    <th className="w-12" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageRows.map((a) => {
+                    const sel = selected.has(a.id);
+                    const cov = coverage(a.amcStartDate || a.warrantyStart, a.amcEndDate || a.warrantyEnd);
+                    return (
+                      <tr
+                        key={a.id}
+                        onClick={() => openRow(a)}
+                        className={cn('group cursor-pointer border-b transition-colors duration-100 last:border-0', sel ? 'bg-primary-soft' : 'hover:bg-subtle')}
+                      >
+                        <td className="py-2.5 pl-4" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox checked={sel} onCheckedChange={(c) => toggle(a.id, c === true)} aria-label={`Select ${a.name}`} />
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <div className="flex items-center gap-2.5">
+                            <AssetThumb category={a.category} size="sm" />
+                            <div className="min-w-0">
+                              <p className="truncate font-medium">{a.name}</p>
+                              <p className="truncate text-xs text-muted-foreground">
+                                <span className="lg:hidden font-mono">{a.assetTag} · </span>
+                                {[a.brand, titleCase(a.category)].filter(Boolean).join(' · ')}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        {cols.tag && (
+                          <td className="hidden px-3 py-2.5 lg:table-cell">
+                            <p className="font-mono text-xs">{a.assetTag}</p>
+                            <p className="font-mono text-xs text-faint">{a.serialNumber}</p>
+                          </td>
+                        )}
+                        <td className="px-3 py-2.5">
+                          <StatusBadge status={a.status} />
+                        </td>
+                        {cols.location && <td className="hidden px-3 py-2.5 text-[13px] lg:table-cell">{displayLocation(a.location)}</td>}
+                        {cols.assignee && (
+                          <td className="px-3 py-2.5">
+                            {a.assignedTo ? (
+                              <span className="flex items-center gap-2 text-[13px]">
+                                <PersonAvatar name={a.assignedTo} size="sm" />
+                                <span className="truncate">{a.assignedTo}</span>
+                              </span>
+                            ) : (
+                              <span className="text-[13px] text-faint">{a.status === 'available' ? 'In stock' : '—'}</span>
+                            )}
+                          </td>
+                        )}
+                        {cols.condition && <td className="hidden px-3 py-2.5 text-[13px] lg:table-cell">{titleCase(a.condition)}</td>}
+                        {cols.coverage && (
+                          <td className="hidden px-3 py-2.5 text-[13px] xl:table-cell">
+                            {cov ? (
+                              <span className={cov.tone === 'success' ? 'text-muted-foreground' : toneClasses(cov.tone).pill.split(' ')[1]}>
+                                {formatDate(a.amcEndDate || a.warrantyEnd)}
+                              </span>
+                            ) : (
+                              <span className="text-faint">—</span>
+                            )}
+                          </td>
+                        )}
+                        <td className="pr-2" onClick={(e) => e.stopPropagation()}>
+                          <AssetRowMenu asset={a} onAction={act} onView={() => setQuickView(a)} />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="border-t">
+              <PaginationFooter page={page} pageSize={pageSize} total={filtered.length} onPage={setPage} onPageSize={(n) => { setPageSize(n); setPage(1); }} />
+            </div>
+          </div>
+        </>
       )}
 
-      {/* Bulk action dialogs */}
-      <BulkAssignAssetsDialog
-        assetIds={selectedAssetIdsArray}
-        open={bulkAssignOpen}
-        onOpenChange={setBulkAssignOpen}
-        onDone={clearSelection}
+      {/* Filters sheet (phone + tablet) */}
+      <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+        <SheetContent side="bottom" className="px-5 pt-3 lg:hidden">
+          <div aria-hidden className="mx-auto mb-3 h-1 w-10 rounded-full bg-border-strong" />
+          <div className="mb-4 flex items-center">
+            <SheetTitle className="flex-1 text-lg">Filters</SheetTitle>
+            {activeFilters > 0 && <button onClick={clearFilters} className="mr-10 text-sm font-medium text-link">Reset</button>}
+          </div>
+          <div className="space-y-5">
+            <ChipGroup label="Status" options={STATUS_ORDER.map((s) => ({ value: s, label: STATUS_META[s].label }))} selected={view === 'all' ? [] : [view]} onToggle={(v) => setParam('view', view === v ? null : v)} />
+            <ChipGroup label="Category" options={options.category} selected={cats} onToggle={(v) => setParam('category', cats.includes(v) ? cats.filter((x) => x !== v) : [...cats, v])} />
+            <ChipGroup label="Location" options={options.location} selected={locs} onToggle={(v) => setParam('location', locs.includes(v) ? locs.filter((x) => x !== v) : [...locs, v])} />
+            <ChipGroup label="Condition" options={options.condition} selected={conds} onToggle={(v) => setParam('condition', conds.includes(v) ? conds.filter((x) => x !== v) : [...conds, v])} />
+          </div>
+          <Button className="mt-6 w-full" onClick={() => setFiltersOpen(false)}>
+            Show {filtered.length.toLocaleString()} assets
+          </Button>
+        </SheetContent>
+      </Sheet>
+
+      <BulkBar
+        count={selected.size}
+        totalMatching={filtered.length}
+        onSelectAll={() => setSelected(new Set(filtered.map((a) => a.id)))}
+        onClear={() => setSelected(new Set())}
+        actions={[
+          { label: 'Check out', icon: ArrowLeftRight, onClick: () => setBulk('assign') },
+          { label: 'Move', icon: MapPin, onClick: () => setBulk('location') },
+          { label: 'Change status', icon: Tag, onClick: () => setBulk('status') },
+          { label: 'AMC', icon: Wrench, onClick: () => setBulk('amc') },
+          { label: 'Export', icon: Download, onClick: () => exportToCSV(assets.filter((a) => selected.has(a.id)), 'assets_selected') },
+        ]}
+        overflow={
+          <DropdownMenu>
+            <DropdownMenuTrigger className="rounded-lg p-1.5 hover:bg-background/10" aria-label="More bulk actions">
+              <MoreHorizontal className="h-4 w-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" side="top">
+              <DropdownMenuItem onSelect={() => setBulk('category')}>
+                <Tag /> Update category
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => setBulk('delete')} className="text-destructive-strong focus:text-destructive-strong [&_svg]:text-destructive-strong">
+                <Trash2 /> Delete assets
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
       />
-      <BulkChangeStatusDialog
-        assetIds={selectedAssetIdsArray}
-        open={bulkStatusOpen}
-        onOpenChange={setBulkStatusOpen}
-        onDone={clearSelection}
+
+      <AssetQuickView
+        asset={quickView ? assets.find((a) => a.id === quickView.id) ?? null : null}
+        open={!!quickView}
+        onOpenChange={(o) => !o && setQuickView(null)}
+        onAction={act}
+        currency={currency}
       />
-      <BulkChangeLocationDialog
-        assetIds={selectedAssetIdsArray}
-        open={bulkLocationOpen}
-        onOpenChange={setBulkLocationOpen}
-        onDone={clearSelection}
-      />
-      <BulkAmcUpdateDialog
-        assetIds={selectedAssetIdsArray}
-        open={bulkAmcOpen}
-        onOpenChange={setBulkAmcOpen}
-        onDone={clearSelection}
-      />
-      <BulkUpdateCategoryDialog
-        assetIds={selectedAssetIdsArray}
-        open={bulkCategoryOpen}
-        onOpenChange={setBulkCategoryOpen}
-        onDone={clearSelection}
-      />
-      <BulkDeleteAssetsDialog
-        assetIds={selectedAssetIdsArray}
-        open={bulkDeleteOpen}
-        onOpenChange={setBulkDeleteOpen}
-        onDone={clearSelection}
-      />
+      {dialogs}
+
+      <BulkAssignAssetsDialog assetIds={ids} open={bulk === 'assign'} onOpenChange={(o) => !o && setBulk(null)} onDone={() => setSelected(new Set())} />
+      <BulkChangeStatusDialog assetIds={ids} open={bulk === 'status'} onOpenChange={(o) => !o && setBulk(null)} onDone={() => setSelected(new Set())} />
+      <BulkChangeLocationDialog assetIds={ids} open={bulk === 'location'} onOpenChange={(o) => !o && setBulk(null)} onDone={() => setSelected(new Set())} />
+      <BulkAmcUpdateDialog assetIds={ids} open={bulk === 'amc'} onOpenChange={(o) => !o && setBulk(null)} onDone={() => setSelected(new Set())} />
+      <BulkUpdateCategoryDialog assetIds={ids} open={bulk === 'category'} onOpenChange={(o) => !o && setBulk(null)} onDone={() => setSelected(new Set())} />
+      <BulkDeleteAssetsDialog assetIds={ids} open={bulk === 'delete'} onOpenChange={(o) => !o && setBulk(null)} onDone={() => setSelected(new Set())} />
     </div>
   );
-};
+}
 
-export default Assets;
+function SortMenu({ sort, onChange }: { sort: Sort; onChange: (s: Sort) => void }) {
+  const labels: Record<Sort, string> = { updated: 'Recently updated', name: 'Name A–Z', tag: 'Asset tag', amc: 'AMC ending soonest' };
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm" className="shrink-0 text-muted-foreground">
+          <ArrowUpDown /> <span className="hidden sm:inline">{labels[sort]}</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+        <DropdownMenuRadioGroup value={sort} onValueChange={(v) => onChange(v as Sort)}>
+          {(Object.keys(labels) as Sort[]).map((s) => (
+            <DropdownMenuRadioItem key={s} value={s} className="pl-8">
+              {labels[s]}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function ChipGroup({ label, options, selected, onToggle }: { label: string; options: { value: string; label: string }[]; selected: string[]; onToggle: (v: string) => void }) {
+  return (
+    <div>
+      <p className="mb-2 text-2xs font-semibold uppercase tracking-wider text-faint">{label}</p>
+      <div className="flex flex-wrap gap-2">
+        {options.map((o) => {
+          const on = selected.includes(o.value);
+          return (
+            <button
+              key={o.value}
+              onClick={() => onToggle(o.value)}
+              className={cn('rounded-full border px-3 py-1.5 text-[13px] font-medium transition-colors', on ? 'border-ring bg-primary-soft text-link' : 'bg-card text-foreground')}
+            >
+              {o.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

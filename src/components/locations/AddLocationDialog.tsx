@@ -39,8 +39,10 @@ const locationSchema = z.object({
 
 type LocationFormValues = z.infer<typeof locationSchema>;
 
-export function AddLocationDialog() {
-    const [open, setOpen] = useState(false);
+export function AddLocationDialog({ open: controlledOpen, onOpenChange, showTrigger = true }: { open?: boolean; onOpenChange?: (open: boolean) => void; showTrigger?: boolean } = {}) {
+    const [internalOpen, setInternalOpen] = useState(false);
+    const open = controlledOpen ?? internalOpen;
+    const setOpen = (o: boolean) => { setInternalOpen(o); onOpenChange?.(o); };
     const { toast } = useToast();
     const createLocation = useCreateLocation();
 
@@ -79,12 +81,12 @@ export function AddLocationDialog() {
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
+            {showTrigger && (<DialogTrigger asChild>
                 <Button className="gap-2 bg-brand-blue hover:bg-brand-blue/90">
                     <Plus className="w-4 h-4" />
                     Add Location
                 </Button>
-            </DialogTrigger>
+            </DialogTrigger>)}
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                     <div className="flex items-center gap-2 mb-1">

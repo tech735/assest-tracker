@@ -4,23 +4,27 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
 
+// 🧩 Components → Button. Hover 120ms (fill), press scale .98 80ms, ring on keyboard focus only.
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-[background-color,border-color,color,transform,box-shadow] duration-[120ms] ease-standard active:scale-[0.98] active:duration-[80ms] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30 disabled:pointer-events-none disabled:opacity-45 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
+        default: "bg-primary text-primary-foreground shadow-xs hover:bg-primary-hover",
+        destructive:
+          "bg-destructive text-destructive-foreground hover:bg-destructive-strong focus-visible:ring-destructive/30",
+        outline: "border border-border-strong bg-card text-foreground hover:bg-background active:bg-muted",
+        secondary: "border border-border-strong bg-card text-foreground hover:bg-background active:bg-muted",
+        ghost: "text-foreground hover:bg-muted active:bg-border",
+        soft: "bg-primary-soft text-link hover:bg-primary/10",
+        link: "text-link underline-offset-4 hover:underline active:scale-100",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-lg px-3",
-        lg: "h-11 rounded-lg px-8",
-        icon: "h-10 w-10",
+        default: "h-9 px-3.5",
+        sm: "h-8 px-3 text-[13px] [&_svg]:size-3.5",
+        lg: "h-11 px-5 text-[15px]",
+        icon: "h-9 w-9",
+        "icon-sm": "h-8 w-8",
         "icon-xs": "h-6 w-6",
       },
     },
@@ -35,12 +39,32 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
+  loading?: boolean;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, loading = false, disabled, children, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
-    return <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />;
+    return (
+      <Comp
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        disabled={disabled || loading}
+        aria-busy={loading || undefined}
+        {...props}
+      >
+        {loading && !asChild ? (
+          <>
+            <svg className="animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M21 12a9 9 0 1 1-6.219-8.56" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            {children}
+          </>
+        ) : (
+          children
+        )}
+      </Comp>
+    );
   },
 );
 Button.displayName = "Button";
