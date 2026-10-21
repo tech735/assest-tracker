@@ -1,4 +1,4 @@
-export type UserRole = 'SUPPORT' | 'WAREHOUSE' | 'INVOICING' | 'ADMIN';
+export type UserRole = 'SUPPORT' | 'WAREHOUSE' | 'INVOICING' | 'ADMIN' | 'VIEWER';
 
 export interface Profile {
     id: string;

@@ -43,8 +43,10 @@ const employeeSchema = z.object({
 
 type EmployeeFormValues = z.infer<typeof employeeSchema>;
 
-export function AddEmployeeDialog() {
-    const [open, setOpen] = useState(false);
+export function AddEmployeeDialog({ open: controlledOpen, onOpenChange, showTrigger = true }: { open?: boolean; onOpenChange?: (open: boolean) => void; showTrigger?: boolean } = {}) {
+    const [internalOpen, setInternalOpen] = useState(false);
+    const open = controlledOpen ?? internalOpen;
+    const setOpen = (o: boolean) => { setInternalOpen(o); onOpenChange?.(o); };
     const { toast } = useToast();
     const createEmployee = useCreateEmployee();
     const { data: locations = [] } = useLocations();
@@ -94,12 +96,12 @@ export function AddEmployeeDialog() {
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
+            {showTrigger && (<DialogTrigger asChild>
                 <Button className="gap-2 bg-brand-blue hover:bg-brand-blue/90">
                     <UserPlus className="w-4 h-4" />
                     Add Employee
                 </Button>
-            </DialogTrigger>
+            </DialogTrigger>)}
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
                     <DialogTitle>Add New Employee</DialogTitle>

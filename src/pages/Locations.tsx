@@ -1,366 +1,250 @@
-import { useState, useEffect } from 'react';
-import { Search, Plus, MoreHorizontal, MapPin, Building2, Warehouse, Globe, Edit2, Trash2, Eye, Store, Wrench, Printer } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
-import { Input } from '@/components/ui/input';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Building2, Download, Layers, MapPin, MoreHorizontal, Package, Pencil, Plus, Printer, Store, Trash2, Users, type LucideIcon } from 'lucide-react';
+import { useAssets, useEmployees, useLocations } from '@/hooks/useSupabaseData';
+import type { AssetStatus, Location } from '@/types/asset';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { useLocations, useAssets, useEmployees } from '@/hooks/useSupabaseData';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
+import { SearchField, Segmented, ViewTabs } from '@/components/app/controls';
+import { AssetThumb, EmptyState, IconBubble, PageHeader, PageLoader, PersonAvatar, Pill, StatusBadge, toneClasses } from '@/components/app/primitives';
 import { AddLocationDialog } from '@/components/locations/AddLocationDialog';
 import { EditLocationDialog } from '@/components/locations/EditLocationDialog';
 import { DeleteLocationDialog } from '@/components/locations/DeleteLocationDialog';
-import { LocationDetailsDialog } from '@/components/locations/LocationDetailsDialog';
-import { Location } from '@/types/asset';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabase';
+import { displayLocation, LOCATION_TYPE_META, STATUS_META, STATUS_ORDER } from '@/lib/assetMeta';
+import { exportToCSV } from '@/lib/exportUtils';
+import { useAccess } from '@/hooks/useCollab';
 
-const typeIcons = {
-  office: Building2,
-  warehouse: Warehouse,
-  remote: Globe,
-  outlet: Store,
-};
+const TYPE_ICON: Record<Location['type'], LucideIcon> = { office: Building2, warehouse: Layers, outlet: Store, remote: MapPin };
 
-const typeLabels = {
-  office: 'Office',
-  warehouse: 'Central Warehouse',
-  remote: 'Remote',
-  outlet: 'Outlet',
-};
-
-const Locations = () => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isFixing, setIsFixing] = useState(false);
-
-  // State for edit/delete/details dialogs
-  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
-  const [deletingLocation, setDeletingLocation] = useState<Location | null>(null);
-  const [viewingLocationId, setViewingLocationId] = useState<string | null>(null);
-  const [searchParams] = useSearchParams();
-
-  const { data: locations = [], isLoading: isLoadingLocations } = useLocations();
-  const { data: assets = [], isLoading: isLoadingAssets } = useAssets();
-  const { data: employees = [], isLoading: isLoadingEmployees } = useEmployees();
+export default function Locations() {
+  const [params, setParams] = useSearchParams();
+  const { data: locations = [], isLoading } = useLocations();
+  const { data: assets = [] } = useAssets();
+  const { data: employees = [] } = useEmployees();
+  const [q, setQ] = useState('');
+  const { can } = useAccess();
+  const [layout, setLayout] = useState<'grid' | 'table'>('grid');
+  const [adding, setAdding] = useState(params.get('new') === '1');
+  const [editing, setEditing] = useState<Location | null>(null);
+  const [deleting, setDeleting] = useState<Location | null>(null);
+  const viewing = locations.find((l) => l.id === params.get('view')) || null;
+  const [tab, setTab] = useState<'assets' | 'people'>('assets');
 
   useEffect(() => {
-    const viewId = searchParams.get('view');
-    if (viewId && locations.length > 0) {
-      const location = locations.find(l => l.id === viewId);
-      if (location) {
-        setViewingLocationId(location.id);
-      }
+    if (params.get('new') === '1') {
+      setAdding(true);
+      const n = new URLSearchParams(params);
+      n.delete('new');
+      setParams(n, { replace: true });
     }
-  }, [searchParams, locations]);
-  const { toast } = useToast();
+  }, [params, setParams]);
 
-  const isLoading = isLoadingLocations || isLoadingAssets || isLoadingEmployees;
-
-  // Function to fix existing assets
-  const fixLocationData = async () => {
-    setIsFixing(true);
-    try {
-      console.log('Starting location ID fix...');
-
-      // Create a mapping from location name to location ID
-      const locationMap = new Map();
-      locations.forEach(location => {
-        locationMap.set(location.name, location.id);
-        // Handle both "Warehouse" and "Central Warehouse" mappings
-        if (location.name === 'Warehouse') {
-          locationMap.set('Central Warehouse', location.id);
-        }
-      });
-
-      console.log('Location mapping:', Object.fromEntries(locationMap));
-
-      // Get all assets that need fixing
-      const { data: allAssets, error: fetchError } = await supabase
-        .from('assets')
-        .select('*');
-
-      if (fetchError) throw fetchError;
-
-      console.log(`Found ${allAssets.length} total assets`);
-
-      // Find assets that need fixing
-      const assetsToFix = allAssets.filter(asset => {
-        return !asset.location_id ||
-          asset.location_id === '' ||
-          !locations.find(loc => loc.id === asset.location_id);
-      });
-
-      console.log(`Found ${assetsToFix.length} assets that need fixing`);
-
-      if (assetsToFix.length === 0) {
-        toast({
-          title: "No Fix Needed",
-          description: "All assets already have correct location assignments.",
-        });
-        return;
-      }
-
-      // Fix each asset
-      let fixedCount = 0;
-      for (const asset of assetsToFix) {
-        const correctLocationId = locationMap.get(asset.location);
-
-        if (correctLocationId) {
-          console.log(`Fixing asset ${asset.name} (${asset.asset_tag}):`);
-          console.log(`  Current location: ${asset.location}`);
-          console.log(`  Current location_id: ${asset.location_id}`);
-          console.log(`  New location_id: ${correctLocationId}`);
-
-          const { error: updateError } = await supabase
-            .from('assets')
-            .update({ location_id: correctLocationId })
-            .eq('id', asset.id);
-
-          if (updateError) {
-            console.error(`Failed to update asset ${asset.asset_tag}:`, updateError);
-          } else {
-            console.log(`✅ Fixed asset ${asset.asset_tag}`);
-            fixedCount++;
-          }
-        } else {
-          console.warn(`⚠️ No location found for asset ${asset.name} with location "${asset.location}"`);
-        }
-      }
-
-      toast({
-        title: "Location Data Fixed",
-        description: `Successfully fixed ${fixedCount} out of ${assetsToFix.length} assets.`,
-      });
-
-      // Refresh the data to show updated counts
-      window.location.reload();
-
-    } catch (error) {
-      console.error('Error fixing location IDs:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fix location data. Please check console for details.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsFixing(false);
-    }
-  };
-
-  // Debug logging
-  console.log('All assets:', assets);
-  console.log('All locations:', locations);
-
-  const filteredLocations = locations.filter((location) => {
-    // Filter assets by location name (text field) instead of locationId
-    const locationAssets = assets.filter(a => {
-      // Handle both "Warehouse" and "Central Warehouse" mapping
-      const assetLocation = a.location?.toLowerCase().trim();
-      const locationName = location.name.toLowerCase().trim();
-
-      return assetLocation === locationName ||
-        (locationName === 'warehouse' && assetLocation === 'central warehouse') ||
-        (locationName === 'central warehouse' && assetLocation === 'warehouse');
+  const stats = useMemo(() => {
+    const m = new Map<string, { byStatus: Record<string, number>; total: number }>();
+    const byName = new Map(locations.map((l) => [l.name, l.id]));
+    assets.forEach((a) => {
+      const id = a.locationId || byName.get(a.location);
+      if (!id) return;
+      const s = m.get(id) || { byStatus: {}, total: 0 };
+      s.byStatus[a.status] = (s.byStatus[a.status] || 0) + 1;
+      s.total++;
+      m.set(id, s);
     });
+    return m;
+  }, [assets, locations]);
 
-    console.log(`Location ${location.name} has ${locationAssets.length} assets:`, locationAssets);
+  if (isLoading) return <PageLoader label="Loading locations" />;
 
-    return location.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (location.address?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
-  });
-
-  if (isLoading) {
+  const filtered = locations.filter((l) => !q || [l.name, l.address].some((f) => f?.toLowerCase().includes(q.toLowerCase())));
+  const open = (l: Location) => {
+    setTab('assets');
+    setParams({ view: l.id });
+  };
+  const menu = (l: Location) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+        <Button variant="ghost" size="icon-sm" aria-label={`Actions for ${l.name}`}>
+          <MoreHorizontal />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+        <DropdownMenuItem onSelect={() => open(l)}><MapPin /> View details</DropdownMenuItem>
+        {can('locations.manage') && <DropdownMenuItem onSelect={() => setEditing(l)}><Pencil /> Edit</DropdownMenuItem>}
+        <DropdownMenuItem asChild><Link to={`/print-handover/location/${l.id}`}><Printer /> Handover form</Link></DropdownMenuItem>
+        {can('locations.manage') && <DropdownMenuSeparator />}
+        {can('locations.manage') && <DropdownMenuItem onSelect={() => setDeleting(l)} className="text-destructive-strong focus:text-destructive-strong [&_svg]:text-destructive-strong"><Trash2 /> Delete</DropdownMenuItem>}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+  const mixBar = (id: string) => {
+    const s = stats.get(id);
+    if (!s?.total) return <div className="h-1.5 rounded-full bg-muted" />;
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading locations...</p>
-        </div>
+      <div className="flex h-1.5 gap-0.5 overflow-hidden rounded-full">
+        {STATUS_ORDER.filter((st) => s.byStatus[st]).map((st) => (
+          <span key={st} className={toneClasses(STATUS_META[st].tone).dot} style={{ flexGrow: s.byStatus[st], minWidth: 4 }} />
+        ))}
       </div>
     );
-  }
+  };
+
+  const viewAssets = viewing ? assets.filter((a) => a.locationId === viewing.id || a.location === viewing.name) : [];
+  const viewPeople = viewing ? employees.filter((e) => (e.locationId === viewing.id || e.location === viewing.name) && e.status !== 'offboarded') : [];
+  const vs = viewing ? stats.get(viewing.id) : undefined;
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl lg:text-2xl font-semibold tracking-tight">Locations</h1>
+    <div className="space-y-5">
+      <PageHeader
+        title="Locations"
+        description={`${locations.length} sites · ${assets.length.toLocaleString()} assets · ${employees.filter((e) => e.status !== 'offboarded').length} people`}
+        actions={
+          <>
+            <Segmented<"grid" | "table"> className="hidden md:inline-flex" value={layout} onChange={setLayout} options={[{ value: 'grid', label: 'Grid' }, { value: 'table', label: 'Table' }]} />
+            <Button variant="secondary" className="hidden md:inline-flex" onClick={() => exportToCSV(locations, 'locations')}>
+              <Download /> Export
+            </Button>
+            {can('locations.manage') && <Button onClick={() => setAdding(true)}>
+              <Plus /> <span className="hidden sm:inline">Add location</span>
+              <span className="sm:hidden">Add</span>
+            </Button>}
+          </>
+        }
+      />
+      <SearchField value={q} onChange={setQ} placeholder="Search locations" className="h-9 w-full md:w-[280px]" />
+
+      {filtered.length === 0 ? (
+        <div className="rounded-xl border bg-card">
+          <EmptyState icon={MapPin} title="No locations" description="Add an office, warehouse or outlet to start placing assets." action={<Button onClick={() => setAdding(true)}><Plus /> Add location</Button>} />
         </div>
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            className="gap-2"
-            onClick={fixLocationData}
-            disabled={isFixing || locations.length === 0}
-          >
-            <Wrench className="w-4 h-4" />
-            <span className="hidden sm:inline">{isFixing ? 'Fixing...' : 'Fix Location Data'}</span>
-          </Button>
-          <AddLocationDialog />
-        </div>
-      </div>
-
-      {/* Search */}
-      <div className="flex flex-col gap-2">
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search locations..."
-            className="pl-10 w-full rounded-full bg-card border-border/60 shadow-sm"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <span className="text-sm text-muted-foreground">
-          Showing {filteredLocations.length} of {locations.length} locations
-        </span>
-      </div>
-
-      {/* Locations Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredLocations.length === 0 ? (
-          <div className="col-span-full text-center py-12 text-muted-foreground">
-            No locations found matching your search
-          </div>
-        ) : (
-          filteredLocations.map((location) => {
-            const Icon = typeIcons[location.type];
-
-            // Count assets by location name (text field) instead of locationId
-            const locationAssets = assets.filter(a => {
-              const assetLocation = a.location?.toLowerCase().trim();
-              const locationName = location.name.toLowerCase().trim();
-
-              return assetLocation === locationName ||
-                (locationName === 'warehouse' && assetLocation === 'central warehouse') ||
-                (locationName === 'central warehouse' && assetLocation === 'warehouse');
-            });
-
+      ) : layout === 'grid' ? (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {filtered.map((l) => {
+            const meta = LOCATION_TYPE_META[l.type] ?? LOCATION_TYPE_META.office;
+            const inStock = stats.get(l.id)?.byStatus.available || 0;
             return (
-              <Card key={location.id} className="border shadow-card hover:shadow-card-hover transition-shadow">
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-brand-blue/10">
-                        <Icon className="w-5 h-5 text-brand-blue" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold">
-                          {location.name === 'Warehouse' ? 'Central Warehouse' : location.name}
-                        </h3>
-                        <Badge variant="outline" className="font-normal text-xs mt-1">
-                          {typeLabels[location.type]}
-                        </Badge>
-                      </div>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem
-                          className="gap-2"
-                          onClick={() => setViewingLocationId(location.id)}
-                        >
-                          <Eye className="w-4 h-4 text-muted-foreground" />
-                          View details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="gap-2"
-                          onClick={() => setEditingLocation(location)}
-                        >
-                          <Edit2 className="w-4 h-4 text-muted-foreground" />
-                          Edit location
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="gap-2"
-                          onClick={() => window.open(`/print-handover/location/${location.id}`, '_blank')}
-                        >
-                          <Printer className="w-4 h-4 text-muted-foreground" />
-                          Print Handover Form
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="gap-2 text-destructive focus:text-destructive"
-                          onClick={() => setDeletingLocation(location)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Delete location
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+              <div key={l.id} role="button" tabIndex={0} onClick={() => open(l)} onKeyDown={(e) => e.key === 'Enter' && open(l)} className="cursor-pointer space-y-4 rounded-xl border bg-card p-4 transition-[border-color,box-shadow] duration-150 hover:border-border-strong hover:shadow-card">
+                <div className="flex items-center gap-3">
+                  <IconBubble icon={TYPE_ICON[l.type] ?? Building2} tone={meta.tone} size="lg" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold">{displayLocation(l.name)}</p>
+                    <p className="truncate text-xs text-muted-foreground">{l.address || meta.label}</p>
                   </div>
-
-                  {location.address && (
-                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                      {location.address}
-                    </p>
-                  )}
-
-                  <div className="flex items-center justify-between pt-4 border-t border-border">
-                    <div className="text-center flex-1">
-                      <p className="text-xl font-semibold">
-                        {locationAssets.length}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Assets</p>
+                  {menu(l)}
+                </div>
+                <div className="grid grid-cols-3">
+                  {[['Assets', stats.get(l.id)?.total ?? l.assetsCount], ['People', l.employeesCount], ['In stock', inStock]].map(([k, v]) => (
+                    <div key={k as string}>
+                      <p className="text-xl font-semibold tabular">{(v as number).toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">{k}</p>
                     </div>
-                    <div className="w-px h-8 bg-border"></div>
-                    <div className="text-center flex-1">
-                      <p className="text-xl font-semibold">
-                        {employees.filter(e => e.locationId === location.id).length}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Employees</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  ))}
+                </div>
+                {mixBar(l.id)}
+                <Pill tone={meta.tone} dot={false}>{meta.label}</Pill>
+              </div>
             );
-          })
-        )}
-      </div>
+          })}
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-xl border bg-card">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-subtle text-left text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <th className="px-4 py-2.5">Location</th>
+                <th className="px-3 py-2.5">Type</th>
+                <th className="px-3 py-2.5 text-right">Assets</th>
+                <th className="px-3 py-2.5 text-right">People</th>
+                <th className="hidden w-[220px] px-3 py-2.5 lg:table-cell">Status mix</th>
+                <th className="w-12" />
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((l) => (
+                <tr key={l.id} onClick={() => open(l)} className="cursor-pointer border-b last:border-0 hover:bg-subtle">
+                  <td className="px-4 py-3">
+                    <p className="font-medium">{displayLocation(l.name)}</p>
+                    <p className="text-xs text-muted-foreground">{l.address}</p>
+                  </td>
+                  <td className="px-3 py-3"><Pill tone={(LOCATION_TYPE_META[l.type] ?? LOCATION_TYPE_META.office).tone}>{(LOCATION_TYPE_META[l.type] ?? LOCATION_TYPE_META.office).label}</Pill></td>
+                  <td className="px-3 py-3 text-right tabular">{(stats.get(l.id)?.total ?? l.assetsCount).toLocaleString()}</td>
+                  <td className="px-3 py-3 text-right tabular">{l.employeesCount}</td>
+                  <td className="hidden px-3 py-3 lg:table-cell">{mixBar(l.id)}</td>
+                  <td className="pr-2" onClick={(e) => e.stopPropagation()}>{menu(l)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-      {/* Dialogs */}
-      {editingLocation && (
-        <EditLocationDialog
-          location={editingLocation}
-          open={!!editingLocation}
-          onOpenChange={(open) => !open && setEditingLocation(null)}
-        />
-      )}
-      {deletingLocation && (
-        <DeleteLocationDialog
-          location={deletingLocation}
-          open={!!deletingLocation}
-          onOpenChange={(open) => !open && setDeletingLocation(null)}
-        />
-      )}
-      {viewingLocationId && (() => {
-        const viewingIndex = filteredLocations.findIndex(l => l.id === viewingLocationId);
-        if (viewingIndex === -1) return null;
-        return (
-          <LocationDetailsDialog
-            locations={filteredLocations}
-            currentIndex={viewingIndex}
-            open={!!viewingLocationId}
-            onOpenChange={(open) => !open && setViewingLocationId(null)}
-            onNavigate={(index) => setViewingLocationId(filteredLocations[index].id)}
-          />
-        );
-      })()}
+      {/* Location detail drawer */}
+      <Sheet open={!!viewing} onOpenChange={(o) => !o && setParams({}, { replace: true })}>
+        <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-[520px]">
+          {viewing && (
+            <>
+              <div className="space-y-4 px-6 pt-5">
+                <div className="flex items-center gap-3.5 pr-10">
+                  <IconBubble icon={TYPE_ICON[viewing.type] ?? Building2} tone={(LOCATION_TYPE_META[viewing.type] ?? LOCATION_TYPE_META.office).tone} size="lg" />
+                  <div className="min-w-0">
+                    <SheetTitle className="truncate text-lg">{displayLocation(viewing.name)}</SheetTitle>
+                    <p className="truncate text-xs text-muted-foreground">{viewing.address || (LOCATION_TYPE_META[viewing.type] ?? LOCATION_TYPE_META.office).label}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {(['available', 'assigned', 'repair', 'lost'] as AssetStatus[]).map((s) => (
+                    <div key={s} className="rounded-lg border px-3 py-2">
+                      <p className="text-lg font-semibold tabular">{vs?.byStatus[s] || 0}</p>
+                      <p className="truncate text-2xs text-muted-foreground">{STATUS_META[s].label}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="secondary" asChild><Link to={`/assets?location=${viewing.id}`}><Package /> All assets here</Link></Button>
+                  <Button size="sm" variant="secondary" asChild><Link to={`/print-handover/location/${viewing.id}`}><Printer /> Handover form</Link></Button>
+                  {can('locations.manage') && <Button size="sm" variant="secondary" onClick={() => setEditing(viewing)}><Pencil /> Edit</Button>}
+                </div>
+                <ViewTabs<'assets' | 'people'> value={tab} onChange={setTab} tabs={[{ value: 'assets', label: 'Assets', count: viewAssets.length }, { value: 'people', label: 'People', count: viewPeople.length }]} />
+              </div>
+              <div className="flex-1 overflow-y-auto px-4 py-3">
+                {tab === 'assets' ? (
+                  viewAssets.length ? (
+                    viewAssets.slice(0, 100).map((a) => (
+                      <Link key={a.id} to={`/assets/${a.id}`} className="flex items-center gap-3 rounded-lg px-2 py-2.5 hover:bg-subtle">
+                        <AssetThumb category={a.category} size="sm" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium">{a.name}</span>
+                          <span className="block truncate text-xs text-muted-foreground"><span className="font-mono">{a.assetTag}</span>{a.assignedTo ? ` · ${a.assignedTo}` : ''}</span>
+                        </span>
+                        <StatusBadge status={a.status} />
+                      </Link>
+                    ))
+                  ) : (
+                    <EmptyState icon={Package} title="No assets here yet" className="py-10" />
+                  )
+                ) : viewPeople.length ? (
+                  viewPeople.map((p) => (
+                    <Link key={p.id} to={`/people/${p.id}`} className="flex items-center gap-3 rounded-lg px-2 py-2.5 hover:bg-subtle">
+                      <PersonAvatar name={p.name} src={p.avatarUrl} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium">{p.name}</span>
+                        <span className="block truncate text-xs text-muted-foreground">{p.department}</span>
+                      </span>
+                      <span className="text-xs text-faint">{p.assetsCount} assets</span>
+                    </Link>
+                  ))
+                ) : (
+                  <EmptyState icon={Users} title="Nobody based here" className="py-10" />
+                )}
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      <AddLocationDialog open={adding} onOpenChange={setAdding} showTrigger={false} />
+      {editing && <EditLocationDialog location={editing} open onOpenChange={(o) => !o && setEditing(null)} />}
+      {deleting && <DeleteLocationDialog location={deleting} open onOpenChange={(o) => !o && setDeleting(null)} />}
     </div>
   );
-};
-
-export default Locations;
+}

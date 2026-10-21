@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import type { UserRole } from '@/types/database';
 import { supabase } from '@/lib/supabase';
+import { profileUserFor } from '@/lib/sessionUser';
 
 // Re-export UserRole for convenience
 export type { UserRole } from '@/types/database';
@@ -49,6 +50,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
                     if (persistedOriginalAdmin) {
                         setOriginalAdminUser(JSON.parse(persistedOriginalAdmin));
                     }
+                } else if (session?.user) {
+                    // A valid session without a matching stored user, e.g. Supabase sent the OAuth
+                    // redirect to the Site URL instead of /auth/callback. Load the profile here so
+                    // the user isn't bounced back to the login page.
+                    const fromSession = await profileUserFor(session.user);
+                    if (fromSession) setUser(fromSession);
                 }
             } catch (error) {
                 console.error('Error parsing persisted user:', error);

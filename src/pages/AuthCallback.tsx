@@ -2,15 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@/contexts/UserContext';
-import type { UserRole as DatabaseUserRole } from '@/types/database';
+import { profileUserFor, takePostLoginRedirect } from '@/lib/sessionUser';
 import { Loader2 } from 'lucide-react';
-
-type ProfileRow = {
-    id: string;
-    full_name: string | null;
-    email: string;
-    role: DatabaseUserRole;
-};
 
 export default function AuthCallback() {
     const navigate = useNavigate();
@@ -30,41 +23,15 @@ export default function AuthCallback() {
                 return;
             }
 
-            const authUser = session.user;
-
-            let profile: ProfileRow | null = null;
-
-            const byId = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', authUser.id)
-                .maybeSingle();
-            profile = byId.data as ProfileRow | null;
-
-            if (!profile) {
-                // Falls back to an account created before it had a Supabase Auth identity.
-                const byEmail = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('email', authUser.email)
-                    .maybeSingle();
-                profile = byEmail.data as ProfileRow | null;
-            }
-
-            if (!profile) {
+            const user = await profileUserFor(session.user);
+            if (!user) {
                 setError('No profile is set up for this account yet. Contact your administrator.');
                 await supabase.auth.signOut();
                 return;
             }
 
-            setUser({
-                id: profile.id,
-                name: profile.full_name || (authUser.user_metadata?.full_name as string) || 'User',
-                email: profile.email,
-                role: profile.role,
-            });
-
-            navigate('/', { replace: true });
+            setUser(user);
+            navigate(takePostLoginRedirect() ?? '/', { replace: true });
         };
 
         completeSignIn();

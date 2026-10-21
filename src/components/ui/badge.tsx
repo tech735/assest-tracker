@@ -4,22 +4,23 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap",
   {
     variants: {
       variant: {
-        default: "border-transparent bg-primary text-primary-foreground",
-        secondary: "border-transparent bg-secondary text-secondary-foreground",
-        destructive: "border-transparent bg-destructive text-destructive-foreground",
-        outline: "text-foreground border-border",
-        success: "border-transparent bg-success/15 text-success",
-        warning: "border-transparent bg-warning/15 text-warning",
-        info: "border-transparent bg-info/15 text-info",
-        available: "border-transparent bg-success/15 text-success",
-        assigned: "border-transparent bg-info/15 text-info",
-        repair: "border-transparent bg-warning/15 text-warning",
-        retired: "border-transparent bg-muted text-muted-foreground",
-        lost: "border-transparent bg-destructive/15 text-destructive",
+        default: "bg-primary text-primary-foreground",
+        secondary: "bg-muted text-quiet-strong",
+        destructive: "bg-destructive-soft text-destructive-strong",
+        outline: "border border-border text-foreground",
+        success: "bg-success-soft text-success-strong",
+        warning: "bg-warning-soft text-warning-strong",
+        info: "bg-info-soft text-info-strong",
+        special: "bg-special-soft text-special-strong",
+        available: "bg-success-soft text-success-strong",
+        assigned: "bg-info-soft text-info-strong",
+        repair: "bg-warning-soft text-warning-strong",
+        retired: "bg-quiet-soft text-quiet-strong",
+        lost: "bg-destructive-soft text-destructive-strong",
       },
     },
     defaultVariants: {

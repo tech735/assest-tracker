@@ -1,129 +1,85 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@500&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Design tokens — mirror the Figma file "Asset Tracker — Redesign Wireframes" (🎨 Foundations).
+ * Values are HSL triplets so Tailwind can apply opacity (e.g. bg-primary/10).
+ */
 @layer base {
   :root {
-    /* Clean professional SaaS palette */
-    --background: 210 20% 98%;
-    --foreground: 222 47% 12%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-
+    /* Surfaces */
+    --background: 220 20% 97%;        /* bg/canvas  #F5F6F8 */
+    --foreground: 220 20% 9%;         /* text/primary #12151B */
+    --card: 0 0% 100%;                /* bg/surface */
+    --card-foreground: 220 20% 9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 220 20% 9%;
+    --subtle: 240 11% 98%;            /* bg/subtle  #FAFAFB */
 
-    /* Calm blue primary */
-    --primary: 215 60% 32%;
-    --primary-foreground: 210 40% 98%;
+    /* KOTU brand */
+    --primary: 240 99% 31%;           /* #02019B */
+    --primary-hover: 240 98% 24%;     /* #020178 */
+    --primary-foreground: 0 0% 100%;
+    --primary-soft: 240 100% 97%;     /* #EEEEFF */
+    --link: 241 75% 41%;              /* #1C1AB8 */
 
-    /* Soft gray secondary */
-    --secondary: 214 32% 91%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 220 20% 94%;
+    --secondary-foreground: 220 20% 9%;
+    --muted: 220 20% 94%;             /* bg/muted #EDEFF3 */
+    --muted-foreground: 222 11% 47%;  /* text/secondary #6B7385 */
+    --faint-foreground: 218 13% 65%;  /* text/muted #9AA3B2 */
+    --accent: 220 20% 94%;
+    --accent-foreground: 220 20% 9%;
 
-    --muted: 210 20% 96%;
-    --muted-foreground: 215 15% 45%;
+    --border: 220 18% 90%;            /* #E2E5EB */
+    --border-strong: 218 17% 83%;     /* #CDD2DB */
+    --input: 220 18% 90%;
+    --ring: 241 66% 53%;              /* #3A38D6 */
 
-    --accent: 214 80% 96%;
-    --accent-foreground: 222 47% 11%;
-
-    /* Status colors */
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-
-    --success: 142 76% 36%;
+    /* Status tones: DEFAULT = dot, soft = background, strong = text */
+    --success: 152 82% 39%;
+    --success-soft: 145 81% 96%;
+    --success-strong: 155 90% 24%;
     --success-foreground: 0 0% 100%;
-
-    --warning: 38 92% 50%;
+    --warning: 34 94% 50%;
+    --warning-soft: 45 100% 96%;
+    --warning-strong: 22 92% 37%;
     --warning-foreground: 0 0% 100%;
-
-    --info: 199 89% 48%;
+    --destructive: 4 86% 58%;
+    --destructive-soft: 5 86% 97%;
+    --destructive-strong: 4 76% 40%;
+    --destructive-foreground: 0 0% 100%;
+    --info: 241 66% 53%;
+    --info-soft: 240 100% 97%;
+    --info-strong: 241 75% 41%;
     --info-foreground: 0 0% 100%;
-
-    --border: 214 20% 90%;
-    --input: 214 20% 90%;
-    --ring: 222 47% 20%;
+    --special: 252 92% 66%;
+    --special-soft: 245 100% 98%;
+    --special-strong: 257 72% 50%;
+    --quiet: 218 13% 65%;
+    --quiet-soft: 220 20% 94%;
+    --quiet-strong: 222 13% 34%;
 
     --radius: 0.75rem;
 
-    /* Spacing scale */
-    --space-1: 0.25rem;
-    --space-2: 0.5rem;
-    --space-3: 0.75rem;
-    --space-4: 1rem;
-    --space-5: 1.5rem;
-    --space-6: 2rem;
-    --space-7: 2.5rem;
-    --space-8: 3rem;
-
-    /* Custom tokens */
-    --sla-breach: 0 84% 60%;
-    --stage-lodged: 199 89% 48%;
-    --stage-warehouse: 38 92% 50%;
-    --stage-invoicing: 263 70% 50%;
-    --stage-completed: 142 76% 36%;
-    --stage-denied: 0 84% 60%;
-
-    /* Modern sidebar colors - white rail, blue reserved as the single accent */
+    /* Sidebar (kept for shadcn sidebar primitives) */
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 222 47% 15%;
-    --sidebar-primary: 215 60% 45%;
+    --sidebar-foreground: 222 11% 47%;
+    --sidebar-primary: 240 99% 31%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 20% 96%;
-    --sidebar-accent-foreground: 222 47% 15%;
-    --sidebar-border: 214 20% 90%;
-    --sidebar-muted: 215 15% 45%;
-    --sidebar-ring: 215 60% 45%;
+    --sidebar-accent: 240 100% 97%;
+    --sidebar-accent-foreground: 241 75% 41%;
+    --sidebar-border: 220 18% 90%;
+    --sidebar-muted: 218 13% 65%;
+    --sidebar-ring: 241 66% 53%;
 
-    /* Card styling */
-    --card-shadow: 0 12px 30px -24px hsl(215 40% 20% / 0.6);
-    --card-shadow-soft: 0 8px 20px -16px hsl(215 40% 20% / 0.5);
-  }
-
-  .dark {
-    --background: 222 47% 8%;
-    --foreground: 210 40% 98%;
-
-    --card: 222 47% 11%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 199 89% 60%;
-    --primary-foreground: 222 47% 11%;
-
-    --secondary: 222 47% 18%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 222 47% 18%;
-    --muted-foreground: 215 20% 65%;
-
-    --accent: 222 47% 18%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 210 40% 98%;
-
-    --success: 142 76% 30%;
-    --success-foreground: 0 0% 100%;
-
-    --border: 222 47% 20%;
-    --input: 222 47% 20%;
-    --ring: 199 89% 60%;
-
-    /* Dark mode sidebar colors */
-    --sidebar-background: 222 47% 11%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 199 89% 60%;
-    --sidebar-primary-foreground: 222 47% 11%;
-    --sidebar-accent: 222 47% 18%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 222 47% 20%;
-    --sidebar-ring: 199 89% 60%;
+    /* Motion (✨ Motion & Interactions) */
+    --ease-standard: cubic-bezier(.2, 0, 0, 1);
+    --ease-enter: cubic-bezier(.16, 1, .3, 1);
+    --ease-exit: cubic-bezier(.4, 0, 1, 1);
   }
 }
 
@@ -132,112 +88,31 @@
     @apply border-border;
   }
 
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'DM Sans', system-ui, sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {
     @apply font-semibold tracking-tight;
   }
+
+  /* Keyboard focus only — mouse clicks don't show the ring */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring/40 ring-offset-0;
+  }
 }
 
 @layer components {
-  .status-badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  .surface {
+    @apply bg-card border border-border rounded-xl;
   }
 
-  .status-new {
-    @apply bg-blue-100 text-blue-800;
-  }
-
-  .status-in-process {
-    @apply bg-amber-100 text-amber-800;
-  }
-
-  .status-completed {
-    @apply bg-green-100 text-green-800;
-  }
-
-  .status-denied {
-    @apply bg-red-100 text-red-800;
-  }
-
-  .status-escalated {
-    @apply bg-red-100 text-red-800 ring-2 ring-red-300;
-  }
-
-  .sla-breach-badge {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-red-600 text-white animate-pulse;
-  }
-
-  .kpi-card {
-    @apply bg-card rounded-xl border border-transparent p-6 shadow-sm transition-all duration-200 hover:shadow-md;
-    box-shadow: var(--card-shadow-soft);
-  }
-
-  .kpi-card-primary {
-    @apply text-white border-transparent;
-    background: linear-gradient(135deg, hsl(215 60% 40%), hsl(210 80% 48%));
-    box-shadow: var(--card-shadow);
-  }
-
-  .sidebar-nav-item {
-    @apply flex items-center gap-3 px-4 py-2.5 rounded-xl text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors duration-150;
-  }
-
-  .sidebar-nav-item-active {
-    @apply bg-sidebar-accent text-sidebar-primary font-medium;
-  }
-
-  .sidebar-nav-item-collapsed {
-    @apply flex items-center justify-center w-11 h-11 mx-auto rounded-xl text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors duration-150;
-  }
-
-  .app-sidebar {
-    @apply bg-sidebar text-sidebar-foreground border-r border-sidebar-border;
-    box-shadow: 1px 0 8px -4px rgb(0 0 0 / 0.06);
-  }
-
-  .app-shell {
-    @apply h-screen bg-background flex overflow-hidden;
-  }
-
-  .app-header {
-    @apply flex items-center justify-between gap-6 px-6 py-3.5 lg:px-8 border-b border-border/70 bg-background/95 backdrop-blur-sm;
-  }
-
-  .app-content {
-    @apply flex-1 px-6 pt-4 pb-28 lg:px-10 lg:pt-8 lg:pb-8;
-  }
-
-  .page-shell {
-    @apply flex flex-col gap-8;
-  }
-
-  .card-base {
-    @apply bg-card rounded-2xl p-6;
-    box-shadow: var(--card-shadow-soft);
-  }
-
-  .card-grid {
-    @apply grid gap-6;
-  }
-
-  .data-table-row {
-    @apply border-b border-border hover:bg-muted/50 transition-colors cursor-pointer;
-  }
-
-  .stage-indicator {
-    @apply w-2 h-2 rounded-full;
-  }
-
-  .timeline-dot {
-    @apply absolute left-0 w-3 h-3 rounded-full border-2 border-background -translate-x-1/2;
-  }
-
-  .timeline-line {
-    @apply absolute left-0 top-3 w-0.5 h-full -translate-x-1/2;
+  .tabular {
+    font-variant-numeric: tabular-nums;
   }
 }
 
@@ -260,25 +135,20 @@
     height: 6px;
   }
 
-  .scrollbar-thin::-webkit-scrollbar-track {
-    @apply bg-transparent;
-  }
-
   .scrollbar-thin::-webkit-scrollbar-thumb {
     @apply bg-border rounded-full;
   }
 
-  .gradient-border {
-    @apply relative;
+  .pb-safe {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
   }
+}
 
-  .gradient-border::before {
-    content: '';
-    @apply absolute inset-0 rounded-lg p-[1px];
-    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--info)));
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 120ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 120ms !important;
+    transition-property: opacity, color, background-color, border-color !important;
   }
 }

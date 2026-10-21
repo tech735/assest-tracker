@@ -1,5 +1,11 @@
 import type { Config } from "tailwindcss";
 
+const tone = (name: string) => ({
+  DEFAULT: `hsl(var(--${name}))`,
+  soft: `hsl(var(--${name}-soft))`,
+  strong: `hsl(var(--${name}-strong))`,
+});
+
 export default {
   darkMode: ["class"],
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
@@ -13,20 +19,38 @@ export default {
       },
     },
     extend: {
+      // Breakpoints follow 🎨 Foundations → Responsive spec:
+      // phone < 768 · tablet portrait md (768) · tablet landscape lg (1024) · laptop xl (1200) · desktop 2xl (1440)
+      screens: {
+        xl: "1200px",
+        "2xl": "1440px",
+      },
       aria: {
         invalid: 'invalid="true"',
       },
       fontFamily: {
-        sans: ['DM Sans', 'system-ui', 'sans-serif'],
+        sans: ["DM Sans", "system-ui", "sans-serif"],
+        mono: ["JetBrains Mono", "ui-monospace", "monospace"],
+      },
+      fontSize: {
+        "2xs": ["11px", "16px"],
       },
       colors: {
-        border: "hsl(var(--border))",
+        border: {
+          DEFAULT: "hsl(var(--border))",
+          strong: "hsl(var(--border-strong))",
+        },
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        subtle: "hsl(var(--subtle))",
+        faint: "hsl(var(--faint-foreground))",
+        link: "hsl(var(--link))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
+          hover: "hsl(var(--primary-hover))",
+          soft: "hsl(var(--primary-soft))",
           foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
@@ -34,7 +58,7 @@ export default {
           foreground: "hsl(var(--secondary-foreground))",
         },
         destructive: {
-          DEFAULT: "hsl(var(--destructive))",
+          ...tone("destructive"),
           foreground: "hsl(var(--destructive-foreground))",
         },
         muted: {
@@ -53,18 +77,11 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        success: {
-          DEFAULT: "hsl(var(--success))",
-          foreground: "hsl(var(--success-foreground))",
-        },
-        warning: {
-          DEFAULT: "hsl(var(--warning))",
-          foreground: "hsl(var(--warning-foreground))",
-        },
-        info: {
-          DEFAULT: "hsl(var(--info))",
-          foreground: "hsl(var(--info-foreground))",
-        },
+        success: { ...tone("success"), foreground: "hsl(var(--success-foreground))" },
+        warning: { ...tone("warning"), foreground: "hsl(var(--warning-foreground))" },
+        info: { ...tone("info"), foreground: "hsl(var(--info-foreground))" },
+        special: tone("special"),
+        quiet: tone("quiet"),
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -80,13 +97,20 @@ export default {
       },
       borderRadius: {
         lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        md: "calc(var(--radius) - 4px)",
+        sm: "calc(var(--radius) - 6px)",
       },
       boxShadow: {
-        'card': '0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04)',
-        'card-hover': '0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05)',
-        'elevated': '0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05)',
+        xs: "0 1px 2px 0 rgb(18 21 27 / 0.05)",
+        card: "0 1px 3px 0 rgb(18 21 27 / 0.08), 0 1px 2px 0 rgb(18 21 27 / 0.04)",
+        "card-hover": "0 4px 8px -2px rgb(18 21 27 / 0.08), 0 2px 4px -2px rgb(18 21 27 / 0.04)",
+        popover: "0 12px 16px -4px rgb(18 21 27 / 0.10), 0 4px 6px -2px rgb(18 21 27 / 0.05)",
+        elevated: "0 24px 48px -12px rgb(18 21 27 / 0.18)",
+      },
+      transitionTimingFunction: {
+        standard: "cubic-bezier(.2,0,0,1)",
+        enter: "cubic-bezier(.16,1,.3,1)",
+        exit: "cubic-bezier(.4,0,1,1)",
       },
       keyframes: {
         "accordion-down": {
@@ -97,25 +121,43 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
-        "fade-in": {
+        // Page / route change: fade + 4px rise (180ms)
+        "page-in": {
           from: { opacity: "0", transform: "translateY(4px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
-        "slide-in-right": {
-          from: { opacity: "0", transform: "translateX(-8px)" },
-          to: { opacity: "1", transform: "translateX(0)" },
+        // Bulk action bar: slide up 24px
+        "bar-in": {
+          from: { opacity: "0", transform: "translate(-50%, 24px)" },
+          to: { opacity: "1", transform: "translate(-50%, 0)" },
         },
-        "pulse-subtle": {
-          "0%, 100%": { opacity: "1" },
-          "50%": { opacity: "0.7" },
+        "sheet-up": {
+          from: { transform: "translateY(100%)" },
+          to: { transform: "translateY(0)" },
+        },
+        shimmer: {
+          "0%": { backgroundPosition: "-200% 0" },
+          "100%": { backgroundPosition: "200% 0" },
+        },
+        "scan-line": {
+          "0%, 100%": { transform: "translateY(-90px)" },
+          "50%": { transform: "translateY(90px)" },
+        },
+        // kept for older components
+        "fade-in": {
+          from: { opacity: "0", transform: "translateY(4px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "fade-in": "fade-in 0.3s ease-out",
-        "slide-in-right": "slide-in-right 0.3s ease-out",
-        "pulse-subtle": "pulse-subtle 2s ease-in-out infinite",
+        "page-in": "page-in 180ms cubic-bezier(.16,1,.3,1)",
+        "bar-in": "bar-in 220ms cubic-bezier(.16,1,.3,1)",
+        "sheet-up": "sheet-up 240ms cubic-bezier(.16,1,.3,1)",
+        shimmer: "shimmer 1.2s linear infinite",
+        "scan-line": "scan-line 2.4s ease-in-out infinite",
+        "fade-in": "fade-in 180ms cubic-bezier(.16,1,.3,1)",
       },
     },
   },

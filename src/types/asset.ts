@@ -88,3 +88,92 @@ export interface DashboardStats {
 }
 
 
+
+// ----- Phase 2: notes, files, audits, e-signed handovers -----
+
+export interface AssetNote {
+  id: string;
+  assetId: string;
+  authorId: string;
+  authorName?: string;
+  body: string;
+  createdAt: string;
+}
+
+export type AssetFileKind = 'invoice' | 'handover' | 'repair' | 'photo' | 'other';
+
+export interface AssetFile {
+  id: string;
+  assetId: string;
+  storagePath: string;
+  fileName: string;
+  sizeBytes?: number;
+  mimeType?: string;
+  kind: AssetFileKind;
+  uploadedByName?: string;
+  createdAt: string;
+}
+
+export interface Audit {
+  id: string;
+  name: string;
+  locationId?: string;
+  locationName?: string;
+  status: 'in_progress' | 'closed';
+  dueDate?: string;
+  notes?: string;
+  expectedCount: number;
+  accuracy?: number;
+  startedByName?: string;
+  startedAt: string;
+  closedAt?: string;
+}
+
+export interface AuditItem {
+  auditId: string;
+  assetId: string;
+  assetTag?: string;
+  assetName?: string;
+  serialNumber?: string;
+}
+
+export type AuditScanResult = 'found' | 'misplaced' | 'unexpected';
+
+export interface AuditScan {
+  id: string;
+  auditId: string;
+  assetId?: string;
+  code: string;
+  result: AuditScanResult;
+  scannedByName?: string;
+  scannedAt: string;
+}
+
+export interface HandoverItem {
+  assetId: string;
+  tag: string;
+  name: string;
+  serial?: string;
+  brand?: string;
+  condition?: string;
+  accessories?: string;
+}
+
+export interface HandoverDocument {
+  id: string;
+  docNo: number;
+  kind: 'handover' | 'return';
+  employeeId?: string;
+  employeeName: string;
+  employeeEmail: string;
+  locationName?: string;
+  items: HandoverItem[];
+  handedOverBy?: string;
+  notes?: string;
+  status: 'pending' | 'signed' | 'void';
+  createdByName?: string;
+  createdAt: string;
+  signedAt?: string;
+  signerName?: string;
+  signature?: string;
+}

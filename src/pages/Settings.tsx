@@ -1,352 +1,194 @@
-import { useState, useEffect } from 'react';
-import { Save, Users, Tag, MapPin, Shield, Bell, Database, Loader2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Bell, Layers, Plus, Settings as SettingsIcon, ShieldCheck, Tag, X, type LucideIcon } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import { useSettings, useUpdateSettings } from '@/hooks/useSupabaseData';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
-import { useSettings, useUpdateSettings } from '@/hooks/useSupabaseData';
-import { useToast } from '@/hooks/use-toast';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { EmptyState, PageHeader, PageLoader } from '@/components/app/primitives';
+import { titleCase } from '@/lib/assetMeta';
+import { AccessSettings } from '@/components/settings/AccessSettings';
+import { useAccess } from '@/hooks/useCollab';
+import { cn } from '@/lib/utils';
 
-const Settings = () => {
+type Section = 'general' | 'categories' | 'tags' | 'notifications' | 'access';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Config = any;
+
+const SECTIONS: { id: Section; label: string; icon: LucideIcon }[] = [
+  { id: 'general', label: 'General', icon: SettingsIcon },
+  { id: 'categories', label: 'Categories', icon: Layers },
+  { id: 'tags', label: 'Asset tags & labels', icon: Tag },
+  { id: 'notifications', label: 'Notifications', icon: Bell },
+  { id: 'access', label: 'Roles & permissions', icon: ShieldCheck },
+];
+
+function Row({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div className="grid gap-2 border-b py-4 last:border-0 sm:grid-cols-[240px_minmax(0,1fr)] sm:gap-6">
+      <div>
+        <Label className="text-sm font-medium">{label}</Label>
+        {hint && <p className="mt-0.5 text-[13px] text-muted-foreground">{hint}</p>}
+      </div>
+      <div className="max-w-md">{children}</div>
+    </div>
+  );
+}
+
+export default function Settings() {
   const { toast } = useToast();
+  const [params, setParams] = useSearchParams();
+  const section = (params.get('section') || 'general') as Section;
   const { data: settings, isLoading, isError } = useSettings();
-  const updateSettings = useUpdateSettings();
-
-  const [localConfig, setLocalConfig] = useState<any>(null);
+  const update = useUpdateSettings();
+  const { can } = useAccess();
+  const readOnly = !can('settings.manage');
+  const [config, setConfig] = useState<Config>(null);
   const [newCategory, setNewCategory] = useState('');
 
   useEffect(() => {
-    if (settings) {
-      setLocalConfig(settings);
-    }
+    if (settings) setConfig(settings);
   }, [settings]);
+  const dirty = useMemo(() => !!config && !!settings && JSON.stringify(config) !== JSON.stringify(settings), [config, settings]);
 
-  const handleSave = async () => {
+  if (isLoading && !config) return <PageLoader label="Loading settings" />;
+  if (isError) return <EmptyState icon={SettingsIcon} title="Couldn’t load settings" action={<Button variant="secondary" onClick={() => window.location.reload()}>Retry</Button>} />;
+  if (!config) return null;
+
+  const set = (patch: Partial<Config>) => setConfig({ ...config, ...patch });
+  const setNotif = (key: string, value: boolean) => setConfig({ ...config, notifications: { ...config.notifications, [key]: value } });
+  const save = async () => {
     try {
-      await updateSettings.mutateAsync(localConfig);
-      toast({
-        title: 'Settings Saved',
-        description: 'Your preferences have been updated successfully.',
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to save settings. Please try again.',
-        variant: 'destructive',
-      });
+      await update.mutateAsync(config);
+      toast({ title: 'Settings saved' });
+    } catch {
+      toast({ title: 'Couldn’t save settings', description: 'Please try again.', variant: 'destructive' });
     }
   };
-
   const addCategory = () => {
-    if (!newCategory.trim()) return;
-    if (localConfig.categories.includes(newCategory.trim())) {
-      toast({
-        title: 'Duplicate Category',
-        description: 'This category already exists.',
-        variant: 'destructive',
-      });
+    const c = newCategory.trim();
+    if (!c) return;
+    if ((config.categories || []).some((x: string) => x.toLowerCase() === c.toLowerCase())) {
+      toast({ title: 'That category already exists', variant: 'destructive' });
       return;
     }
-    setLocalConfig({
-      ...localConfig,
-      categories: [...localConfig.categories, newCategory.trim()]
-    });
+    set({ categories: [...(config.categories || []), c] });
     setNewCategory('');
   };
 
-  const deleteCategory = (categoryToDelete: string) => {
-    setLocalConfig({
-      ...localConfig,
-      categories: localConfig.categories.filter((c: string) => c !== categoryToDelete)
-    });
-  };
-
-  if (isLoading && !localConfig) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-brand-blue mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading settings...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="flex flex-col items-center justify-center h-96 text-center space-y-4">
-        <p className="text-destructive font-medium">Failed to load settings from the database.</p>
-        <Button variant="outline" onClick={() => window.location.reload()}>Retry</Button>
-      </div>
-    );
-  }
-
-  if (!localConfig) return null;
-
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">Settings</h1>
-        </div>
-        <Button
-          className="gap-2 bg-brand-blue hover:bg-brand-blue/90"
-          onClick={handleSave}
-          disabled={updateSettings.isPending}
-        >
-          {updateSettings.isPending ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Save className="w-4 h-4" />
+    <div className="space-y-5 pb-16">
+      <PageHeader title="Settings" />
+      <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
+        <nav className="flex gap-1 overflow-x-auto scrollbar-hide lg:flex-col" aria-label="Settings sections">
+          {SECTIONS.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => setParams(s.id === 'general' ? {} : { section: s.id }, { replace: true })}
+              className={cn('flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] transition-colors', section === s.id ? 'bg-primary-soft font-medium text-link' : 'text-muted-foreground hover:bg-muted hover:text-foreground')}
+            >
+              <s.icon className="h-4 w-4" /> {s.label}
+            </button>
+          ))}
+        </nav>
+
+        <div className="min-w-0 rounded-xl border bg-card px-5 py-2 md:px-6">
+          {section === 'general' && (
+            <>
+              <Row label="Organisation name" hint="Shown on handover forms and emails.">
+                <Input value={config.orgName || ''} onChange={(e) => set({ orgName: e.target.value })} />
+              </Row>
+              <Row label="Currency" hint="Used for purchase cost, book value and reports.">
+                <Select value={config.currency || 'INR'} onValueChange={(v) => set({ currency: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {['INR', 'USD', 'EUR', 'GBP', 'AED', 'SGD'].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </Row>
+              <Row label="Timezone">
+                <Select value={config.timezone || 'Asia/Kolkata'} onValueChange={(v) => set({ timezone: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {['Asia/Kolkata', 'UTC', 'Asia/Dubai', 'Asia/Singapore', 'Europe/London', 'America/New_York'].map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </Row>
+            </>
           )}
-          Save Changes
-        </Button>
+
+          {section === 'categories' && (
+            <Row label="Asset categories" hint="Available when adding assets and in filters. Removing one doesn’t change existing assets.">
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  {(config.categories || []).map((c: string) => (
+                    <span key={c} className="inline-flex items-center gap-1.5 rounded-full border bg-subtle py-1 pl-3 pr-1.5 text-[13px]">
+                      {titleCase(c)}
+                      <button onClick={() => set({ categories: config.categories.filter((x: string) => x !== c) })} className="rounded-full p-0.5 text-faint hover:bg-muted hover:text-foreground" aria-label={`Remove ${c}`}>
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <form onSubmit={(e) => { e.preventDefault(); addCategory(); }} className="flex gap-2">
+                  <Input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="e.g. Printers" />
+                  <Button type="submit" variant="secondary"><Plus /> Add</Button>
+                </form>
+              </div>
+            </Row>
+          )}
+
+          {section === 'tags' && (
+            <>
+              <Row label="Asset tag prefix" hint="New assets are numbered automatically, e.g. AST-1249.">
+                <Input value={config.tagPrefix || ''} onChange={(e) => set({ tagPrefix: e.target.value })} className="font-mono" />
+              </Row>
+              <Row label="Label preview" hint="Printed from any asset page. The QR code opens the asset so anyone can check it in or out.">
+                <div className="flex items-center gap-4 rounded-lg border-2 border-foreground p-4">
+                  <QRCodeSVG value={`${window.location.origin}/assets/example`} size={72} marginSize={0} />
+                  <div>
+                    <p className="font-mono text-lg font-semibold">{config.tagPrefix || 'AST-'}1249</p>
+                    <p className="text-sm font-medium">MacBook Air 13" M3</p>
+                    <p className="text-[10px]">Property of {config.orgName || 'KOTU'}</p>
+                  </div>
+                </div>
+              </Row>
+            </>
+          )}
+
+          {section === 'notifications' && (
+            <>
+              {[
+                ['warrantyAlerts', 'Warranty & AMC reminders', 'Emails at 30, 15 and 7 days before coverage ends.'],
+                ['assignmentNotifications', 'Assignment emails', 'Notify employees when an asset is checked out to or in from them.'],
+                ['emailDigest', 'Daily digest', 'One morning email to IT with everything that needs attention.'],
+                ['lowStockAlerts', 'Low stock alerts', 'Warn when a category has fewer than 3 assets in stock.'],
+              ].map(([key, label, hint]) => (
+                <Row key={key} label={label} hint={hint}>
+                  <Switch checked={!!config.notifications?.[key]} onCheckedChange={(v) => setNotif(key, v)} />
+                </Row>
+              ))}
+            </>
+          )}
+
+          {section === 'access' && <AccessSettings />}
+        </div>
       </div>
 
-      {/* Settings Tabs */}
-      <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="bg-muted/50">
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="categories">Categories</TabsTrigger>
-          <TabsTrigger value="roles">Roles & Permissions</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
-        </TabsList>
-
-        {/* General Settings */}
-        <TabsContent value="general" className="space-y-6">
-          <Card className="border shadow-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Database className="w-5 h-5" />
-                Organization Settings
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="orgName">Organization Name</Label>
-                  <Input
-                    id="orgName"
-                    value={localConfig.orgName}
-                    onChange={(e) => setLocalConfig({ ...localConfig, orgName: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="tagPrefix">Asset Tag Prefix</Label>
-                  <Input
-                    id="tagPrefix"
-                    value={localConfig.tagPrefix}
-                    onChange={(e) => setLocalConfig({ ...localConfig, tagPrefix: e.target.value })}
-                    placeholder="e.g., AST-, ASSET-"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="currency">Currency</Label>
-                  <Select
-                    value={localConfig.currency}
-                    onValueChange={(value) => setLocalConfig({ ...localConfig, currency: value })}
-                  >
-                    <SelectTrigger id="currency">
-                      <SelectValue placeholder="Select currency" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="INR">INR (₹)</SelectItem>
-                      <SelectItem value="USD">USD ($)</SelectItem>
-                      <SelectItem value="EUR">EUR (€)</SelectItem>
-                      <SelectItem value="GBP">GBP (£)</SelectItem>
-                      <SelectItem value="AUD">AUD ($)</SelectItem>
-                      <SelectItem value="CAD">CAD ($)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="timezone">Timezone</Label>
-                  <Input
-                    id="timezone"
-                    value={localConfig.timezone}
-                    onChange={(e) => setLocalConfig({ ...localConfig, timezone: e.target.value })}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Categories Settings */}
-        <TabsContent value="categories" className="space-y-6">
-          <Card className="border shadow-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Tag className="w-5 h-5" />
-                Asset Categories
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {localConfig.categories.map((category: string, index: number) => (
-                  <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                    <span className="font-medium">{category}</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => deleteCategory(category)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-6 flex gap-2">
-                <div className="flex-1">
-                  <Input
-                    placeholder="New category name (e.g., Tablet, Camera)"
-                    value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && addCategory()}
-                  />
-                </div>
-                <Button
-                  variant="outline"
-                  className="gap-2"
-                  onClick={addCategory}
-                >
-                  <Tag className="w-4 h-4" />
-                  Add Category
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Roles Settings */}
-        <TabsContent value="roles" className="space-y-6">
-          <Card className="border shadow-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="w-5 h-5" />
-                User Roles
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {localConfig.roles.map((role: any, index: number) => (
-                  <div key={index} className="flex items-center justify-between p-4 rounded-lg bg-muted/30">
-                    <div>
-                      <p className="font-medium">{role.name}</p>
-                      <p className="text-sm text-muted-foreground">{role.description}</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Button variant="ghost" size="sm">Edit</Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Notifications Settings */}
-        <TabsContent value="notifications" className="space-y-6">
-          <Card className="border shadow-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="w-5 h-5" />
-                Notification Preferences
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Warranty Expiration Alerts</p>
-                    <p className="text-sm text-muted-foreground">
-                      Get notified when asset warranties are expiring
-                    </p>
-                  </div>
-                  <Switch
-                    checked={localConfig.notifications.warrantyAlerts}
-                    onCheckedChange={(checked) =>
-                      setLocalConfig({
-                        ...localConfig,
-                        notifications: { ...localConfig.notifications, warrantyAlerts: checked }
-                      })
-                    }
-                  />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Assignment Notifications</p>
-                    <p className="text-sm text-muted-foreground">
-                      Notify when assets are assigned or returned
-                    </p>
-                  </div>
-                  <Switch
-                    checked={localConfig.notifications.assignmentNotifications}
-                    onCheckedChange={(checked) =>
-                      setLocalConfig({
-                        ...localConfig,
-                        notifications: { ...localConfig.notifications, assignmentNotifications: checked }
-                      })
-                    }
-                  />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Low Stock Alerts</p>
-                    <p className="text-sm text-muted-foreground">
-                      Alert when available assets fall below threshold
-                    </p>
-                  </div>
-                  <Switch
-                    checked={localConfig.notifications.lowStockAlerts}
-                    onCheckedChange={(checked) =>
-                      setLocalConfig({
-                        ...localConfig,
-                        notifications: { ...localConfig.notifications, lowStockAlerts: checked }
-                      })
-                    }
-                  />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Daily Email Digest</p>
-                    <p className="text-sm text-muted-foreground">
-                      Receive a daily summary of asset activities
-                    </p>
-                  </div>
-                  <Switch
-                    checked={localConfig.notifications.emailDigest}
-                    onCheckedChange={(checked) =>
-                      setLocalConfig({
-                        ...localConfig,
-                        notifications: { ...localConfig.notifications, emailDigest: checked }
-                      })
-                    }
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      {readOnly && section !== 'access' && (
+        <p className="rounded-xl bg-subtle px-4 py-3 text-[13px] text-muted-foreground">You can view settings; only admins can change them.</p>
+      )}
+      {dirty && !readOnly && (
+        <div className="fixed bottom-[84px] left-1/2 z-40 flex w-[calc(100vw-24px)] max-w-md -translate-x-1/2 animate-bar-in items-center gap-3 rounded-xl bg-foreground py-2 pl-4 pr-2 text-background shadow-elevated md:bottom-6">
+          <span className="flex-1 text-sm">You have unsaved changes</span>
+          <Button size="sm" variant="ghost" className="text-background hover:bg-background/10" onClick={() => setConfig(settings)}>Discard</Button>
+          <Button size="sm" className="bg-background text-foreground hover:bg-background/90" loading={update.isPending} onClick={save}>Save</Button>
+        </div>
+      )}
     </div>
   );
-};
-
-export default Settings;
+}
