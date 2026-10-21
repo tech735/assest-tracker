@@ -7,6 +7,7 @@ import type { Asset } from '@/types/asset';
 import { Button } from '@/components/ui/button';
 import { AssetThumb, StatusBadge } from '@/components/app/primitives';
 import { displayLocation } from '@/lib/assetMeta';
+import { findAssetByCode } from '@/lib/scan';
 
 // Native barcode scanning (Chrome/Edge on Android & desktop, Safari 17+ partially).
 // Falls back to manual entry when unavailable. USB scanners act as keyboards and also work in the field.
@@ -17,14 +18,6 @@ declare global {
   }
 }
 
-/** Resolve a scanned value to an asset: QR links to /assets/<id>, or a printed tag / serial number. */
-export function findAssetByCode(assets: Asset[], raw: string): Asset | undefined {
-  const code = raw.trim();
-  const fromUrl = code.match(/assets\/([0-9a-f-]{36})/i)?.[1];
-  if (fromUrl) return assets.find((a) => a.id === fromUrl);
-  const c = code.toLowerCase();
-  return assets.find((a) => a.assetTag?.toLowerCase() === c || a.serialNumber?.toLowerCase() === c || a.id === code);
-}
 
 export function ScanDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const navigate = useNavigate();

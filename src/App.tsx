@@ -14,6 +14,9 @@ import PersonProfile from "./pages/PersonProfile";
 import Locations from "./pages/Locations";
 import Maintenance from "./pages/Maintenance";
 import Audits from "./pages/Audits";
+import AuditRun from "./pages/AuditRun";
+import SignHandover from "./pages/SignHandover";
+import MyAssets from "./pages/MyAssets";
 import Reports from "./pages/Reports";
 import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
@@ -54,6 +57,9 @@ const App = () => (
                       <Route path="/locations" element={<Locations />} />
                       <Route path="/maintenance" element={<Maintenance />} />
                       <Route path="/audits" element={<Audits />} />
+                      <Route path="/audits/:id" element={<AuditRun />} />
+                      <Route path="/sign/:id" element={<SignHandover />} />
+                      <Route path="/me" element={<MyAssets />} />
                       <Route path="/reports" element={<Reports />} />
                       <Route path="/notifications" element={<Notifications />} />
                       <Route path="/settings" element={<Settings />} />

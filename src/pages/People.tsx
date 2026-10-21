@@ -39,6 +39,7 @@ import { BulkOffboardDialog } from '@/components/people/BulkOffboardDialog';
 import { BulkDeleteEmployeesDialog } from '@/components/people/BulkDeleteEmployeesDialog';
 import { categoryIcon, displayLocation, EMPLOYEE_STATUS_META, formatDate } from '@/lib/assetMeta';
 import { exportToCSV } from '@/lib/exportUtils';
+import { useAccess } from '@/hooks/useCollab';
 import { cn } from '@/lib/utils';
 
 type View = 'current' | 'onboarding' | 'returns' | 'offboarded';
@@ -57,6 +58,7 @@ export function PersonMenu({
   onOffboard: () => void;
 }) {
   const navigate = useNavigate();
+  const { can } = useAccess();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -68,10 +70,12 @@ export function PersonMenu({
         <DropdownMenuItem onSelect={() => navigate(`/people/${person.id}`)}>
           <Users /> View profile
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onEdit}>
-          <Pencil /> Edit
-        </DropdownMenuItem>
-        {person.status !== 'offboarded' && (
+        {can('people.manage') && (
+          <DropdownMenuItem onSelect={onEdit}>
+            <Pencil /> Edit
+          </DropdownMenuItem>
+        )}
+        {person.status !== 'offboarded' && can('assets.checkout') && (
           <DropdownMenuItem onSelect={onAssign}>
             <Package /> Assign assets
           </DropdownMenuItem>
@@ -79,7 +83,7 @@ export function PersonMenu({
         <DropdownMenuItem onSelect={() => navigate(`/print-handover/employee/${person.id}`)}>
           <Printer /> Handover form
         </DropdownMenuItem>
-        {person.status !== 'offboarded' && (
+        {person.status !== 'offboarded' && can('people.manage') && (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={onOffboard} className="text-destructive-strong focus:text-destructive-strong [&_svg]:text-destructive-strong">
@@ -98,6 +102,7 @@ export default function People() {
   const { data: employees = [], isLoading } = useEmployees();
   const { data: assets = [] } = useAssets();
   const { data: locations = [] } = useLocations();
+  const { can } = useAccess();
 
   const view = (params.get('tab') || 'current') as View;
   const q = params.get('q') || '';
@@ -235,10 +240,10 @@ export default function People() {
             <Button variant="secondary" className="hidden md:inline-flex" onClick={() => exportToCSV(filtered, 'people_export')}>
               <Download /> Export
             </Button>
-            <Button onClick={() => setAdding(true)}>
+            {can('people.manage') && <Button onClick={() => setAdding(true)}>
               <UserPlus /> <span className="hidden sm:inline">Add person</span>
               <span className="sm:hidden">Add</span>
-            </Button>
+            </Button>}
           </>
         }
       />
@@ -347,12 +352,16 @@ export default function People() {
         count={selected.size}
         onClear={() => setSelected(new Set())}
         actions={[
-          { label: 'Department', icon: Building2, onClick: () => setBulk('department') },
-          { label: 'Location', icon: MapPin, onClick: () => setBulk('location') },
-          { label: 'Status', icon: Tag, onClick: () => setBulk('status') },
-          { label: 'Offboard', icon: LogOut, onClick: () => setBulk('offboard') },
+          ...(can('people.manage')
+            ? [
+                { label: 'Department', icon: Building2, onClick: () => setBulk('department') },
+                { label: 'Location', icon: MapPin, onClick: () => setBulk('location') },
+                { label: 'Status', icon: Tag, onClick: () => setBulk('status') },
+                { label: 'Offboard', icon: LogOut, onClick: () => setBulk('offboard') },
+              ]
+            : []),
           { label: 'Export', icon: Download, onClick: () => exportToCSV(employees.filter((e) => selected.has(e.id)), 'people_selected') },
-          { label: 'Delete', icon: Trash2, onClick: () => setBulk('delete'), destructive: true },
+          ...(can('people.manage') ? [{ label: 'Delete', icon: Trash2, onClick: () => setBulk('delete'), destructive: true }] : []),
         ]}
       />
 

@@ -2,7 +2,7 @@ import * as React from 'react';
 import type { Asset, AssetStatus } from '@/types/asset';
 import { EditAssetDialog } from './EditAssetDialog';
 import { DeleteAssetDialog } from './DeleteAssetDialog';
-import { AssignAssetDialog } from './AssignAssetDialog';
+import { CheckOutDialog } from './CheckOutDialog';
 import { ReturnAssetDialog } from './ReturnAssetDialog';
 import { RepairAssetDialog } from './RepairAssetDialog';
 import { LostAssetDialog } from './LostAssetDialog';
@@ -37,7 +37,7 @@ export function useAssetActions() {
     <>
       {is('edit') && <EditAssetDialog asset={state.asset} open onOpenChange={close} />}
       {is('delete') && <DeleteAssetDialog asset={state.asset} open onOpenChange={close} />}
-      {is('assign') && <AssignAssetDialog asset={state.asset} open onOpenChange={close} />}
+      {is('assign') && <CheckOutDialog asset={state.asset} open onOpenChange={close} />}
       {is('return') && <ReturnAssetDialog assetId={state.asset.id} open onOpenChange={close} />}
       {is('repair') && <RepairAssetDialog asset={state.asset} open onOpenChange={close} />}
       {is('lost') && <LostAssetDialog asset={state.asset} open onOpenChange={close} />}

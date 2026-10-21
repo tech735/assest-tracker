@@ -22,6 +22,7 @@ import {
   Wrench,
   BarChart3,
   ArrowLeftRight,
+  Briefcase,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,7 @@ import { supabase } from '@/lib/supabase';
 import { useUser } from '@/contexts/UserContext';
 import { useAlerts, useAssets } from '@/hooks/useSupabaseData';
 import { amcExpiring } from '@/lib/assetMeta';
+import { useAccess } from '@/hooks/useCollab';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -70,7 +72,13 @@ interface NavItem {
 }
 
 const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
-  { label: 'Overview', items: [{ to: '/', label: 'Dashboard', short: 'Dashboard', icon: LayoutDashboard }] },
+  {
+    label: 'Overview',
+    items: [
+      { to: '/', label: 'Dashboard', short: 'Dashboard', icon: LayoutDashboard },
+      { to: '/me', label: 'My assets', short: 'Mine', icon: Briefcase },
+    ],
+  },
   {
     label: 'Inventory',
     items: [
@@ -92,7 +100,7 @@ const ALL_NAV = NAV_GROUPS.flatMap((g) => g.items);
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: 'Admin',
-  SUPPORT: 'Support',
+  SUPPORT: 'IT Support',
   WAREHOUSE: 'Warehouse',
   INVOICING: 'Finance',
   VIEWER: 'Viewer',
@@ -106,6 +114,7 @@ const isActive = (pathname: string, to: string) => (to === '/' ? pathname === '/
 
 function useCurrentProfile() {
   const { user: authUser } = useUser();
+  const { access } = useAccess();
   const [overrides, setOverrides] = React.useState<{ name?: string; avatarUrl?: string }>(() => {
     try {
       return JSON.parse(localStorage.getItem('userProfile') || '{}');
@@ -123,7 +132,7 @@ function useCurrentProfile() {
   const profile: UserProfile = {
     name: overrides.name || authUser?.name || 'User',
     email: authUser?.email || '',
-    role: ROLE_LABELS[authUser?.role || ''] || authUser?.role || 'User',
+    role: ROLE_LABELS[access?.role || authUser?.role || ''] || access?.role || authUser?.role || 'User',
     avatarUrl: overrides.avatarUrl || authAvatar,
   };
   const save = (p: UserProfile) => {
@@ -362,7 +371,7 @@ function Rail({ profile, onEditProfile, onShortcuts }: MenuProps) {
 
 function MobileTabBar({ onScan, onMore, alertCount }: { onScan: () => void; onMore: () => void; alertCount: number }) {
   const { pathname } = useLocation();
-  const moreActive = ['/maintenance', '/audits', '/people', '/locations', '/reports', '/settings'].some((p) => pathname.startsWith(p));
+  const moreActive = ['/maintenance', '/audits', '/people', '/locations', '/reports', '/settings', '/me', '/sign'].some((p) => pathname.startsWith(p));
   const tab = (to: string, label: string, Icon: LucideIcon, badge?: number) => {
     const active = isActive(pathname, to);
     return (
@@ -406,6 +415,7 @@ function MoreSheet({ open, onOpenChange, profile, onEditProfile, onShortcuts }: 
     navigate(to);
   };
   const groups: { title: string; items: { icon: LucideIcon; label: string; to?: string; onClick?: () => void; meta?: string }[] }[] = [
+    { title: 'Mine', items: [{ icon: Briefcase, label: 'My assets & forms', to: '/me' }] },
     { title: 'Directory', items: [{ icon: Users, label: 'People', to: '/people' }, { icon: MapPin, label: 'Locations', to: '/locations' }] },
     {
       title: 'Operations',
@@ -471,6 +481,8 @@ function MoreSheet({ open, onOpenChange, profile, onEditProfile, onShortcuts }: 
 
 function TopBar({ onPalette, onScan, alertCount }: { onPalette: () => void; onScan: () => void; alertCount: number }) {
   const navigate = useNavigate();
+  const { can } = useAccess();
+  const canCreate = can('assets.edit') || can('assets.checkout') || can('people.manage') || can('locations.manage');
   const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
   return (
     <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b bg-card/95 px-4 backdrop-blur md:h-16 md:gap-3 md:px-6 xl:px-8">
@@ -492,31 +504,41 @@ function TopBar({ onPalette, onScan, alertCount }: { onPalette: () => void; onSc
       <Button variant="secondary" size="sm" onClick={onScan} className="hidden md:inline-flex">
         <ScanLine /> Scan
       </Button>
-      <DropdownMenu>
+      {canCreate && <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button size="sm" className="hidden md:inline-flex">
             <Plus /> New
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuItem onSelect={() => navigate('/assets/new')}>
-            <Package /> Add asset <span className="ml-auto text-xs text-faint">N</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => navigate('/assets?view=available&checkout=1')}>
-            <ArrowLeftRight /> Check out an asset
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => navigate('/assets/import')}>
-            <Upload /> Import from CSV
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => navigate('/people?new=1')}>
-            <UserPlus /> Add person
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => navigate('/locations?new=1')}>
-            <MapPin /> Add location
-          </DropdownMenuItem>
+          {can('assets.edit') && (
+            <DropdownMenuItem onSelect={() => navigate('/assets/new')}>
+              <Package /> Add asset <span className="ml-auto text-xs text-faint">N</span>
+            </DropdownMenuItem>
+          )}
+          {can('assets.checkout') && (
+            <DropdownMenuItem onSelect={() => navigate('/assets?view=available&checkout=1')}>
+              <ArrowLeftRight /> Check out an asset
+            </DropdownMenuItem>
+          )}
+          {can('assets.edit') && (
+            <DropdownMenuItem onSelect={() => navigate('/assets/import')}>
+              <Upload /> Import from CSV
+            </DropdownMenuItem>
+          )}
+          {(can('people.manage') || can('locations.manage')) && <DropdownMenuSeparator />}
+          {can('people.manage') && (
+            <DropdownMenuItem onSelect={() => navigate('/people?new=1')}>
+              <UserPlus /> Add person
+            </DropdownMenuItem>
+          )}
+          {can('locations.manage') && (
+            <DropdownMenuItem onSelect={() => navigate('/locations?new=1')}>
+              <MapPin /> Add location
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
-      </DropdownMenu>
+      </DropdownMenu>}
       <Link to="/notifications" className="relative hidden rounded-lg p-2 text-muted-foreground hover:bg-muted md:block" aria-label={`Notifications${alertCount ? `, ${alertCount} unresolved` : ''}`}>
         <Bell className="h-[18px] w-[18px]" />
         {alertCount > 0 && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full border-2 border-card bg-destructive" />}

@@ -23,6 +23,7 @@ import { CardLink, EmptyState, IconBubble, PageHeader, PageLoader, PersonAvatar,
 import { amcExpiring, daysUntil, displayLocation, timeAgo, titleCase, type Tone } from '@/lib/assetMeta';
 import { exportToCSV } from '@/lib/exportUtils';
 import type { AssignmentEventType } from '@/types/asset';
+import { useAccess } from '@/hooks/useCollab';
 
 type Range = '7D' | '30D' | '90D' | '12M';
 
@@ -50,6 +51,7 @@ export default function Dashboard() {
   const { data: employees = [] } = useEmployees();
   const { data: locations = [] } = useLocations();
   const [range, setRange] = useState<Range>('30D');
+  const { can } = useAccess();
 
   const m = useMemo(() => {
     const total = assets.length;
@@ -137,11 +139,11 @@ export default function Dashboard() {
             <Button variant="secondary" className="hidden sm:inline-flex" onClick={() => exportToCSV(assets, 'asset_register')}>
               <Download /> Export
             </Button>
-            <Button asChild className="hidden sm:inline-flex">
+            {can('assets.checkout') && <Button asChild className="hidden sm:inline-flex">
               <Link to="/assets?view=available&checkout=1">
                 <ArrowLeftRight /> Check out asset
               </Link>
-            </Button>
+            </Button>}
           </>
         }
       />
@@ -172,10 +174,11 @@ export default function Dashboard() {
       {/* Mobile quick actions */}
       <div className="grid grid-cols-3 gap-2.5 md:hidden">
         {[
-          { label: 'Check out', icon: ArrowLeftRight, to: '/assets?view=available&checkout=1' },
-          { label: 'Add asset', icon: Plus, to: '/assets/new' },
-          { label: 'Log repair', icon: Wrench, to: '/maintenance?tab=repairs' },
-        ].map((q) => (
+          { label: 'Check out', icon: ArrowLeftRight, to: '/assets?view=available&checkout=1', ok: can('assets.checkout') },
+          { label: 'Add asset', icon: Plus, to: '/assets/new', ok: can('assets.edit') },
+          { label: 'Log repair', icon: Wrench, to: '/maintenance?tab=repairs', ok: can('maintenance.manage') },
+          { label: 'My assets', icon: Package, to: '/me', ok: true },
+        ].filter((q) => q.ok).slice(0, 3).map((q) => (
           <Link key={q.label} to={q.to} className="flex flex-col items-center gap-1.5 rounded-xl border bg-card py-3 text-xs font-medium active:bg-muted">
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-soft text-link">
               <q.icon className="h-[18px] w-[18px]" />

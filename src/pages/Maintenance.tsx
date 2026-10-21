@@ -11,6 +11,7 @@ import { useAssetActions } from '@/components/assets/useAssetActions';
 import { BulkAmcUpdateDialog } from '@/components/assets/BulkAmcUpdateDialog';
 import { coverage, daysUntil, displayLocation, formatDate, formatMoney, type Tone } from '@/lib/assetMeta';
 import { exportToCSV } from '@/lib/exportUtils';
+import { useAccess } from '@/hooks/useCollab';
 
 type Tab = 'amc' | 'repairs' | 'warranty';
 type Window = 'all' | 'expiring' | 'expired';
@@ -22,6 +23,8 @@ export default function Maintenance() {
   const { data: assignments = [] } = useAssignments();
   const { data: settings } = useSettings();
   const { open: act, dialogs } = useAssetActions();
+  const { can } = useAccess();
+  const canMaintain = can('maintenance.manage');
   const [windowF, setWindowF] = useState<Window>('expiring');
   const [renewing, setRenewing] = useState<Asset | null>(null);
 
@@ -172,11 +175,13 @@ export default function Maintenance() {
             <Button variant="secondary" className="hidden md:inline-flex" onClick={() => exportToCSV(tab === 'repairs' ? data.repairs : tab === 'warranty' ? data.warranty : data.amc, `maintenance_${tab}`)}>
               <Download /> Export
             </Button>
-            <Button asChild>
-              <Link to="/assets?view=assigned">
-                <Wrench /> Log repair
-              </Link>
-            </Button>
+            {canMaintain && (
+              <Button asChild>
+                <Link to="/assets?view=assigned">
+                  <Wrench /> Log repair
+                </Link>
+              </Button>
+            )}
           </>
         }
       />
@@ -204,7 +209,7 @@ export default function Maintenance() {
             <Segmented<Window> size="sm" value={windowF} onChange={setWindowF} options={[{ value: 'expiring', label: 'Expiring ≤ 30d' }, { value: 'expired', label: 'Expired' }, { value: 'all', label: 'All' }]} />
           </div>
         )}
-        {tab === 'amc' && coverageRows(filterWindow(data.amc, (a) => a.amcEndDate), (a) => a.amcStartDate, (a) => a.amcEndDate, true)}
+        {tab === 'amc' && coverageRows(filterWindow(data.amc, (a) => a.amcEndDate), (a) => a.amcStartDate, (a) => a.amcEndDate, canMaintain)}
         {tab === 'warranty' && coverageRows(filterWindow(data.warranty, (a) => a.warrantyEnd), (a) => a.warrantyStart || a.purchaseDate, (a) => a.warrantyEnd, false)}
         {tab === 'repairs' &&
           (data.repairs.length === 0 ? (
@@ -228,9 +233,11 @@ export default function Maintenance() {
                       <p className="text-xs text-muted-foreground">{formatMoney(a.repairCost, settings?.currency)}</p>
                     </div>
                     <Pill tone={late ? 'destructive' : 'warning'}>{late ? 'Overdue' : 'In repair'}</Pill>
-                    <Button size="sm" variant="secondary" onClick={() => act('repair', a)}>
-                      <CheckCircle2 /> Complete
-                    </Button>
+                    {canMaintain && (
+                      <Button size="sm" variant="secondary" onClick={() => act('repair', a)}>
+                        <CheckCircle2 /> Complete
+                      </Button>
+                    )}
                   </li>
                 );
               })}

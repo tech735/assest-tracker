@@ -6,7 +6,6 @@ import {
   Building2,
   CalendarDays,
   Check,
-  FileText,
   Layers,
   MapPin,
   MoreHorizontal,
@@ -26,10 +25,12 @@ import { AssetThumb, CardLink, EmptyState, KeyValue, PageHeader, PageLoader, Per
 import { AssetRowMenu, AssetTimeline, CoverageCard } from '@/components/assets/AssetPanels';
 import { primaryAction, useAssetActions } from '@/components/assets/useAssetActions';
 import { LabelDialog } from '@/components/assets/LabelDialog';
+import { AssetFilesPanel, NoteComposer } from '@/components/assets/AssetCollab';
+import { useAccess } from '@/hooks/useCollab';
 import { bookValue, displayLocation, formatDate, formatMoney, titleCase } from '@/lib/assetMeta';
 import { cn } from '@/lib/utils';
 
-type Tab = 'overview' | 'activity' | 'maintenance';
+type Tab = 'overview' | 'activity' | 'maintenance' | 'files';
 
 export default function AssetDetail() {
   const { id } = useParams();
@@ -40,6 +41,7 @@ export default function AssetDetail() {
   const currency = settings?.currency;
   const asset = useMemo(() => assets.find((a) => a.id === id), [assets, id]);
   const { open: act, dialogs } = useAssetActions();
+  const { can } = useAccess();
   const [tab, setTab] = useState<Tab>('overview');
   const [labelOpen, setLabelOpen] = useState(false);
 
@@ -65,7 +67,9 @@ export default function AssetDetail() {
       />
     );
 
-  const primary = primaryAction(asset.status);
+  const primaryRaw = primaryAction(asset.status);
+  const primary = primaryRaw && (primaryRaw.action === 'repair' ? can('maintenance.manage') : can('assets.checkout')) ? primaryRaw : null;
+  const canEdit = can('assets.edit');
   const bv = bookValue(asset);
   const retireBy = asset.purchaseDate ? addYears(parseISO(asset.purchaseDate), 3) : null;
   const steps = [
@@ -81,9 +85,9 @@ export default function AssetDetail() {
 
   const actionTiles = [
     ...(primary ? [{ label: primary.label, icon: ArrowLeftRight, onClick: () => act(primary.action, asset), primary: true }] : []),
-    { label: 'Edit', icon: Pencil, onClick: () => act('edit', asset) },
+    ...(canEdit ? [{ label: 'Edit', icon: Pencil, onClick: () => act('edit', asset) }] : []),
     { label: 'Label', icon: Printer, onClick: () => setLabelOpen(true) },
-    { label: asset.status === 'repair' ? 'Repair' : 'Issue', icon: Wrench, onClick: () => act('repair', asset) },
+    ...(can('maintenance.manage') ? [{ label: asset.status === 'repair' ? 'Repair' : 'Issue', icon: Wrench, onClick: () => act('repair', asset) }] : []),
   ];
 
   return (
@@ -107,9 +111,11 @@ export default function AssetDetail() {
         }
         actions={
           <div className="hidden items-center gap-2 md:flex">
-            <Button variant="secondary" onClick={() => act('edit', asset)}>
-              <Pencil /> Edit
-            </Button>
+            {canEdit && (
+              <Button variant="secondary" onClick={() => act('edit', asset)}>
+                <Pencil /> Edit
+              </Button>
+            )}
             <Button variant="secondary" onClick={() => setLabelOpen(true)}>
               <Printer /> Print label
             </Button>
@@ -118,13 +124,13 @@ export default function AssetDetail() {
                 <ArrowLeftRight /> {primary.label}
               </Button>
             )}
-            <AssetRowMenu asset={asset} onAction={act} trigger={<Button variant="secondary" size="icon" aria-label="More actions"><MoreHorizontal /></Button>} />
+            {canEdit && <AssetRowMenu asset={asset} onAction={act} trigger={<Button variant="secondary" size="icon" aria-label="More actions"><MoreHorizontal /></Button>} />}
           </div>
         }
       />
 
       {/* Phone action tiles */}
-      <div className="grid grid-cols-4 gap-2 md:hidden">
+      <div className={cn('grid gap-2 md:hidden', actionTiles.length === 4 ? 'grid-cols-4' : actionTiles.length === 3 ? 'grid-cols-3' : 'grid-cols-2')}>
         {actionTiles.map((t) => (
           <button
             key={t.label}
@@ -144,6 +150,7 @@ export default function AssetDetail() {
           { value: 'overview', label: 'Overview' },
           { value: 'activity', label: 'Activity' },
           { value: 'maintenance', label: 'Maintenance & AMC' },
+          { value: 'files', label: 'Files' },
         ]}
       />
 
@@ -173,6 +180,9 @@ export default function AssetDetail() {
             </SectionCard>
 
             <SectionCard title="Activity" action={<button onClick={() => setTab('activity')} className="text-[13px] font-medium text-link hover:underline">View all</button>}>
+              <div className="mb-4">
+                <NoteComposer asset={asset} />
+              </div>
               <AssetTimeline asset={asset} limit={6} />
             </SectionCard>
 
@@ -184,24 +194,24 @@ export default function AssetDetail() {
           </div>
 
           <div className="space-y-4">
-            <SectionCard title="Properties" action={<button onClick={() => act('edit', asset)} className="text-[13px] font-medium text-link hover:underline">Edit</button>}>
+            <SectionCard title="Properties" action={canEdit && <button onClick={() => act('edit', asset)} className="text-[13px] font-medium text-link hover:underline">Edit</button>}>
               <div className="space-y-3">
                 <KeyValue icon={Layers} label="Category">{titleCase(asset.category)}</KeyValue>
                 <KeyValue icon={Tag} label="Model">{[asset.brand, asset.model].filter(Boolean).join(' ') || '—'}</KeyValue>
                 <KeyValue icon={MapPin} label="Location">{displayLocation(asset.location)}</KeyValue>
                 <KeyValue icon={CalendarDays} label="Purchased">{formatDate(asset.purchaseDate)}</KeyValue>
                 <KeyValue icon={Building2} label="Vendor">{asset.vendor || '—'}</KeyValue>
-                <KeyValue icon={Wallet} label="Cost / book value">
+                {can('costs.view') && <KeyValue icon={Wallet} label="Cost / book value">
                   {formatMoney(asset.purchaseCost, currency)}
                   {bv && <span className="text-muted-foreground"> / {formatMoney(bv.value, currency)}</span>}
-                </KeyValue>
+                </KeyValue>}
                 <KeyValue icon={ShieldCheck} label="Warranty">{asset.warrantyEnd ? `Until ${formatDate(asset.warrantyEnd)}` : '—'}</KeyValue>
               </div>
             </SectionCard>
 
             <SectionCard
               title="Assigned to"
-              action={asset.status === 'assigned' ? <button onClick={() => act('return', asset)} className="text-[13px] font-medium text-link hover:underline">Check in</button> : asset.status === 'available' ? <button onClick={() => act('assign', asset)} className="text-[13px] font-medium text-link hover:underline">Check out</button> : null}
+              action={!can('assets.checkout') ? null : asset.status === 'assigned' ? <button onClick={() => act('return', asset)} className="text-[13px] font-medium text-link hover:underline">Check in</button> : asset.status === 'available' ? <button onClick={() => act('assign', asset)} className="text-[13px] font-medium text-link hover:underline">Check out</button> : null}
             >
               {asset.assignedTo ? (
                 <div className="flex items-center gap-3">
@@ -217,7 +227,7 @@ export default function AssetDetail() {
               )}
             </SectionCard>
 
-            <CoverageCard title="AMC" start={asset.amcStartDate} end={asset.amcEndDate} action={<button onClick={() => act('edit', asset)} className="text-[13px] font-medium text-link hover:underline">Renew</button>} />
+            <CoverageCard title="AMC" start={asset.amcStartDate} end={asset.amcEndDate} action={canEdit && <button onClick={() => act('edit', asset)} className="text-[13px] font-medium text-link hover:underline">Renew</button>} />
 
             <div className="flex items-center gap-3 rounded-xl border bg-card p-4">
               <span className="flex h-14 w-14 items-center justify-center rounded-lg border">
@@ -237,6 +247,9 @@ export default function AssetDetail() {
 
       {tab === 'activity' && (
         <SectionCard title="Full history">
+          <div className="mb-4">
+            <NoteComposer asset={asset} />
+          </div>
           <AssetTimeline asset={asset} />
         </SectionCard>
       )}
@@ -245,25 +258,25 @@ export default function AssetDetail() {
         <div className="grid gap-4 md:grid-cols-2">
           <CoverageCard title="AMC" start={asset.amcStartDate} end={asset.amcEndDate} action={<button onClick={() => act('edit', asset)} className="text-[13px] font-medium text-link hover:underline">Update</button>} />
           <CoverageCard title="Warranty" start={asset.warrantyStart} end={asset.warrantyEnd} />
-          <SectionCard title="Repair" className="md:col-span-2" action={<Button size="sm" variant="secondary" onClick={() => act('repair', asset)}><Wrench /> {asset.status === 'repair' ? 'Complete repair' : 'Send for repair'}</Button>}>
+          <SectionCard title="Repair" className="md:col-span-2" action={can('maintenance.manage') && <Button size="sm" variant="secondary" onClick={() => act('repair', asset)}><Wrench /> {asset.status === 'repair' ? 'Complete repair' : 'Send for repair'}</Button>}>
             {asset.status === 'repair' ? (
               <div className="grid gap-3 sm:grid-cols-3">
                 <KeyValue label="Vendor">{asset.repairVendor || '—'}</KeyValue>
                 <KeyValue label="Expected back">{formatDate(asset.repairEstReturn)}</KeyValue>
-                <KeyValue label="Estimated cost">{formatMoney(asset.repairCost, currency)}</KeyValue>
+                {can('costs.view') && <KeyValue label="Estimated cost">{formatMoney(asset.repairCost, currency)}</KeyValue>}
                 {asset.repairNotes && <p className="text-sm text-muted-foreground sm:col-span-3">{asset.repairNotes}</p>}
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">Not in repair. Past repairs appear in the Activity tab.</p>
             )}
           </SectionCard>
-          <SectionCard title="Invoice & documents" className="md:col-span-2">
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <FileText className="h-5 w-5 text-faint" />
-              File attachments (invoices, repair quotes, signed handover forms) arrive with the next release.
-            </div>
-          </SectionCard>
         </div>
+      )}
+
+      {tab === 'files' && (
+        <SectionCard title="Files">
+          <AssetFilesPanel asset={asset} />
+        </SectionCard>
       )}
 
       {dialogs}

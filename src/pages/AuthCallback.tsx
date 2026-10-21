@@ -64,7 +64,9 @@ export default function AuthCallback() {
                 role: profile.role,
             });
 
-            navigate('/', { replace: true });
+            const next = sessionStorage.getItem('postLoginRedirect');
+            sessionStorage.removeItem('postLoginRedirect');
+            navigate(next && next.startsWith('/') && !next.startsWith('//') ? next : '/', { replace: true });
         };
 
         completeSignIn();

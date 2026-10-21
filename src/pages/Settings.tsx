@@ -11,6 +11,8 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { EmptyState, PageHeader, PageLoader } from '@/components/app/primitives';
 import { titleCase } from '@/lib/assetMeta';
+import { AccessSettings } from '@/components/settings/AccessSettings';
+import { useAccess } from '@/hooks/useCollab';
 import { cn } from '@/lib/utils';
 
 type Section = 'general' | 'categories' | 'tags' | 'notifications' | 'access';
@@ -43,6 +45,8 @@ export default function Settings() {
   const section = (params.get('section') || 'general') as Section;
   const { data: settings, isLoading, isError } = useSettings();
   const update = useUpdateSettings();
+  const { can } = useAccess();
+  const readOnly = !can('settings.manage');
   const [config, setConfig] = useState<Config>(null);
   const [newCategory, setNewCategory] = useState('');
 
@@ -171,15 +175,14 @@ export default function Settings() {
             </>
           )}
 
-          {section === 'access' && (
-            <div className="py-4">
-              <EmptyState icon={ShieldCheck} title="Roles & permissions" description="The permission matrix — enforced in the database — arrives with the next part of this update." className="py-10" />
-            </div>
-          )}
+          {section === 'access' && <AccessSettings />}
         </div>
       </div>
 
-      {dirty && (
+      {readOnly && section !== 'access' && (
+        <p className="rounded-xl bg-subtle px-4 py-3 text-[13px] text-muted-foreground">You can view settings; only admins can change them.</p>
+      )}
+      {dirty && !readOnly && (
         <div className="fixed bottom-[84px] left-1/2 z-40 flex w-[calc(100vw-24px)] max-w-md -translate-x-1/2 animate-bar-in items-center gap-3 rounded-xl bg-foreground py-2 pl-4 pr-2 text-background shadow-elevated md:bottom-6">
           <span className="flex-1 text-sm">You have unsaved changes</span>
           <Button size="sm" variant="ghost" className="text-background hover:bg-background/10" onClick={() => setConfig(settings)}>Discard</Button>

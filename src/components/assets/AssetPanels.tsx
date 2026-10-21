@@ -6,6 +6,7 @@ import {
   ArrowUpRight,
   CheckCircle2,
   Copy,
+  MessageSquare,
   Eye,
   MapPin,
   MoreHorizontal,
@@ -20,6 +21,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useAssetAssignments } from '@/hooks/useSupabaseData';
+import { useAccess, useAssetNotes, useDeleteAssetNote } from '@/hooks/useCollab';
 import type { Asset, Assignment, AssignmentEventType } from '@/types/asset';
 import { Button } from '@/components/ui/button';
 import {
@@ -51,6 +53,7 @@ export function AssetRowMenu({
   align?: 'start' | 'end';
   trigger?: React.ReactNode;
 }) {
+  const { can } = useAccess();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -71,29 +74,33 @@ export function AssetRowMenu({
             <ArrowUpRight /> Open full page
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onAction('edit', asset)}>
-          <Pencil /> Edit
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onAction('clone', asset)}>
-          <Copy /> Duplicate
-        </DropdownMenuItem>
+        {can('assets.edit') && (
+          <>
+            <DropdownMenuItem onSelect={() => onAction('edit', asset)}>
+              <Pencil /> Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => onAction('clone', asset)}>
+              <Copy /> Duplicate
+            </DropdownMenuItem>
+          </>
+        )}
         <DropdownMenuSeparator />
-        {asset.status === 'available' && (
+        {asset.status === 'available' && can('assets.checkout') && (
           <DropdownMenuItem onSelect={() => onAction('assign', asset)}>
             <ArrowLeftRight /> Check out
           </DropdownMenuItem>
         )}
-        {asset.status === 'assigned' && (
+        {asset.status === 'assigned' && can('assets.checkout') && (
           <DropdownMenuItem onSelect={() => onAction('return', asset)}>
             <ArrowLeftRight /> Check in
           </DropdownMenuItem>
         )}
-        {(asset.status === 'available' || asset.status === 'assigned' || asset.status === 'repair') && (
+        {(asset.status === 'available' || asset.status === 'assigned' || asset.status === 'repair') && can('maintenance.manage') && (
           <DropdownMenuItem onSelect={() => onAction('repair', asset)}>
             <Wrench /> {asset.status === 'repair' ? 'Complete repair' : 'Send for repair'}
           </DropdownMenuItem>
         )}
-        {asset.status === 'lost' ? (
+        {!can('assets.edit') ? null : asset.status === 'lost' ? (
           <DropdownMenuItem onSelect={() => onAction('lost', asset)}>
             <CheckCircle2 /> Mark found
           </DropdownMenuItem>
@@ -104,10 +111,10 @@ export function AssetRowMenu({
             </DropdownMenuItem>
           )
         )}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => onAction('delete', asset)} className="text-destructive-strong focus:text-destructive-strong [&_svg]:text-destructive-strong">
+        {can('assets.delete') && <DropdownMenuSeparator />}
+        {can('assets.delete') && <DropdownMenuItem onSelect={() => onAction('delete', asset)} className="text-destructive-strong focus:text-destructive-strong [&_svg]:text-destructive-strong">
           <Trash2 /> Delete
-        </DropdownMenuItem>
+        </DropdownMenuItem>}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -126,8 +133,11 @@ const EVENT_META: Record<AssignmentEventType, { icon: LucideIcon; tone: Tone; ti
 
 export function AssetTimeline({ asset, limit }: { asset: Asset; limit?: number }) {
   const { data: events = [], isLoading } = useAssetAssignments(asset.id);
+  const { data: notes = [] } = useAssetNotes(asset.id);
+  const { access } = useAccess();
+  const delNote = useDeleteAssetNote(asset.id);
   const sorted = [...events].sort((a, b) => (b.assignedDate || '').localeCompare(a.assignedDate || ''));
-  const rows: { key: string; icon: LucideIcon; tone: Tone; title: string; sub?: string; date?: string }[] = sorted.map((e) => {
+  const rows: { key: string; icon: LucideIcon; tone: Tone; title: string; sub?: string; date?: string; noteId?: string; mine?: boolean }[] = sorted.map((e) => {
     const meta = EVENT_META[e.eventType] ?? EVENT_META.assign;
     const sub = [
       e.handedOverBy && e.eventType === 'assign' ? `by ${e.handedOverBy}` : null,
@@ -139,6 +149,8 @@ export function AssetTimeline({ asset, limit }: { asset: Asset; limit?: number }
       .join(' · ');
     return { key: e.id, icon: meta.icon, tone: meta.tone, title: meta.title(e), sub, date: e.assignedDate };
   });
+  notes.forEach((n) => rows.push({ key: `note-${n.id}`, icon: MessageSquare, tone: 'special', title: `${n.authorName || 'Someone'} added a note`, sub: n.body, date: n.createdAt, noteId: n.id, mine: n.authorId === access?.userId }));
+  rows.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   rows.push({ key: 'created', icon: Plus, tone: 'quiet', title: 'Added to register', sub: asset.vendor ? `from ${asset.vendor}` : undefined, date: asset.createdAt });
   const shown = limit ? rows.slice(0, limit) : rows;
 
@@ -158,7 +170,12 @@ export function AssetTimeline({ asset, limit }: { asset: Asset; limit?: number }
               <p className="flex-1 text-sm font-medium">{r.title}</p>
               <time className="shrink-0 text-xs text-faint">{formatDate(r.date)}</time>
             </div>
-            {r.sub && <p className="mt-0.5 text-[13px] text-muted-foreground">{r.sub}</p>}
+            {r.sub && <p className={cn('mt-0.5 text-[13px]', r.noteId ? 'whitespace-pre-wrap rounded-lg bg-subtle px-3 py-2 text-foreground' : 'text-muted-foreground')}>{r.sub}</p>}
+            {r.noteId && r.mine && (
+              <button onClick={() => delNote.mutate(r.noteId!)} className="mt-1 text-xs text-faint hover:text-destructive-strong">
+                Delete
+              </button>
+            )}
           </div>
         </li>
       ))}
@@ -193,6 +210,8 @@ export function CoverageCard({ title, start, end, action }: { title: string; sta
 
 export function AssetDetailsGrid({ asset, currency }: { asset: Asset; currency?: string }) {
   const bv = bookValue(asset);
+  const { can } = useAccess();
+  const costs = can('costs.view');
   return (
     <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
       <Field label="Category">{titleCase(asset.category)}</Field>
@@ -200,9 +219,9 @@ export function AssetDetailsGrid({ asset, currency }: { asset: Asset; currency?:
       <Field label="Location">{displayLocation(asset.location)}</Field>
       <Field label="Condition">{titleCase(asset.condition)}</Field>
       <Field label="Purchase date">{formatDate(asset.purchaseDate)}</Field>
-      <Field label="Purchase cost">{formatMoney(asset.purchaseCost, currency)}</Field>
+      {costs && <Field label="Purchase cost">{formatMoney(asset.purchaseCost, currency)}</Field>}
       <Field label="Vendor">{asset.vendor || '—'}</Field>
-      <Field label="Book value">{bv ? `${formatMoney(bv.value, currency)} (${bv.depreciatedPct}% dep.)` : '—'}</Field>
+      {costs && <Field label="Book value">{bv ? `${formatMoney(bv.value, currency)} (${bv.depreciatedPct}% dep.)` : '—'}</Field>}
     </div>
   );
 }
@@ -223,9 +242,11 @@ export function AssetQuickView({
   currency?: string;
 }) {
   const [tab, setTab] = React.useState<'overview' | 'activity'>('overview');
+  const { can } = useAccess();
   React.useEffect(() => setTab('overview'), [asset?.id]);
   if (!asset) return null;
-  const primary = primaryAction(asset.status);
+  const p0 = primaryAction(asset.status);
+  const primary = p0 && (p0.action === 'repair' ? can('maintenance.manage') : can('assets.checkout')) ? p0 : null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -253,9 +274,11 @@ export function AssetQuickView({
                 <ArrowLeftRight /> {primary.label}
               </Button>
             )}
-            <Button size="sm" variant="secondary" onClick={() => onAction('edit', asset)}>
-              <MapPin /> Move / edit
-            </Button>
+            {can('assets.edit') && (
+              <Button size="sm" variant="secondary" onClick={() => onAction('edit', asset)}>
+                <MapPin /> Move / edit
+              </Button>
+            )}
             <Button size="sm" variant="secondary" asChild>
               <Link to={`/assets/${asset.id}?print=label`}>
                 <Printer /> Print label

@@ -1,14 +1,15 @@
 import { useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, ArrowLeft, ArrowRight, Check, CheckCircle2, ChevronRight, Download, FileSpreadsheet, ScanLine, Upload, XCircle } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ArrowRight, Check, CheckCircle2, ChevronRight, Download, FileSpreadsheet, Lock, ScanLine, Upload, XCircle } from 'lucide-react';
 import { useAssets, useLocations } from '@/hooks/useSupabaseData';
 import * as supabaseService from '@/services/supabaseService';
 import type { Asset, AssetCategory, AssetCondition } from '@/types/asset';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PageHeader, ProgressBar } from '@/components/app/primitives';
+import { EmptyState, PageHeader, ProgressBar } from '@/components/app/primitives';
+import { useAccess } from '@/hooks/useCollab';
 import { BulkAssetAddDialog } from '@/components/assets/BulkAssetAddDialog';
 import { downloadText, parseCSV, parseLooseDate, toCSV } from '@/lib/csv';
 import { displayLocation } from '@/lib/assetMeta';
@@ -55,6 +56,8 @@ export default function AssetImport() {
   const [dragging, setDragging] = useState(false);
   const [progress, setProgress] = useState({ done: 0, failed: 0, total: 0, running: false, finished: false });
   const [scanWizard, setScanWizard] = useState(false);
+  const { can } = useAccess();
+  const canEditAssets = can('assets.edit');
 
   const headers = rows[0] || [];
   const body = rows.slice(1);
@@ -182,6 +185,10 @@ export default function AssetImport() {
     downloadText('import-issues.csv', toCSV([['Row', 'Status', 'Issues'], ...results.filter((r) => r.status !== 'ready').map((r) => [r.row, r.status, r.issues.join('; ')])]));
 
   const steps = ['Upload file', 'Map columns', 'Review', 'Import'];
+  if (!canEditAssets)
+    return (
+      <EmptyState icon={Lock} title="You can’t import assets" description="Your role is read-only for assets. Ask an admin (Settings → Roles & permissions) if you need access." />
+    );
 
   return (
     <div className="space-y-5">

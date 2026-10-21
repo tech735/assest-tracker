@@ -44,6 +44,7 @@ import { BulkUpdateCategoryDialog } from '@/components/assets/BulkUpdateCategory
 import { BulkDeleteAssetsDialog } from '@/components/assets/BulkDeleteAssetsDialog';
 import { amcExpiring, coverage, displayLocation, formatDate, STATUS_META, STATUS_ORDER, titleCase } from '@/lib/assetMeta';
 import { exportToCSV } from '@/lib/exportUtils';
+import { useAccess } from '@/hooks/useCollab';
 import { cn } from '@/lib/utils';
 
 type View = 'all' | AssetStatus | 'amc' | 'overdue';
@@ -63,6 +64,7 @@ export default function Assets() {
   const { data: settings } = useSettings();
   const currency = settings?.currency;
   const { open: act, dialogs } = useAssetActions();
+  const { can } = useAccess();
 
   // --- URL-synced filters (shareable views) ---
   const rawView = params.get('view') || 'all';
@@ -221,20 +223,20 @@ export default function Assets() {
         description={`${assets.length.toLocaleString()} assets across ${locations.length} locations`}
         actions={
           <>
-            <Button variant="secondary" asChild className="hidden md:inline-flex">
+            {can('assets.edit') && <Button variant="secondary" asChild className="hidden md:inline-flex">
               <Link to="/assets/import">
                 <Upload /> Import
               </Link>
-            </Button>
+            </Button>}
             <Button variant="secondary" className="hidden md:inline-flex" onClick={() => exportToCSV(filtered, 'assets_export')} disabled={!filtered.length}>
               <Download /> Export
             </Button>
-            <Button asChild>
+            {can('assets.edit') && <Button asChild>
               <Link to="/assets/new">
                 <Plus /> <span className="hidden sm:inline">Add asset</span>
                 <span className="sm:hidden">Add</span>
               </Link>
-            </Button>
+            </Button>}
           </>
         }
       />
@@ -490,25 +492,24 @@ export default function Assets() {
         onSelectAll={() => setSelected(new Set(filtered.map((a) => a.id)))}
         onClear={() => setSelected(new Set())}
         actions={[
-          { label: 'Check out', icon: ArrowLeftRight, onClick: () => setBulk('assign') },
-          { label: 'Move', icon: MapPin, onClick: () => setBulk('location') },
-          { label: 'Change status', icon: Tag, onClick: () => setBulk('status') },
-          { label: 'AMC', icon: Wrench, onClick: () => setBulk('amc') },
+          ...(can('assets.checkout') ? [{ label: 'Check out', icon: ArrowLeftRight, onClick: () => setBulk('assign') }] : []),
+          ...(can('assets.edit') ? [{ label: 'Move', icon: MapPin, onClick: () => setBulk('location') }, { label: 'Change status', icon: Tag, onClick: () => setBulk('status') }] : []),
+          ...(can('maintenance.manage') ? [{ label: 'AMC', icon: Wrench, onClick: () => setBulk('amc') }] : []),
           { label: 'Export', icon: Download, onClick: () => exportToCSV(assets.filter((a) => selected.has(a.id)), 'assets_selected') },
         ]}
         overflow={
-          <DropdownMenu>
+          (can('assets.edit') || can('assets.delete')) && <DropdownMenu>
             <DropdownMenuTrigger className="rounded-lg p-1.5 hover:bg-background/10" aria-label="More bulk actions">
               <MoreHorizontal className="h-4 w-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" side="top">
-              <DropdownMenuItem onSelect={() => setBulk('category')}>
+              {can('assets.edit') && <DropdownMenuItem onSelect={() => setBulk('category')}>
                 <Tag /> Update category
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => setBulk('delete')} className="text-destructive-strong focus:text-destructive-strong [&_svg]:text-destructive-strong">
+              </DropdownMenuItem>}
+              {can('assets.delete') && <DropdownMenuSeparator />}
+              {can('assets.delete') && <DropdownMenuItem onSelect={() => setBulk('delete')} className="text-destructive-strong focus:text-destructive-strong [&_svg]:text-destructive-strong">
                 <Trash2 /> Delete assets
-              </DropdownMenuItem>
+              </DropdownMenuItem>}
             </DropdownMenuContent>
           </DropdownMenu>
         }

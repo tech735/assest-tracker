@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { CheckCircle2, Circle, Plus, QrCode, ScanLine, Upload } from 'lucide-react';
+import { CheckCircle2, Circle, Lock, Plus, QrCode, ScanLine, Upload } from 'lucide-react';
 import { useAssets, useCreateAsset, useLocations, useSettings } from '@/hooks/useSupabaseData';
 import { useToast } from '@/hooks/use-toast';
 import type { AssetCategory, AssetCondition } from '@/types/asset';
@@ -14,7 +14,8 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PageHeader } from '@/components/app/primitives';
+import { EmptyState, PageHeader } from '@/components/app/primitives';
+import { useAccess } from '@/hooks/useCollab';
 import { Segmented } from '@/components/app/controls';
 import { useShell } from '@/components/layout/AppShell';
 import { displayLocation, titleCase } from '@/lib/assetMeta';
@@ -62,6 +63,8 @@ export default function AssetNew() {
   const { data: locations = [] } = useLocations();
   const { data: settings } = useSettings();
   const [submitting, setSubmitting] = useState<null | 'create' | 'another' | 'checkout'>(null);
+  const { can } = useAccess();
+  const canEditAssets = can('assets.edit');
 
   const categories = useMemo(() => {
     const all = [...(settings?.categories || []), ...assets.map((a) => a.category)].filter(Boolean).map((c: string) => c.toLowerCase());
@@ -172,6 +175,11 @@ export default function AssetNew() {
       )}
     />
   );
+
+  if (!canEditAssets)
+    return (
+      <EmptyState icon={Lock} title="You can’t add assets" description="Your role is read-only for assets. Ask an admin (Settings → Roles & permissions) if you need access." />
+    );
 
   return (
     <Form {...form}>

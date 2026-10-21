@@ -10,6 +10,7 @@ import { bookValue, daysUntil, displayLocation, formatDate, timeAgo } from '@/li
 import { exportToCSV } from '@/lib/exportUtils';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { useAccess } from '@/hooks/useCollab';
 
 type Category = 'Inventory' | 'Assignments' | 'Maintenance' | 'Financial';
 interface Ctx { assets: Asset[]; assignments: Assignment[]; employees: Employee[]; locations: Location[] }
@@ -176,6 +177,7 @@ export default function Reports() {
   const { data: employees = [] } = useEmployees();
   const { data: locations = [] } = useLocations();
   const [cat, setCat] = useState<Category | 'All'>('All');
+  const { can } = useAccess();
   const [q, setQ] = useState('');
   const [lastRun, setLastRun] = useState<Record<string, string>>(() => {
     try {
@@ -201,7 +203,8 @@ export default function Reports() {
     toast({ title: `${r.title} downloaded`, description: `${rows.length.toLocaleString()} rows` });
   };
 
-  const shown = REPORTS.filter((r) => (cat === 'All' || r.category === cat) && (!q || `${r.title} ${r.description}`.toLowerCase().includes(q.toLowerCase())));
+  const allowed = REPORTS.filter((r) => r.category !== 'Financial' || can('costs.view'));
+  const shown = allowed.filter((r) => (cat === 'All' || r.category === cat) && (!q || `${r.title} ${r.description}`.toLowerCase().includes(q.toLowerCase())));
 
   return (
     <div className="space-y-5">
@@ -209,7 +212,7 @@ export default function Reports() {
       <div className="grid gap-5 lg:grid-cols-[200px_minmax(0,1fr)]">
         <nav className="flex gap-1.5 overflow-x-auto scrollbar-hide lg:flex-col">
           {CATS.map((c) => {
-            const n = c === 'All' ? REPORTS.length : REPORTS.filter((r) => r.category === c).length;
+            const n = c === 'All' ? allowed.length : allowed.filter((r) => r.category === c).length;
             return (
               <button
                 key={c}
