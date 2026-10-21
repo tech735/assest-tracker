@@ -601,8 +601,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [profileOpen, setProfileOpen] = React.useState(false);
   const [shortcutsOpen, setShortcutsOpen] = React.useState(false);
 
-  // Global shortcuts
+  // Global shortcuts. Registered once: re-registering on every navigation used to drop a "g" pressed
+  // just before a route change.
+  const navigateRef = React.useRef(navigate);
+  navigateRef.current = navigate;
   React.useEffect(() => {
+    const navigate = (to: string) => navigateRef.current(to);
     let lastG = 0;
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
@@ -628,7 +632,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [navigate]);
+  }, []);
 
   const ctx = React.useMemo(() => ({ openPalette: () => setPaletteOpen(true), openScanner: () => setScanOpen(true) }), []);
 

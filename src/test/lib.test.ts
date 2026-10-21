@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { parseCSV, parseLooseDate, toCSV } from '@/lib/csv';
 import { bookValue, coverage, displayLocation, initials } from '@/lib/assetMeta';
 import { findAssetByCode } from '@/lib/scan';
+import { chunk, fetchAllPages, mapLimit } from '@/lib/paging';
 import type { Asset } from '@/types/asset';
 
 describe('parseCSV', () => {
@@ -68,5 +69,50 @@ describe('asset maths', () => {
   it('display helpers', () => {
     expect(displayLocation('Warehouse')).toBe('Central Warehouse');
     expect(initials('Ananya Kapoor')).toBe('AK');
+  });
+});
+
+describe('paging', () => {
+  // Fake server holding `total` rows that returns at most `cap` per request, like PostgREST max-rows.
+  const server = (total: number, cap: number, withCount = true) => {
+    const rows = Array.from({ length: total }, (_, i) => i);
+    const requests: [number, number][] = [];
+    const page = async (from: number, to: number, count: boolean) => {
+      requests.push([from, to]);
+      return { data: rows.slice(from, Math.min(to + 1, from + cap)), error: null, count: count && withCount ? total : null };
+    };
+    return { page, requests };
+  };
+
+  it('fetches every row past the 1000-row cap', async () => {
+    const s = server(6000, 1000);
+    const rows = await fetchAllPages(s.page);
+    expect(rows).toHaveLength(6000);
+    expect(new Set(rows).size).toBe(6000);
+    expect(s.requests).toHaveLength(6);
+  });
+  it('follows a server cap smaller than the requested page', async () => {
+    const rows = await fetchAllPages(server(2300, 500).page);
+    expect(rows).toEqual(Array.from({ length: 2300 }, (_, i) => i));
+  });
+  it('walks pages when no count comes back', async () => {
+    expect(await fetchAllPages(server(2500, 1000, false).page)).toHaveLength(2500);
+    expect(await fetchAllPages(server(0, 1000, false).page)).toEqual([]);
+  });
+  it('throws the first error', async () => {
+    await expect(fetchAllPages(async () => ({ data: null, error: new Error('boom') }))).rejects.toThrow('boom');
+  });
+  it('chunk and mapLimit keep order and bound concurrency', async () => {
+    expect(chunk([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
+    let inFlight = 0;
+    let peak = 0;
+    const out = await mapLimit([1, 2, 3, 4, 5, 6, 7], 3, async (n) => {
+      peak = Math.max(peak, ++inFlight);
+      await new Promise((r) => setTimeout(r, 5));
+      inFlight--;
+      return n * 2;
+    });
+    expect(out).toEqual([2, 4, 6, 8, 10, 12, 14]);
+    expect(peak).toBe(3);
   });
 });

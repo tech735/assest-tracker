@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { chunk, fetchAllPages, mapLimit } from '@/lib/paging';
 import { Alert } from '@/types/alert';
 import { Asset, AssetCategory, AssetCondition, AssetStatus, Assignment, DashboardStats, Employee, Location } from '@/types/asset';
 
@@ -96,13 +97,14 @@ const mapAlert = (data: any): Alert => ({
 // =====================================================
 
 export async function getAssets(): Promise<Asset[]> {
-    const { data, error } = await supabase
-        .from('assets')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return (data || []).map(mapAsset);
+    const rows = await fetchAllPages((from, to, count) =>
+        supabase
+            .from('assets')
+            .select('*', count ? { count: 'exact' } : undefined)
+            .order('created_at', { ascending: false })
+            .order('id')
+            .range(from, to));
+    return rows.map(mapAsset);
 }
 
 export async function getAssetById(id: string): Promise<Asset | null> {
@@ -224,19 +226,24 @@ export async function bulkUpdateAssets(ids: string[], updates: Partial<Asset>): 
     if ('assignedTo' in updates) payload.assigned_to = updates.assignedTo;
     if ('assignedToId' in updates) payload.assigned_to_id = updates.assignedToId;
 
-    const { error } = await supabase.from('assets').update(payload).in('id', ids);
-    if (error) throw error;
+    // Chunked: thousands of ids in one ?id=in.(...) URL exceed request-line limits.
+    for (const part of chunk(ids, 150)) {
+        const { error } = await supabase.from('assets').update(payload).in('id', part);
+        if (error) throw error;
+    }
 }
 
 export async function deleteAssets(ids: string[]): Promise<void> {
-    const { error } = await supabase.from('assets').delete().in('id', ids);
-    if (error) throw error;
+    for (const part of chunk(ids, 150)) {
+        const { error } = await supabase.from('assets').delete().in('id', part);
+        if (error) throw error;
+    }
 }
 
 // Reuses markLost per asset so each one gets its own assignment-log "lost" entry,
 // exactly like the single-asset flow (see LostAssetDialog).
 export async function bulkMarkAssetsLost(ids: string[], { reference, notes }: { reference?: string; notes?: string }): Promise<void> {
-    await Promise.all(ids.map((assetId) => markLost({ assetId, reference, notes })));
+    await mapLimit(ids, 6, (assetId) => markLost({ assetId, reference, notes }));
 }
 
 export async function returnAsset({
@@ -516,13 +523,14 @@ export async function offboardEmployee({ id, exitDate }: { id: string; exitDate:
 // =====================================================
 
 export async function getEmployees(): Promise<Employee[]> {
-    const { data, error } = await supabase
-        .from('employees')
-        .select('*')
-        .order('name', { ascending: true });
-
-    if (error) throw error;
-    return (data || []).map(mapEmployee);
+    const rows = await fetchAllPages((from, to, count) =>
+        supabase
+            .from('employees')
+            .select('*', count ? { count: 'exact' } : undefined)
+            .order('name', { ascending: true })
+            .order('id')
+            .range(from, to));
+    return rows.map(mapEmployee);
 }
 
 export async function getEmployeeById(id: string): Promise<Employee | null> {
@@ -601,13 +609,17 @@ export async function bulkUpdateEmployees(ids: string[], updates: Partial<Employ
     if ('location' in updates) payload.location = updates.location;
     if ('locationId' in updates) payload.location_id = updates.locationId;
 
-    const { error } = await supabase.from('employees').update(payload).in('id', ids);
-    if (error) throw error;
+    for (const part of chunk(ids, 150)) {
+        const { error } = await supabase.from('employees').update(payload).in('id', part);
+        if (error) throw error;
+    }
 }
 
 export async function deleteEmployees(ids: string[]): Promise<void> {
-    const { error } = await supabase.from('employees').delete().in('id', ids);
-    if (error) throw error;
+    for (const part of chunk(ids, 150)) {
+        const { error } = await supabase.from('employees').delete().in('id', part);
+        if (error) throw error;
+    }
 }
 
 // Mirrors OffboardEmployeeDialog's single-employee flow for each employee: return
@@ -616,25 +628,28 @@ export async function bulkOffboardEmployees(ids: string[], exitDate: string): Pr
     const { data: locationRows } = await supabase.from('locations').select('*').eq('name', 'Core Office').limit(1);
     const coreOffice = locationRows && locationRows[0] ? mapLocation(locationRows[0]) : undefined;
 
-    const { data: assetRows, error: assetsError } = await supabase
-        .from('assets')
-        .select('*')
-        .eq('status', 'assigned')
-        .in('assigned_to_id', ids);
-    if (assetsError) throw assetsError;
+    const assetRows = (await mapLimit(chunk(ids, 150), 3, (part) =>
+        fetchAllPages((from, to, count) =>
+            supabase
+                .from('assets')
+                .select('*', count ? { count: 'exact' } : undefined)
+                .eq('status', 'assigned')
+                .in('assigned_to_id', part)
+                .order('id')
+                .range(from, to)))).flat();
 
-    const activeAssets = (assetRows || []).map(mapAsset);
+    const activeAssets = assetRows.map(mapAsset);
 
-    await Promise.all(activeAssets.map((asset) => returnAsset({
+    await mapLimit(activeAssets, 6, (asset) => returnAsset({
         assetId: asset.id,
         condition: asset.condition,
         receivedBy: 'IT (Bulk Offboarding)',
         notes: `Collected as part of bulk offboarding.`,
         locationId: coreOffice?.id,
         locationName: coreOffice?.name,
-    })));
+    }));
 
-    await Promise.all(ids.map((id) => offboardEmployee({ id, exitDate })));
+    await mapLimit(ids, 6, (id) => offboardEmployee({ id, exitDate }));
 }
 
 // =====================================================
@@ -642,13 +657,14 @@ export async function bulkOffboardEmployees(ids: string[], exitDate: string): Pr
 // =====================================================
 
 export async function getLocations(): Promise<Location[]> {
-    const { data, error } = await supabase
-        .from('locations')
-        .select('*')
-        .order('name', { ascending: true });
-
-    if (error) throw error;
-    return (data || []).map(mapLocation);
+    const rows = await fetchAllPages((from, to, count) =>
+        supabase
+            .from('locations')
+            .select('*', count ? { count: 'exact' } : undefined)
+            .order('name', { ascending: true })
+            .order('id')
+            .range(from, to));
+    return rows.map(mapLocation);
 }
 
 export async function getLocationById(id: string): Promise<Location | null> {
@@ -707,13 +723,15 @@ export async function deleteLocation(id: string): Promise<void> {
 // =====================================================
 
 export async function getAssignments(): Promise<Assignment[]> {
-    const { data, error } = await supabase
-        .from('assignments')
-        .select('*')
-        .order('assigned_date', { ascending: false });
-
-    if (error) throw error;
-    return (data || []).map(mapAssignment);
+    const rows = await fetchAllPages((from, to, count) =>
+        supabase
+            .from('assignments')
+            .select('*', count ? { count: 'exact' } : undefined)
+            .order('assigned_date', { ascending: false })
+            .order('created_at', { ascending: false })
+            .order('id')
+            .range(from, to));
+    return rows.map(mapAssignment);
 }
 
 export async function getAssignmentsByAssetId(assetId: string): Promise<Assignment[]> {
@@ -790,14 +808,15 @@ export async function deleteAssignment(id: string): Promise<void> {
 // =====================================================
 
 export async function getAlerts(): Promise<Alert[]> {
-    const { data, error } = await supabase
-        .from('alerts')
-        .select('*')
-        .eq('is_resolved', false)
-        .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return (data || []).map(mapAlert);
+    const rows = await fetchAllPages((from, to, count) =>
+        supabase
+            .from('alerts')
+            .select('*', count ? { count: 'exact' } : undefined)
+            .eq('is_resolved', false)
+            .order('created_at', { ascending: false })
+            .order('id')
+            .range(from, to));
+    return rows.map(mapAlert);
 }
 
 export async function createAlert(alert: Omit<Alert, 'id' | 'createdAt' | 'updatedAt' | 'isResolved'>): Promise<Alert> {
@@ -859,11 +878,12 @@ export async function resolveAlert(id: string): Promise<void> {
 // =====================================================
 
 export async function getDashboardStats(): Promise<DashboardStats> {
-    const { data: assets, error } = await supabase
-        .from('assets')
-        .select('status');
-
-    if (error) throw error;
+    const assets = await fetchAllPages<{ status: string }>((from, to, count) =>
+        supabase
+            .from('assets')
+            .select('status', count ? { count: 'exact' } : undefined)
+            .order('id')
+            .range(from, to));
 
     const stats: DashboardStats = {
         totalAssets: assets?.length || 0,

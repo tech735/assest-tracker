@@ -1,6 +1,7 @@
 // Phase 2 data access: permissions, notes, files, audits and e-signed handover documents.
 // Tables/policies come from supabase/migrations/0009–0012.
 import { supabase } from '@/lib/supabase';
+import { fetchAllPages } from '@/lib/paging';
 import type {
   AssetFile,
   AssetFileKind,
@@ -196,18 +197,19 @@ export async function getAudits(): Promise<Audit[]> {
 }
 
 export async function getAudit(id: string): Promise<{ audit: Audit; items: AuditItem[]; scans: AuditScan[] }> {
-  const [a, i, sc] = await Promise.all([
+  // A warehouse audit can expect thousands of assets, past the API's 1000-row page.
+  const [a, items, scans] = await Promise.all([
     supabase.from('audits').select('*').eq('id', id).single(),
-    supabase.from('audit_items').select('*').eq('audit_id', id),
-    supabase.from('audit_scans').select('*').eq('audit_id', id).order('scanned_at', { ascending: false }),
+    fetchAllPages<Row>((from, to, count) =>
+      supabase.from('audit_items').select('*', count ? { count: 'exact' } : undefined).eq('audit_id', id).order('asset_id').range(from, to)),
+    fetchAllPages<Row>((from, to, count) =>
+      supabase.from('audit_scans').select('*', count ? { count: 'exact' } : undefined).eq('audit_id', id).order('scanned_at', { ascending: false }).order('id').range(from, to)),
   ]);
   if (a.error) throw a.error;
-  if (i.error) throw i.error;
-  if (sc.error) throw sc.error;
   return {
     audit: mapAudit(a.data),
-    items: (i.data || []).map((r: Row) => ({ auditId: String(r.audit_id), assetId: String(r.asset_id), assetTag: s(r.asset_tag), assetName: s(r.asset_name), serialNumber: s(r.serial_number) })),
-    scans: (sc.data || []).map(mapScan),
+    items: items.map((r: Row) => ({ auditId: String(r.audit_id), assetId: String(r.asset_id), assetTag: s(r.asset_tag), assetName: s(r.asset_name), serialNumber: s(r.serial_number) })),
+    scans: scans.map(mapScan),
   };
 }
 

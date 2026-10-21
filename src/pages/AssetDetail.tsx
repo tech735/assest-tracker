@@ -256,7 +256,7 @@ export default function AssetDetail() {
 
       {tab === 'maintenance' && (
         <div className="grid gap-4 md:grid-cols-2">
-          <CoverageCard title="AMC" start={asset.amcStartDate} end={asset.amcEndDate} action={<button onClick={() => act('edit', asset)} className="text-[13px] font-medium text-link hover:underline">Update</button>} />
+          <CoverageCard title="AMC" start={asset.amcStartDate} end={asset.amcEndDate} action={canEdit && <button onClick={() => act('edit', asset)} className="text-[13px] font-medium text-link hover:underline">Update</button>} />
           <CoverageCard title="Warranty" start={asset.warrantyStart} end={asset.warrantyEnd} />
           <SectionCard title="Repair" className="md:col-span-2" action={can('maintenance.manage') && <Button size="sm" variant="secondary" onClick={() => act('repair', asset)}><Wrench /> {asset.status === 'repair' ? 'Complete repair' : 'Send for repair'}</Button>}>
             {asset.status === 'repair' ? (

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -29,6 +30,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useAssets, useReturnAsset, useLocations } from '@/hooks/useSupabaseData';
 import { useToast } from '@/hooks/use-toast';
+import { useAccess } from '@/hooks/useCollab';
 
 const returnSchema = z.object({
     assetId: z.string().min(1, { message: 'Asset is required.' }),
@@ -65,6 +67,12 @@ export function ReturnAssetDialog({ open, onOpenChange, assetId }: ReturnAssetDi
     });
 
     const { data: locations = [] } = useLocations();
+    const { access } = useAccess();
+
+    // Default "Received by" to whoever is signed in, like "Handed over by" on check-out.
+    useEffect(() => {
+        if (open && access?.name && !form.getValues('receivedBy')) form.setValue('receivedBy', access.name);
+    }, [open, access?.name, form]);
 
     const onSubmit = async (values: ReturnFormValues) => {
         try {
