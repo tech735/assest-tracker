@@ -20,7 +20,7 @@
 -- migration is optional and can be skipped/reverted.
 
 CREATE EXTENSION IF NOT EXISTS pg_cron;
-CREATE EXTENSION IF NOT EXISTS pg_net;
+CREATE EXTENSION IF NOT EXISTS pg_net WITH SCHEMA extensions;
 
 SELECT cron.schedule(
   'amc-expiry-check-daily',

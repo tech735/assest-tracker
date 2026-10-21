@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import type { UserRole } from '@/types/database';
+import { supabase } from '@/lib/supabase';
 
 // Re-export UserRole for convenience
 export type { UserRole } from '@/types/database';
@@ -23,36 +24,31 @@ interface UserContextType {
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
-// Mock users for testing (fallback only)
-const mockUsers: Record<string, User> = {
-    admin: {
-        id: '0',
-        name: 'Admin',
-        role: 'ADMIN',
-        email: 'tech@kotu.co.in',
-    },
-};
-
 export function UserProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [originalAdminUser, setOriginalAdminUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        // Check if we have a persisted user in localStorage
-        const checkPersistedUser = () => {
+        // Restore the persisted user only if a real Supabase session backs it - a stale entry
+        // (e.g. from the removed mock login) would otherwise show the app shell with no data access.
+        const checkPersistedUser = async () => {
+            // Read synchronously: the persist effects below clear these keys on the first render,
+            // before getSession() resolves.
+            const persistedUser = localStorage.getItem('user');
+            const persistedOriginalAdmin = localStorage.getItem('originalAdminUser');
+
             try {
-                const persistedUser = localStorage.getItem('user');
-                const persistedOriginalAdmin = localStorage.getItem('originalAdminUser');
+                const { data: { session } } = await supabase.auth.getSession();
+                const parsedUser: User | null = persistedUser ? JSON.parse(persistedUser) : null;
+                const sessionEmail = session?.user.email?.toLowerCase();
 
-                if (persistedUser) {
-                    const parsedUser = JSON.parse(persistedUser);
+                if (parsedUser && sessionEmail && parsedUser.email.toLowerCase() === sessionEmail) {
                     setUser(parsedUser);
-                }
 
-                if (persistedOriginalAdmin) {
-                    const parsedOriginalAdmin = JSON.parse(persistedOriginalAdmin);
-                    setOriginalAdminUser(parsedOriginalAdmin);
+                    if (persistedOriginalAdmin) {
+                        setOriginalAdminUser(JSON.parse(persistedOriginalAdmin));
+                    }
                 }
             } catch (error) {
                 console.error('Error parsing persisted user:', error);
@@ -108,5 +104,3 @@ export function useUser() {
     }
     return context;
 }
-
-export { mockUsers };

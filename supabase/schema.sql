@@ -156,7 +156,7 @@ BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public;
 
 -- =====================================================
 -- TRIGGERS
@@ -206,7 +206,7 @@ BEGIN
     END IF;
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public;
 
 -- 3. Trigger to call the function before insert
 DROP TRIGGER IF EXISTS tr_generate_asset_tag ON assets;
@@ -243,7 +243,7 @@ BEGIN
     END IF;
     RETURN NULL;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public;
 
 -- 2. Sync location assets_count when assets are created/moved/deleted
 CREATE OR REPLACE FUNCTION sync_location_assets_count()
@@ -269,7 +269,7 @@ BEGIN
     END IF;
     RETURN NULL;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public;
 
 -- 3. Sync location employees_count when employees are created/moved/deleted
 CREATE OR REPLACE FUNCTION sync_location_employees_count()
@@ -295,7 +295,7 @@ BEGIN
     END IF;
     RETURN NULL;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public;
 
 -- 4. Sync Names (Keep denormalized name strings updated if master record changes)
 CREATE OR REPLACE FUNCTION sync_related_names()
@@ -318,7 +318,7 @@ BEGIN
     END IF;
     RETURN NULL;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public;
 
 -- =====================================================
 -- SYNCHRONIZATION TRIGGERS
@@ -360,28 +360,35 @@ ALTER TABLE assets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE assignments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE alerts ENABLE ROW LEVEL SECURITY;
 
--- Create policies for public access (adjust based on your security requirements)
--- For now, allowing all operations for authenticated users
+-- Signed-in users only (sign-up is restricted to @kotu.co.in). The anon key alone gets no access.
+-- See migrations/0006_security_advisor_fixes.sql.
 
-CREATE POLICY "Allow all operations on locations" ON locations
-  FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Authenticated users can manage locations" ON locations
+  FOR ALL TO authenticated
+  USING ((SELECT auth.uid()) IS NOT NULL) WITH CHECK ((SELECT auth.uid()) IS NOT NULL);
 
-CREATE POLICY "Allow all operations on employees" ON employees
-  FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Authenticated users can manage employees" ON employees
+  FOR ALL TO authenticated
+  USING ((SELECT auth.uid()) IS NOT NULL) WITH CHECK ((SELECT auth.uid()) IS NOT NULL);
 
-CREATE POLICY "Allow all operations on assets" ON assets
-  FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Authenticated users can manage assets" ON assets
+  FOR ALL TO authenticated
+  USING ((SELECT auth.uid()) IS NOT NULL) WITH CHECK ((SELECT auth.uid()) IS NOT NULL);
 
-CREATE POLICY "Allow all operations on assignments" ON assignments
-  FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Authenticated users can manage assignments" ON assignments
+  FOR ALL TO authenticated
+  USING ((SELECT auth.uid()) IS NOT NULL) WITH CHECK ((SELECT auth.uid()) IS NOT NULL);
 
-CREATE POLICY "Allow all operations on alerts" ON alerts
-  FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Authenticated users can manage alerts" ON alerts
+  FOR ALL TO authenticated
+  USING ((SELECT auth.uid()) IS NOT NULL) WITH CHECK ((SELECT auth.uid()) IS NOT NULL);
 
+-- Only the amc-expiry-check edge function (service role, bypasses RLS) touches it.
 ALTER TABLE amc_notifications ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Allow all operations on amc_notifications" ON amc_notifications
-  FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "No client access to amc_notifications" ON amc_notifications
+  FOR ALL TO anon, authenticated
+  USING (false) WITH CHECK (false);
 
 -- =====================================================
 -- APP SETTINGS TABLE
@@ -416,5 +423,6 @@ CREATE TRIGGER update_app_settings_updated_at BEFORE UPDATE ON app_settings
 
 ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Allow all operations on app_settings" ON app_settings
-  FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Authenticated users can manage app_settings" ON app_settings
+  FOR ALL TO authenticated
+  USING ((SELECT auth.uid()) IS NOT NULL) WITH CHECK ((SELECT auth.uid()) IS NOT NULL);
