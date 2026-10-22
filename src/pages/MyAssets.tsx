@@ -93,7 +93,7 @@ export default function MyAssets() {
           <EmptyState icon={Package} title="Nothing assigned" description="When IT hands you a device, it’ll show up here." />
         </div>
       ) : (
-        <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 min-[1680px]:grid-cols-4">
+        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 min-[1680px]:grid-cols-4">
           {mine.map((a) => (
             <li key={a.id}>
               <DeviceCard asset={a} since={since.get(a.id)} amcVendor={a.amcContractId ? vendorOf.get(a.amcContractId) : undefined} request={openRequestFor.get(a.id)} onReport={() => setReporting(a)} />

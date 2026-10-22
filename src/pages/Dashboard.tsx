@@ -188,7 +188,7 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <SectionCard
           className="order-2 lg:order-1 lg:col-span-2"
           title="Check-outs & returns"
@@ -232,7 +232,7 @@ export default function Dashboard() {
         </SectionCard>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         <SectionCard title="Recent activity" action={<CardLink to="/assets">View assets</CardLink>}>
           {assignments.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">No activity yet.</p>

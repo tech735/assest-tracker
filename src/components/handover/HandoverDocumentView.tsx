@@ -88,7 +88,7 @@ export function HandoverDocumentView({
           : `I acknowledge receipt of the assets listed above in the stated condition. They remain the property of ${orgName}, are to be used for official purposes only, and will be returned on request or on my last working day. Loss or damage must be reported to IT within 24 hours.`}
       </p>
 
-      <section className="grid gap-4 sm:grid-cols-2">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="rounded-lg border border-[#E2E5EB] p-4">
           <p className="text-xs text-[#9AA3B2]">{doc.kind === 'return' ? 'Returned by' : 'Received by'} (employee)</p>
           {doc.status === 'signed' && doc.signature ? (

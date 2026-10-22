@@ -195,7 +195,7 @@ export function CheckOutDialog({ asset, open, onOpenChange }: { asset: Asset; op
             {person && <p className="text-xs text-muted-foreground">Has {person.assetsCount} other asset{person.assetsCount === 1 ? '' : 's'} · {displayLocation(person.location)}</p>}
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="grid gap-1.5">
               <Label>Handover date</Label>
               <DatePicker value={date} onChange={setDate} className="h-[38px] w-full" />

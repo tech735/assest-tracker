@@ -171,7 +171,7 @@ export default function AssetDetail() {
       />
 
       {tab === 'overview' && (
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="min-w-0 space-y-5">
             <SectionCard title="Lifecycle" action={retireBy && <span className="text-xs text-muted-foreground">Est. replacement {formatDate(retireBy, 'MMM yyyy')}</span>}>
               <ol className="grid grid-cols-4">
@@ -271,12 +271,12 @@ export default function AssetDetail() {
       )}
 
       {tab === 'maintenance' && (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <CoverageCard title="AMC" start={asset.amcStartDate} end={asset.amcEndDate} contractId={asset.amcContractId} action={!asset.amcContractId && canEdit && <button onClick={() => act('edit', asset)} className="text-[13px] font-medium text-link hover:underline">Update</button>} />
           <CoverageCard title="Warranty" start={asset.warrantyStart} end={asset.warrantyEnd} contractId={asset.warrantyContractId} />
           <SectionCard title="Repair" className="md:col-span-2" action={can('maintenance.manage') && <Button size="sm" variant="secondary" onClick={() => act('repair', asset)}><Wrench /> {asset.status === 'repair' ? 'Complete repair' : 'Send for repair'}</Button>}>
             {asset.status === 'repair' ? (
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <KeyValue label="Vendor">{asset.repairVendor || '—'}</KeyValue>
                 <KeyValue label="Expected back">{formatDate(asset.repairEstReturn)}</KeyValue>
                 {can('costs.view') && <KeyValue label="Estimated cost">{formatMoney(asset.repairCost, currency)}</KeyValue>}

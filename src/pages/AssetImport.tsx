@@ -243,7 +243,7 @@ export default function AssetImport() {
       )}
 
       {step === 2 && (
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="overflow-hidden rounded-xl border bg-card">
             <div className="flex items-center gap-2.5 border-b px-5 py-3.5">
               <FileSpreadsheet className="h-[18px] w-[18px] text-muted-foreground" />
@@ -325,7 +325,7 @@ export default function AssetImport() {
 
       {step === 3 && (
         <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {[
               { cls: 'bg-success-soft text-success-strong', icon: CheckCircle2, n: ready.length, l: 'rows ready to import' },
               { cls: 'bg-warning-soft text-warning-strong', icon: AlertTriangle, n: warnings.length, l: skipDuplicates ? 'warnings (duplicates are skipped)' : 'warnings' },

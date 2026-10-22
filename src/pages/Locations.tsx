@@ -119,12 +119,12 @@ export default function Locations() {
           <EmptyState icon={MapPin} title="No locations" description="Add an office, warehouse or outlet to start placing assets." action={can('locations.manage') && <Button onClick={() => setAdding(true)}><Plus /> Add location</Button>} />
         </div>
       ) : layout === 'grid' ? (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((l) => {
             const meta = LOCATION_TYPE_META[l.type] ?? LOCATION_TYPE_META.office;
             const inStock = stats.get(l.id)?.byStatus.available || 0;
             return (
-              <div key={l.id} role="button" tabIndex={0} onClick={() => open(l)} onKeyDown={(e) => e.key === 'Enter' && open(l)} className="cursor-pointer space-y-4 rounded-xl border bg-card p-4 transition-[border-color,box-shadow] duration-150 hover:border-border-strong hover:shadow-card">
+              <div key={l.id} role="button" tabIndex={0} onClick={() => open(l)} onKeyDown={(e) => e.key === 'Enter' && open(l)} className="min-w-0 cursor-pointer space-y-4 rounded-xl border bg-card p-4 transition-[border-color,box-shadow] duration-150 hover:border-border-strong hover:shadow-card">
                 <div className="flex items-center gap-3">
                   <IconBubble icon={TYPE_ICON[l.type] ?? Building2} tone={meta.tone} size="lg" />
                   <div className="min-w-0 flex-1">

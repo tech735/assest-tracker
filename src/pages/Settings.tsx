@@ -83,7 +83,7 @@ export default function Settings() {
   return (
     <div className="space-y-5 pb-16">
       <PageHeader title="Settings" />
-      <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
         <nav className="flex gap-1 overflow-x-auto scrollbar-hide lg:flex-col" aria-label="Settings sections">
           {SECTIONS.map((s) => (
             <button

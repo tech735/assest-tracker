@@ -209,7 +209,7 @@ export default function Reports() {
   return (
     <div className="space-y-5">
       <PageHeader title="Reports" description="Run any report as a CSV — open it in Excel or Google Sheets" />
-      <div className="grid gap-5 lg:grid-cols-[200px_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[200px_minmax(0,1fr)]">
         <nav className="flex gap-1.5 overflow-x-auto scrollbar-hide lg:flex-col">
           {CATS.map((c) => {
             const n = c === 'All' ? allowed.length : allowed.filter((r) => r.category === c).length;
@@ -227,7 +227,7 @@ export default function Reports() {
         </nav>
         <div className="space-y-4">
           <SearchField value={q} onChange={setQ} placeholder="Search reports" className="h-9 w-full md:w-[280px]" />
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {shown.map((r) => (
               <div key={r.id} className="flex flex-col gap-2.5 rounded-xl border bg-card p-4 transition-[border-color] hover:border-border-strong">
                 <div className="flex items-center gap-2">

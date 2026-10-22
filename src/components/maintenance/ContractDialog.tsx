@@ -98,7 +98,7 @@ export function ContractDialog({
             <DialogDescription>Record the vendor’s terms once, then pick the assets it covers. Their AMC / warranty dates follow the contract.</DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="grid gap-1.5">
               <Label>Type</Label>
               <Segmented<ContractKind> className="flex w-full" value={form.kind} onChange={(v) => set('kind', v)} options={[{ value: 'amc', label: 'AMC' }, { value: 'warranty', label: 'Warranty' }]} />
@@ -134,7 +134,7 @@ export function ContractDialog({
             <p className="text-xs text-muted-foreground">{COVERAGE_META[form.coverage].hint}</p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="grid gap-1.5">
               <Label>Starts</Label>
               <DatePicker value={form.startDate} onChange={(v) => set('startDate', v)} className="h-[38px] w-full" />
@@ -167,7 +167,7 @@ export function ContractDialog({
           </div>
           {computed != null && !nums.totalAmount && <p className="-mt-2 text-xs text-muted-foreground">Total will be {formatMoney(computed, form.currency)} including GST.</p>}
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="grid gap-1.5">
               <Label htmlFor="c-covers">What’s covered</Label>
               <Textarea id="c-covers" rows={2} value={form.covers || ''} onChange={(e) => set('covers', e.target.value)} placeholder="e.g. Service and labour for hardware repairs" />

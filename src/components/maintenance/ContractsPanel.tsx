@@ -88,7 +88,7 @@ export function ContractsPanel() {
       {contracts.length === 0 ? (
         <EmptyState icon={FileSignature} title="No contracts yet" description="Add an AMC or vendor warranty, then choose the assets it covers." className="py-12" action={canManage && <Button onClick={() => setEditing(null)}><Plus /> Add contract</Button>} />
       ) : (
-        <ul className="grid gap-3 p-4 lg:grid-cols-2">
+        <ul className="grid grid-cols-1 gap-3 p-4 lg:grid-cols-2">
           {contracts.map((c) => {
             const cov = coverage(c.startDate, c.endDate);
             const n = covered.get(c.id)?.length || 0;
