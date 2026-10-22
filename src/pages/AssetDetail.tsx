@@ -193,7 +193,7 @@ export default function AssetDetail() {
             )}
           </div>
 
-          <div className="space-y-4">
+          <div className="min-w-0 space-y-4">
             <SectionCard title="Properties" action={canEdit && <button onClick={() => act('edit', asset)} className="text-[13px] font-medium text-link hover:underline">Edit</button>}>
               <div className="space-y-3">
                 <KeyValue icon={Layers} label="Category">{titleCase(asset.category)}</KeyValue>
@@ -227,7 +227,7 @@ export default function AssetDetail() {
               )}
             </SectionCard>
 
-            <CoverageCard title="AMC" start={asset.amcStartDate} end={asset.amcEndDate} action={canEdit && <button onClick={() => act('edit', asset)} className="text-[13px] font-medium text-link hover:underline">Renew</button>} />
+            <CoverageCard title="AMC" start={asset.amcStartDate} end={asset.amcEndDate} contractId={asset.amcContractId} action={!asset.amcContractId && canEdit && <button onClick={() => act('edit', asset)} className="text-[13px] font-medium text-link hover:underline">Renew</button>} />
 
             <div className="flex items-center gap-3 rounded-xl border bg-card p-4">
               <span className="flex h-14 w-14 items-center justify-center rounded-lg border">
@@ -256,8 +256,8 @@ export default function AssetDetail() {
 
       {tab === 'maintenance' && (
         <div className="grid gap-4 md:grid-cols-2">
-          <CoverageCard title="AMC" start={asset.amcStartDate} end={asset.amcEndDate} action={canEdit && <button onClick={() => act('edit', asset)} className="text-[13px] font-medium text-link hover:underline">Update</button>} />
-          <CoverageCard title="Warranty" start={asset.warrantyStart} end={asset.warrantyEnd} />
+          <CoverageCard title="AMC" start={asset.amcStartDate} end={asset.amcEndDate} contractId={asset.amcContractId} action={!asset.amcContractId && canEdit && <button onClick={() => act('edit', asset)} className="text-[13px] font-medium text-link hover:underline">Update</button>} />
+          <CoverageCard title="Warranty" start={asset.warrantyStart} end={asset.warrantyEnd} contractId={asset.warrantyContractId} />
           <SectionCard title="Repair" className="md:col-span-2" action={can('maintenance.manage') && <Button size="sm" variant="secondary" onClick={() => act('repair', asset)}><Wrench /> {asset.status === 'repair' ? 'Complete repair' : 'Send for repair'}</Button>}>
             {asset.status === 'repair' ? (
               <div className="grid gap-3 sm:grid-cols-3">

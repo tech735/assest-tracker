@@ -28,6 +28,8 @@ const mapAsset = (data: any): Asset => ({
     warrantyEnd: data.warranty_end,
     amcStartDate: data.amc_start_date,
     amcEndDate: data.amc_end_date,
+    amcContractId: data.amc_contract_id ?? undefined,
+    warrantyContractId: data.warranty_contract_id ?? undefined,
     notes: data.notes,
     repairVendor: data.repair_vendor,
     repairEstReturn: data.repair_est_return,

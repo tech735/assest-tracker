@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as svc from '@/services/collabService';
 import type { Permission } from '@/services/collabService';
-import type { AssetFile, AssetFileKind } from '@/types/asset';
+import type { AssetFile, AssetFileKind, ServiceContract } from '@/types/asset';
 
 /* ---------------- Permissions ---------------- */
 
@@ -145,3 +145,26 @@ export function useVoidHandover() {
   const qc = useQueryClient();
   return useMutation({ mutationFn: svc.voidHandoverDocument, onSuccess: () => qc.invalidateQueries({ queryKey: ['handovers'] }) });
 }
+
+/* ---------------- Service contracts ---------------- */
+
+export function useContracts() {
+  return useQuery({ queryKey: ['contracts'], queryFn: svc.getContracts, retry: false });
+}
+
+function useContractMutation<V, R>(fn: (v: V) => Promise<R>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['contracts'] });
+      qc.invalidateQueries({ queryKey: ['assets'] });
+    },
+  });
+}
+
+export const useSaveContract = () => useContractMutation(({ input, id }: { input: svc.ContractInput; id?: string }) => svc.saveContract(input, id));
+export const useDeleteContract = () => useContractMutation(svc.deleteContract);
+export const useAddAssetsToContract = () => useContractMutation(({ contract, ids }: { contract: ServiceContract; ids: string[] }) => svc.addAssetsToContract(contract, ids));
+export const useRemoveAssetsFromContract = () => useContractMutation(({ contract, ids }: { contract: ServiceContract; ids: string[] }) => svc.removeAssetsFromContract(contract, ids));
+export const useUploadContractDocument = () => useContractMutation(({ contract, file }: { contract: ServiceContract; file: File }) => svc.uploadContractDocument(contract, file));

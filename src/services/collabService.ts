@@ -1,7 +1,7 @@
-// Phase 2 data access: permissions, notes, files, audits and e-signed handover documents.
-// Tables/policies come from supabase/migrations/0009–0012.
+// Phase 2 data access: permissions, notes, files, audits, e-signed handover documents and service
+// contracts. Tables/policies come from supabase/migrations/0009–0014.
 import { supabase } from '@/lib/supabase';
-import { fetchAllPages } from '@/lib/paging';
+import { chunk, fetchAllPages } from '@/lib/paging';
 import type {
   AssetFile,
   AssetFileKind,
@@ -12,6 +12,7 @@ import type {
   AuditScanResult,
   HandoverDocument,
   HandoverItem,
+  ServiceContract,
 } from '@/types/asset';
 import type { UserRole } from '@/types/database';
 
@@ -339,4 +340,118 @@ export const signingLink = (id: string) => `${window.location.origin}/sign/${id}
 export async function emailHandoverLink(documentId: string): Promise<boolean> {
   const { error } = await supabase.functions.invoke('send-handover-email', { body: { documentId, appUrl: window.location.origin } });
   return !error;
+}
+
+/* ---------------- Service contracts (AMC / warranty) ---------------- */
+
+const num = (v: unknown) => (v == null || v === '' ? undefined : Number(v));
+const mapContract = (r: Row): ServiceContract => ({
+  id: String(r.id),
+  kind: r.kind as ServiceContract['kind'],
+  vendor: String(r.vendor),
+  reference: s(r.reference),
+  coverage: r.coverage as ServiceContract['coverage'],
+  category: s(r.category),
+  startDate: String(r.start_date),
+  endDate: String(r.end_date),
+  units: num(r.units),
+  rate: num(r.rate),
+  taxPercent: num(r.tax_percent),
+  totalAmount: num(r.total_amount),
+  currency: s(r.currency) || 'INR',
+  covers: s(r.covers),
+  excludes: s(r.excludes),
+  supportContact: s(r.support_contact),
+  notes: s(r.notes),
+  documentPath: s(r.document_path),
+  documentName: s(r.document_name),
+  createdAt: String(r.created_at),
+});
+
+export type ContractInput = Omit<ServiceContract, 'id' | 'createdAt' | 'documentPath' | 'documentName'>;
+const contractRow = (c: ContractInput) => ({
+  kind: c.kind,
+  vendor: c.vendor.trim(),
+  reference: c.reference?.trim() || null,
+  coverage: c.coverage,
+  category: c.category || null,
+  start_date: c.startDate,
+  end_date: c.endDate,
+  units: c.units ?? null,
+  rate: c.rate ?? null,
+  tax_percent: c.taxPercent ?? null,
+  total_amount: c.totalAmount ?? null,
+  currency: c.currency || 'INR',
+  covers: c.covers?.trim() || null,
+  excludes: c.excludes?.trim() || null,
+  support_contact: c.supportContact?.trim() || null,
+  notes: c.notes?.trim() || null,
+});
+
+export async function getContracts(): Promise<ServiceContract[]> {
+  const { data, error } = await supabase.from('service_contracts').select('*').order('end_date', { ascending: true });
+  if (error) throw error;
+  return (data || []).map(mapContract);
+}
+
+export async function saveContract(input: ContractInput, id?: string): Promise<ServiceContract> {
+  const q = id ? supabase.from('service_contracts').update(contractRow(input)).eq('id', id) : supabase.from('service_contracts').insert(contractRow(input));
+  const { data, error } = await q.select().single();
+  if (error) throw error;
+  // Keep linked assets' dates in step with the contract period.
+  if (id) await syncContractDates(mapContract(data));
+  return mapContract(data);
+}
+
+type LinkColumns = { id: string; start: string; end: string };
+const linkColumns = (kind: ServiceContract['kind']): LinkColumns =>
+  kind === 'amc' ? { id: 'amc_contract_id', start: 'amc_start_date', end: 'amc_end_date' } : { id: 'warranty_contract_id', start: 'warranty_start', end: 'warranty_end' };
+type AssetPatch = Record<string, string | null>;
+
+async function syncContractDates(c: ServiceContract) {
+  const col = linkColumns(c.kind);
+  const patch: AssetPatch = { [col.start]: c.startDate, [col.end]: c.endDate };
+  const { error } = await supabase.from('assets').update(patch).eq(col.id, c.id);
+  if (error) throw error;
+}
+
+export async function deleteContract(c: ServiceContract) {
+  // Linked assets keep their dates; the link clears via ON DELETE SET NULL.
+  const { error } = await supabase.from('service_contracts').delete().eq('id', c.id);
+  if (error) throw error;
+  if (c.documentPath) await supabase.storage.from(BUCKET).remove([c.documentPath]);
+}
+
+/** Put assets under a contract: links them and sets their AMC / warranty dates to the contract period. */
+export async function addAssetsToContract(c: ServiceContract, assetIds: string[]) {
+  const col = linkColumns(c.kind);
+  const patch: AssetPatch = { [col.id]: c.id, [col.start]: c.startDate, [col.end]: c.endDate };
+  for (const part of chunk(assetIds, 150)) {
+    const { error } = await supabase.from('assets').update(patch).in('id', part);
+    if (error) throw error;
+  }
+}
+
+/** Take assets off a contract; dates that came from it are cleared too. */
+export async function removeAssetsFromContract(c: ServiceContract, assetIds: string[]) {
+  const col = linkColumns(c.kind);
+  const patch: AssetPatch = { [col.id]: null, [col.start]: null, [col.end]: null };
+  for (const part of chunk(assetIds, 150)) {
+    const { error } = await supabase.from('assets').update(patch).in('id', part).eq(col.id, c.id);
+    if (error) throw error;
+  }
+}
+
+export async function uploadContractDocument(c: ServiceContract, file: File): Promise<ServiceContract> {
+  const safe = file.name.replace(/[^\w.\- ]+/g, '_');
+  const path = `contracts/${c.id}/${crypto.randomUUID()}-${safe}`;
+  const up = await supabase.storage.from(BUCKET).upload(path, file, { contentType: file.type || undefined, upsert: false });
+  if (up.error) throw up.error;
+  const { data, error } = await supabase.from('service_contracts').update({ document_path: path, document_name: file.name }).eq('id', c.id).select().single();
+  if (error) {
+    await supabase.storage.from(BUCKET).remove([path]);
+    throw error;
+  }
+  if (c.documentPath) await supabase.storage.from(BUCKET).remove([c.documentPath]);
+  return mapContract(data);
 }

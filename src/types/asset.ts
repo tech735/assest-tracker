@@ -25,6 +25,8 @@ export interface Asset {
   warrantyEnd?: string;
   amcStartDate?: string;
   amcEndDate?: string;
+  amcContractId?: string;
+  warrantyContractId?: string;
   notes?: string;
   repairVendor?: string;
   repairEstReturn?: string;
@@ -34,6 +36,33 @@ export interface Asset {
   lostNotes?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export type ContractKind = 'amc' | 'warranty';
+export type ContractCoverage = 'comprehensive' | 'non_comprehensive';
+
+/** An AMC or vendor warranty covering a set of assets (Maintenance → Contracts). */
+export interface ServiceContract {
+  id: string;
+  kind: ContractKind;
+  vendor: string;
+  reference?: string;
+  coverage: ContractCoverage;
+  category?: string;
+  startDate: string;
+  endDate: string;
+  units?: number;
+  rate?: number;
+  taxPercent?: number;
+  totalAmount?: number;
+  currency: string;
+  covers?: string;
+  excludes?: string;
+  supportContact?: string;
+  notes?: string;
+  documentPath?: string;
+  documentName?: string;
+  createdAt: string;
 }
 
 export interface Employee {

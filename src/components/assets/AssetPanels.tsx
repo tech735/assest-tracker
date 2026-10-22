@@ -21,7 +21,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useAssetAssignments } from '@/hooks/useSupabaseData';
-import { useAccess, useAssetNotes, useDeleteAssetNote } from '@/hooks/useCollab';
+import { useAccess, useAssetNotes, useContracts, useDeleteAssetNote } from '@/hooks/useCollab';
+import { COVERAGE_META } from '@/lib/contracts';
 import type { Asset, Assignment, AssignmentEventType } from '@/types/asset';
 import { Button } from '@/components/ui/button';
 import {
@@ -185,10 +186,12 @@ export function AssetTimeline({ asset, limit }: { asset: Asset; limit?: number }
 
 /* ---------------- Cards shared by drawer & detail page ---------------- */
 
-export function CoverageCard({ title, start, end, action }: { title: string; start?: string; end?: string; action?: React.ReactNode }) {
+export function CoverageCard({ title, start, end, action, contractId }: { title: string; start?: string; end?: string; action?: React.ReactNode; contractId?: string }) {
   const c = coverage(start, end);
+  const { data: contracts = [] } = useContracts();
+  const contract = contractId ? contracts.find((x) => x.id === contractId) : undefined;
   return (
-    <div className="rounded-xl border bg-card p-4">
+    <div className="min-w-0 rounded-xl border bg-card p-4">
       <div className="mb-2.5 flex items-center gap-2">
         <ShieldCheck className="h-4 w-4 text-faint" />
         <p className="flex-1 text-sm font-semibold">{title}</p>
@@ -203,6 +206,19 @@ export function CoverageCard({ title, start, end, action }: { title: string; sta
         </>
       ) : (
         <p className="text-xs text-muted-foreground">Not covered</p>
+      )}
+      {contract && (
+        <div className="mt-3 space-y-1 border-t pt-3 text-xs">
+          <p className="flex items-center gap-2">
+            <span className="min-w-0 flex-1 truncate font-medium text-foreground">{contract.vendor}</span>
+            <Link to={`/maintenance?tab=contracts&contract=${contract.id}`} className="shrink-0 font-medium text-link hover:underline">Contract</Link>
+          </p>
+          <p className="text-muted-foreground">
+            {COVERAGE_META[contract.coverage].label} — {COVERAGE_META[contract.coverage].hint.toLowerCase()}
+            {contract.reference ? <> · <span className="font-mono">{contract.reference}</span></> : null}
+          </p>
+          {contract.supportContact && <p className="truncate text-muted-foreground">Support: {contract.supportContact}</p>}
+        </div>
       )}
     </div>
   );
@@ -312,8 +328,8 @@ export function AssetQuickView({
                 <p className="mb-3 text-2xs font-semibold uppercase tracking-wider text-faint">Details</p>
                 <AssetDetailsGrid asset={asset} currency={currency} />
               </div>
-              <CoverageCard title="AMC" start={asset.amcStartDate} end={asset.amcEndDate} />
-              <CoverageCard title="Warranty" start={asset.warrantyStart} end={asset.warrantyEnd} />
+              <CoverageCard title="AMC" start={asset.amcStartDate} end={asset.amcEndDate} contractId={asset.amcContractId} />
+              <CoverageCard title="Warranty" start={asset.warrantyStart} end={asset.warrantyEnd} contractId={asset.warrantyContractId} />
               <div className="flex items-center gap-3 rounded-xl border bg-card p-4">
                 <span className="flex h-14 w-14 items-center justify-center rounded-lg border">
                   <QrCode className="h-9 w-9" />

@@ -120,7 +120,7 @@ export default function Dashboard() {
 
   const attentionCount = m.repair.length + m.amc.length + m.overdue.length;
   const attention: { icon: typeof Wrench; tone: Tone; title: string; meta: string; to: string; show: boolean }[] = [
-    { icon: AlertTriangle, tone: 'warning', title: 'AMC expiring in 30 days', meta: `${m.amc.length} assets${m.amc[0] ? ` · earliest ${format(parseISO(m.amc[0].amcEndDate!), 'd MMM')}` : ''}`, to: '/maintenance', show: m.amc.length > 0 },
+    { icon: AlertTriangle, tone: 'warning', title: 'AMC expiring in 30 days', meta: `${m.amc.length} assets${m.amc[0] ? ` · earliest ${format(parseISO(m.amc[0].amcEndDate!), 'd MMM')}` : ''}`, to: '/maintenance?tab=amc', show: m.amc.length > 0 },
     { icon: ArrowLeftRight, tone: 'destructive', title: 'Overdue returns', meta: `${m.overdue.length} assets held by offboarded staff`, to: '/assets?view=overdue', show: m.overdue.length > 0 },
     { icon: Wrench, tone: 'warning', title: 'Repairs past their ETA', meta: `${m.lateRepairs.length} of ${m.repair.length} in repair`, to: '/maintenance?tab=repairs', show: m.lateRepairs.length > 0 },
     { icon: Wrench, tone: 'info', title: 'In repair', meta: `${m.repair.length} assets with vendors`, to: '/assets?view=repair', show: m.repair.length > 0 && m.lateRepairs.length === 0 },

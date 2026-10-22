@@ -47,6 +47,7 @@ import { EditProfileDialog, type UserProfile } from './EditProfileDialog';
 import { PersonAvatar } from '@/components/app/primitives';
 import { CommandPalette } from './CommandPalette';
 import { ScanDialog } from './ScanDialog';
+import kotuLogo from '@/assets/kotu-logo.png';
 
 /* ------------------------------------------------------------------ */
 /* Shell context: lets any page open the palette or scanner            */
@@ -225,7 +226,7 @@ function UserMenu({ compact, profile, onEditProfile, onShortcuts }: MenuProps & 
 function Brand({ compact }: { compact?: boolean }) {
   return (
     <Link to="/" className="flex items-center gap-2.5 rounded-lg outline-none">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-[15px] font-bold text-primary-foreground">K</span>
+      <img src={kotuLogo} alt="KOTU" width={32} height={32} className="h-8 w-8 shrink-0 rounded-lg" />
       {!compact && (
         <span className="min-w-0 leading-tight">
           <span className="block text-sm font-semibold text-foreground">Asset Tracker</span>

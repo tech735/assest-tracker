@@ -11,14 +11,15 @@ import { useAssetActions } from '@/components/assets/useAssetActions';
 import { BulkAmcUpdateDialog } from '@/components/assets/BulkAmcUpdateDialog';
 import { coverage, daysUntil, displayLocation, formatDate, formatMoney, type Tone } from '@/lib/assetMeta';
 import { exportToCSV } from '@/lib/exportUtils';
-import { useAccess } from '@/hooks/useCollab';
+import { useAccess, useContracts } from '@/hooks/useCollab';
+import { ContractsPanel } from '@/components/maintenance/ContractsPanel';
 
-type Tab = 'amc' | 'repairs' | 'warranty';
+type Tab = 'contracts' | 'amc' | 'repairs' | 'warranty';
 type Window = 'all' | 'expiring' | 'expired';
 
 export default function Maintenance() {
   const [params, setParams] = useSearchParams();
-  const tab = (params.get('tab') || 'amc') as Tab;
+  const tab = (params.get('tab') || 'contracts') as Tab;
   const { data: assets = [], isLoading } = useAssets();
   const { data: assignments = [] } = useAssignments();
   const { data: settings } = useSettings();
@@ -27,6 +28,8 @@ export default function Maintenance() {
   const canMaintain = can('maintenance.manage');
   const [windowF, setWindowF] = useState<Window>('expiring');
   const [renewing, setRenewing] = useState<Asset | null>(null);
+  const { data: contracts = [] } = useContracts();
+  const vendorOf = useMemo(() => new Map(contracts.map((c) => [c.id, c.vendor])), [contracts]);
 
   const data = useMemo(() => {
     const amc = assets.filter((a) => a.amcEndDate).sort((a, b) => a.amcEndDate!.localeCompare(b.amcEndDate!));
@@ -86,7 +89,7 @@ export default function Maintenance() {
     return { tone: 'success', label: 'Active' };
   };
 
-  const coverageRows = (list: Asset[], startOf: (a: Asset) => string | undefined, endOf: (a: Asset) => string | undefined, renew: boolean) =>
+  const coverageRows = (list: Asset[], startOf: (a: Asset) => string | undefined, endOf: (a: Asset) => string | undefined, renew: boolean, contractOf: (a: Asset) => string | undefined) =>
     list.length === 0 ? (
       <EmptyState icon={ShieldCheck} title="Nothing in this window" description="Try “All” to see every contract." className="py-12" />
     ) : (
@@ -101,7 +104,7 @@ export default function Maintenance() {
                 <div className="flex items-center gap-2">
                   <Link to={`/assets/${a.id}`} className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{a.name}</p>
-                    <p className="truncate text-xs text-muted-foreground"><span className="font-mono">{a.assetTag}</span> · {a.assignedTo || displayLocation(a.location)}</p>
+                    <p className="truncate text-xs text-muted-foreground"><span className="font-mono">{a.assetTag}</span> · {vendorOf.get(contractOf(a) || '') || a.assignedTo || displayLocation(a.location)}</p>
                   </Link>
                   <Pill tone={st.tone}>{st.label}</Pill>
                 </div>
@@ -120,6 +123,7 @@ export default function Maintenance() {
             <tr className="border-b bg-subtle text-left text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
               <th className="px-4 py-2.5">Asset</th>
               <th className="hidden px-3 py-2.5 lg:table-cell">Holder / location</th>
+              <th className="px-3 py-2.5">Contract</th>
               <th className="hidden px-3 py-2.5 xl:table-cell">Start</th>
               <th className="px-3 py-2.5">End</th>
               <th className="w-[200px] px-3 py-2.5">Coverage left</th>
@@ -143,6 +147,7 @@ export default function Maintenance() {
                     </Link>
                   </td>
                   <td className="hidden px-3 py-2.5 text-[13px] lg:table-cell">{a.assignedTo || displayLocation(a.location)}</td>
+                  <td className="max-w-[180px] truncate px-3 py-2.5 text-[13px] text-muted-foreground">{vendorOf.get(contractOf(a) || '') || '—'}</td>
                   <td className="hidden px-3 py-2.5 text-[13px] text-muted-foreground xl:table-cell">{formatDate(startOf(a))}</td>
                   <td className="px-3 py-2.5 text-[13px]">{formatDate(endOf(a))}</td>
                   <td className="px-3 py-2.5">
@@ -172,7 +177,7 @@ export default function Maintenance() {
         description="Repairs, service contracts and warranty coverage in one place"
         actions={
           <>
-            <Button variant="secondary" className="hidden md:inline-flex" onClick={() => exportToCSV(tab === 'repairs' ? data.repairs : tab === 'warranty' ? data.warranty : data.amc, `maintenance_${tab}`)}>
+            <Button variant="secondary" className="hidden md:inline-flex" onClick={() => exportToCSV(tab === 'repairs' ? data.repairs : tab === 'warranty' ? data.warranty : data.amc, `maintenance_${tab === 'contracts' ? 'amc' : tab}`)}>
               <Download /> Export
             </Button>
             {canMaintain && (
@@ -195,22 +200,24 @@ export default function Maintenance() {
 
       <ViewTabs<Tab>
         value={tab}
-        onChange={(t) => setParams(t === 'amc' ? {} : { tab: t }, { replace: true })}
+        onChange={(t) => setParams(t === 'contracts' ? {} : { tab: t }, { replace: true })}
         tabs={[
-          { value: 'amc', label: 'AMC contracts', count: data.amc.length },
+          { value: 'contracts', label: 'Contracts', count: contracts.length },
+          { value: 'amc', label: 'AMC by asset', count: data.amc.length },
           { value: 'repairs', label: 'Repairs', count: data.repairs.length },
-          { value: 'warranty', label: 'Warranty', count: data.warranty.length },
+          { value: 'warranty', label: 'Warranty by asset', count: data.warranty.length },
         ]}
       />
 
       <div className="overflow-hidden rounded-xl border bg-card">
-        {tab !== 'repairs' && (
+        {(tab === 'amc' || tab === 'warranty') && (
           <div className="flex items-center gap-3 border-b px-4 py-3">
             <Segmented<Window> size="sm" value={windowF} onChange={setWindowF} options={[{ value: 'expiring', label: 'Expiring ≤ 30d' }, { value: 'expired', label: 'Expired' }, { value: 'all', label: 'All' }]} />
           </div>
         )}
-        {tab === 'amc' && coverageRows(filterWindow(data.amc, (a) => a.amcEndDate), (a) => a.amcStartDate, (a) => a.amcEndDate, canMaintain)}
-        {tab === 'warranty' && coverageRows(filterWindow(data.warranty, (a) => a.warrantyEnd), (a) => a.warrantyStart || a.purchaseDate, (a) => a.warrantyEnd, false)}
+        {tab === 'contracts' && <ContractsPanel />}
+        {tab === 'amc' && coverageRows(filterWindow(data.amc, (a) => a.amcEndDate), (a) => a.amcStartDate, (a) => a.amcEndDate, canMaintain, (a) => a.amcContractId)}
+        {tab === 'warranty' && coverageRows(filterWindow(data.warranty, (a) => a.warrantyEnd), (a) => a.warrantyStart || a.purchaseDate, (a) => a.warrantyEnd, false, (a) => a.warrantyContractId)}
         {tab === 'repairs' &&
           (data.repairs.length === 0 ? (
             <EmptyState icon={CheckCircle2} title="Nothing in repair" description="Send an asset for repair from its page or the row menu in Assets." className="py-12" />

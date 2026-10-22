@@ -1,29 +1,22 @@
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { CameraOff, CheckCircle2, Keyboard, ScanLine, X, XCircle } from 'lucide-react';
+import { CameraOff, CheckCircle2, Keyboard, RotateCcw, ScanLine, X, XCircle } from 'lucide-react';
 import { useAssets } from '@/hooks/useSupabaseData';
 import type { Asset } from '@/types/asset';
 import { Button } from '@/components/ui/button';
 import { AssetThumb, StatusBadge } from '@/components/app/primitives';
 import { displayLocation } from '@/lib/assetMeta';
 import { findAssetByCode } from '@/lib/scan';
+import { CAMERA_MESSAGES, useBarcodeCamera } from '@/hooks/useBarcodeCamera';
 
-// Native barcode scanning (Chrome/Edge on Android & desktop, Safari 17+ partially).
-// Falls back to manual entry when unavailable. USB scanners act as keyboards and also work in the field.
-type Detector = { detect: (source: CanvasImageSource) => Promise<{ rawValue: string }[]> };
-declare global {
-  interface Window {
-    BarcodeDetector?: new (opts?: { formats?: string[] }) => Detector;
-  }
-}
-
+// Camera scanning works in every modern browser (see useBarcodeCamera). Manual entry and USB scanners,
+// which type like a keyboard, always work too.
 
 export function ScanDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const navigate = useNavigate();
   const { data: assets = [] } = useAssets();
   const videoRef = React.useRef<HTMLVideoElement>(null);
-  const [camera, setCamera] = React.useState<'starting' | 'on' | 'unavailable'>('starting');
   const [manual, setManual] = React.useState('');
   const [result, setResult] = React.useState<{ code: string; asset?: Asset } | null>(null);
 
@@ -39,49 +32,12 @@ export function ScanDialog({ open, onOpenChange }: { open: boolean; onOpenChange
     if (!open) {
       setResult(null);
       setManual('');
-      return;
     }
-    let stream: MediaStream | undefined;
-    let raf = 0;
-    let stopped = false;
-    const start = async () => {
-      if (!window.BarcodeDetector || !navigator.mediaDevices?.getUserMedia) {
-        setCamera('unavailable');
-        return;
-      }
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        if (stopped || !videoRef.current) return;
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-        setCamera('on');
-        const detector = new window.BarcodeDetector({ formats: ['qr_code', 'code_128', 'code_39', 'ean_13', 'data_matrix'] });
-        const tick = async () => {
-          if (stopped || !videoRef.current) return;
-          try {
-            const codes = await detector.detect(videoRef.current);
-            if (codes[0]?.rawValue) {
-              resolve(codes[0].rawValue);
-              return; // pause scanning while a result is shown
-            }
-          } catch {
-            /* frame not ready */
-          }
-          raf = requestAnimationFrame(tick);
-        };
-        raf = requestAnimationFrame(tick);
-      } catch {
-        setCamera('unavailable');
-      }
-    };
-    setCamera('starting');
-    start();
-    return () => {
-      stopped = true;
-      cancelAnimationFrame(raf);
-      stream?.getTracks().forEach((t) => t.stop());
-    };
-  }, [open, resolve]);
+  }, [open]);
+
+  // Scanning pauses while a result is shown; "Scan another" resumes it.
+  const { state: camera, retry } = useBarcodeCamera(videoRef, { enabled: open, paused: !!result, onCode: resolve });
+  const cameraFailed = camera !== 'starting' && camera !== 'on';
 
   const go = (path: string) => {
     onOpenChange(false);
@@ -106,14 +62,20 @@ export function ScanDialog({ open, onOpenChange }: { open: boolean; onOpenChange
             <video ref={videoRef} playsInline muted className={camera === 'on' ? 'absolute inset-0 h-full w-full object-cover opacity-70' : 'hidden'} />
             <div className={`relative h-64 w-64 rounded-3xl border-[3px] transition-colors duration-200 ${result?.asset ? 'border-success bg-success/20' : result ? 'border-destructive' : 'border-background/90'}`}>
               {!result && camera === 'on' && <div className="absolute left-5 right-5 top-1/2 h-0.5 animate-scan-line bg-success" />}
-              {camera === 'unavailable' && !result && (
-                <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center text-sm text-background/80">
+              {cameraFailed && !result && (
+                <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-sm text-background/80">
                   <CameraOff className="h-8 w-8" />
-                  Camera scanning isn’t available on this browser. Type the tag or serial below, or use a USB scanner.
+                  {CAMERA_MESSAGES[camera]}
+                  {camera !== 'unsupported' && (
+                    <Button size="sm" variant="secondary" onClick={retry} className="bg-background/15 text-background hover:bg-background/25">
+                      <RotateCcw /> Try again
+                    </Button>
+                  )}
                 </div>
               )}
+              {camera === 'starting' && !result && <p className="flex h-full items-center justify-center text-sm text-background/70">Starting camera…</p>}
             </div>
-            {!result && camera !== 'unavailable' && <p className="relative text-sm text-background/80">Point at the QR or barcode on the asset</p>}
+            {!result && camera === 'on' && <p className="relative text-sm text-background/80">Point at the QR or barcode on the asset</p>}
           </div>
 
           {result ? (
@@ -169,7 +131,7 @@ export function ScanDialog({ open, onOpenChange }: { open: boolean; onOpenChange
                 <input
                   value={manual}
                   onChange={(e) => setManual(e.target.value)}
-                  autoFocus={camera === 'unavailable'}
+                  autoFocus={cameraFailed}
                   placeholder="Type tag or serial (e.g. AST-1042)"
                   className="h-11 flex-1 bg-transparent text-sm text-background outline-none placeholder:text-background/50"
                 />

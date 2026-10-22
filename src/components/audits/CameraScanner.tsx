@@ -1,60 +1,28 @@
 import * as React from 'react';
-import { CameraOff } from 'lucide-react';
+import { CameraOff, RotateCcw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { CAMERA_MESSAGES, useBarcodeCamera } from '@/hooks/useBarcodeCamera';
 
 /**
  * Continuous camera scanning for audits: keeps scanning and reports each new code,
- * ignoring the same code for a short cooldown. Uses the browser BarcodeDetector.
+ * ignoring the same code for a short cooldown.
  */
 export function CameraScanner({ onCode, cooldownMs = 2500 }: { onCode: (code: string) => void; cooldownMs?: number }) {
   const videoRef = React.useRef<HTMLVideoElement>(null);
-  const [state, setState] = React.useState<'starting' | 'on' | 'unavailable'>('starting');
   const [flash, setFlash] = React.useState(false);
   const recent = React.useRef(new Map<string, number>());
-  const cb = React.useRef(onCode);
-  cb.current = onCode;
 
-  React.useEffect(() => {
-    let stream: MediaStream | undefined;
-    let raf = 0;
-    let stopped = false;
-    (async () => {
-      if (!window.BarcodeDetector || !navigator.mediaDevices?.getUserMedia) return setState('unavailable');
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        if (stopped || !videoRef.current) return;
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-        setState('on');
-        const detector = new window.BarcodeDetector({ formats: ['qr_code', 'code_128', 'code_39', 'ean_13', 'data_matrix'] });
-        const tick = async () => {
-          if (stopped || !videoRef.current) return;
-          try {
-            for (const c of await detector.detect(videoRef.current)) {
-              const now = Date.now();
-              if (c.rawValue && now - (recent.current.get(c.rawValue) || 0) > cooldownMs) {
-                recent.current.set(c.rawValue, now);
-                setFlash(true);
-                setTimeout(() => setFlash(false), 200);
-                navigator.vibrate?.(30);
-                cb.current(c.rawValue);
-              }
-            }
-          } catch {
-            /* frame not ready */
-          }
-          raf = requestAnimationFrame(tick);
-        };
-        raf = requestAnimationFrame(tick);
-      } catch {
-        setState('unavailable');
-      }
-    })();
-    return () => {
-      stopped = true;
-      cancelAnimationFrame(raf);
-      stream?.getTracks().forEach((t) => t.stop());
-    };
-  }, [cooldownMs]);
+  const { state, retry } = useBarcodeCamera(videoRef, {
+    onCode: (code) => {
+      const now = Date.now();
+      if (now - (recent.current.get(code) || 0) <= cooldownMs) return;
+      recent.current.set(code, now);
+      setFlash(true);
+      setTimeout(() => setFlash(false), 200);
+      navigator.vibrate?.(30);
+      onCode(code);
+    },
+  });
 
   return (
     <div className="relative flex h-52 items-center justify-center overflow-hidden rounded-2xl bg-foreground text-background">
@@ -65,10 +33,15 @@ export function CameraScanner({ onCode, cooldownMs = 2500 }: { onCode: (code: st
         </div>
       )}
       {state === 'starting' && <p className="text-sm text-background/70">Starting camera…</p>}
-      {state === 'unavailable' && (
-        <p className="flex max-w-xs flex-col items-center gap-2 px-6 text-center text-sm text-background/80">
-          <CameraOff className="h-6 w-6" /> Camera scanning isn’t available in this browser — use a USB scanner or type the tag.
-        </p>
+      {state !== 'starting' && state !== 'on' && (
+        <div className="flex max-w-sm flex-col items-center gap-2 px-6 text-center text-sm text-background/80">
+          <CameraOff className="h-6 w-6" /> {CAMERA_MESSAGES[state]}
+          {state !== 'unsupported' && (
+            <Button size="sm" variant="secondary" onClick={retry} className="bg-background/15 text-background hover:bg-background/25">
+              <RotateCcw /> Try again
+            </Button>
+          )}
+        </div>
       )}
     </div>
   );

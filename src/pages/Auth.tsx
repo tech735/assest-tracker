@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Info, Paperclip, ScanLine, ShieldCheck, XCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import kotuLogo from '@/assets/kotu-logo.png';
 
 const GoogleIcon = () => (
     <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden>
@@ -52,7 +53,7 @@ export default function Auth() {
             {/* Brand panel — desktop & tablet landscape */}
             <aside className="hidden w-[46%] max-w-[680px] flex-col justify-between bg-primary px-14 py-12 text-primary-foreground lg:flex">
                 <div className="flex items-center gap-2.5">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-card text-lg font-bold text-link">K</span>
+                    <img src={kotuLogo} alt="KOTU" width={36} height={36} className="h-9 w-9 rounded-[9px] ring-1 ring-primary-foreground/25" />
                     <span className="font-semibold">KOTU Asset Tracker</span>
                 </div>
                 <div className="space-y-6">
@@ -71,7 +72,7 @@ export default function Auth() {
 
             <main className="flex flex-1 items-center justify-center px-6 py-12">
                 <div className="w-full max-w-[380px] space-y-5">
-                    <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-xl font-bold text-primary-foreground lg:hidden">K</span>
+                    <img src={kotuLogo} alt="KOTU" width={48} height={48} className="h-12 w-12 rounded-xl lg:hidden" />
                     <div className="space-y-2">
                         <h2 className="text-2xl font-semibold tracking-tight">Sign in</h2>
                         <p className="text-muted-foreground">Use your KOTU Google Workspace account to continue.</p>
