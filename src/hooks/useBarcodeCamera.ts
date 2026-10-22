@@ -9,7 +9,8 @@ declare global {
   }
 }
 
-const FORMATS: BarcodeFormat[] = ['qr_code', 'code_128', 'code_39', 'ean_13', 'data_matrix'];
+// Asset labels (QR) plus the 1D/2D codes manufacturers print on serial-number stickers.
+const FORMATS: BarcodeFormat[] = ['qr_code', 'code_128', 'code_39', 'code_93', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'itf', 'codabar', 'data_matrix', 'pdf417'];
 
 /**
  * The browser's own BarcodeDetector where it exists (Android, macOS, ChromeOS); otherwise the bundled
@@ -69,7 +70,8 @@ export function useBarcodeCamera(
     (async () => {
       if (!navigator.mediaDevices?.getUserMedia) return setState('unsupported');
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+        // Ask for HD: laptop webcams default to 640×480, too blurry for thin 1D barcode lines.
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
       } catch (e) {
         const name = e instanceof DOMException ? e.name : '';
         return setState(name === 'NotAllowedError' || name === 'SecurityError' ? 'denied' : name === 'NotFoundError' || name === 'OverconstrainedError' ? 'nocamera' : 'error');

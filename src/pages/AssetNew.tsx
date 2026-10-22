@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -93,6 +93,12 @@ export default function AssetNew() {
     },
   });
   const v = form.watch();
+  // "Add as new asset" from the scanner while already on this page only changes ?serial=.
+  const serialParam = params.get('serial');
+  useEffect(() => {
+    if (serialParam) form.setValue('serialNumber', serialParam, { shouldValidate: true, shouldDirty: true });
+  }, [serialParam, form]);
+
   const duplicate = v.serialNumber && assets.find((a) => a.serialNumber?.toLowerCase() === v.serialNumber.trim().toLowerCase());
 
   const submit = (mode: 'create' | 'another' | 'checkout') =>
@@ -236,7 +242,7 @@ export default function AssetNew() {
                       <FormControl>
                         <Input placeholder="Scan or type" {...field} aria-invalid={!!duplicate || undefined} />
                       </FormControl>
-                      <Button type="button" variant="secondary" size="icon" className="h-[38px] w-[38px] shrink-0" onClick={openScanner} aria-label="Scan barcode">
+                      <Button type="button" variant="secondary" size="icon" className="h-[38px] w-[38px] shrink-0" onClick={() => openScanner({ title: 'Scan serial number', onCode: (code) => form.setValue('serialNumber', code, { shouldValidate: true, shouldDirty: true }) })} aria-label="Scan barcode">
                         <ScanLine />
                       </Button>
                     </div>

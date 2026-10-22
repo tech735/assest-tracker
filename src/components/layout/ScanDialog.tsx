@@ -13,7 +13,7 @@ import { CAMERA_MESSAGES, useBarcodeCamera } from '@/hooks/useBarcodeCamera';
 // Camera scanning works in every modern browser (see useBarcodeCamera). Manual entry and USB scanners,
 // which type like a keyboard, always work too.
 
-export function ScanDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+export function ScanDialog({ open, onOpenChange, capture }: { open: boolean; onOpenChange: (o: boolean) => void; capture?: { title: string; onCode: (code: string) => void } | null }) {
   const navigate = useNavigate();
   const { data: assets = [] } = useAssets();
   const videoRef = React.useRef<HTMLVideoElement>(null);
@@ -21,11 +21,19 @@ export function ScanDialog({ open, onOpenChange }: { open: boolean; onOpenChange
   const [result, setResult] = React.useState<{ code: string; asset?: Asset } | null>(null);
 
   const resolve = React.useCallback(
-    (code: string) => {
-      setResult({ code, asset: findAssetByCode(assets, code) });
+    (raw: string) => {
+      const code = raw.trim();
+      if (!code) return;
       if ('vibrate' in navigator) navigator.vibrate?.(40);
+      if (capture) {
+        // Filling a field (e.g. serial number on Add asset): hand the value back and close.
+        capture.onCode(code);
+        onOpenChange(false);
+        return;
+      }
+      setResult({ code, asset: findAssetByCode(assets, code) });
     },
-    [assets],
+    [assets, capture, onOpenChange],
   );
 
   React.useEffect(() => {
@@ -49,12 +57,12 @@ export function ScanDialog({ open, onOpenChange }: { open: boolean; onOpenChange
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-foreground/60 data-[state=open]:animate-in data-[state=open]:fade-in-0" />
         <DialogPrimitive.Content className="fixed inset-0 z-50 flex flex-col bg-foreground text-background data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom sm:inset-auto sm:left-1/2 sm:top-1/2 sm:h-[620px] sm:w-[420px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:overflow-hidden sm:rounded-2xl sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=open]:zoom-in-[.98]">
-          <DialogPrimitive.Title className="sr-only">Scan asset label</DialogPrimitive.Title>
+          <DialogPrimitive.Title className="sr-only">{capture?.title || 'Scan asset label'}</DialogPrimitive.Title>
           <div className="flex items-center px-4 pb-2 pt-[max(1rem,env(safe-area-inset-top))]">
             <DialogPrimitive.Close className="rounded-full p-1.5 hover:bg-background/10" aria-label="Close">
               <X className="h-6 w-6" />
             </DialogPrimitive.Close>
-            <p className="flex-1 text-center text-[15px] font-semibold">Scan asset label</p>
+            <p className="flex-1 text-center text-[15px] font-semibold">{capture?.title || 'Scan asset label'}</p>
             <span className="w-9" />
           </div>
 
@@ -75,7 +83,7 @@ export function ScanDialog({ open, onOpenChange }: { open: boolean; onOpenChange
               )}
               {camera === 'starting' && !result && <p className="flex h-full items-center justify-center text-sm text-background/70">Starting camera…</p>}
             </div>
-            {!result && camera === 'on' && <p className="relative text-sm text-background/80">Point at the QR or barcode on the asset</p>}
+            {!result && camera === 'on' && <p className="relative text-sm text-background/80">{capture ? 'Point at the barcode — hold it steady, 10–20 cm away' : 'Point at the QR or barcode on the asset'}</p>}
           </div>
 
           {result ? (
@@ -132,7 +140,7 @@ export function ScanDialog({ open, onOpenChange }: { open: boolean; onOpenChange
                   value={manual}
                   onChange={(e) => setManual(e.target.value)}
                   autoFocus={cameraFailed}
-                  placeholder="Type tag or serial (e.g. AST-1042)"
+                  placeholder={capture ? 'Or type it here' : 'Type tag or serial (e.g. AST-1042)'}
                   className="h-11 flex-1 bg-transparent text-sm text-background outline-none placeholder:text-background/50"
                 />
               </label>

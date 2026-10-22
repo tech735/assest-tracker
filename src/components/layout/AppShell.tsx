@@ -54,9 +54,14 @@ import type { Permission } from '@/services/collabService';
 /* Shell context: lets any page open the palette or scanner            */
 /* ------------------------------------------------------------------ */
 
+/** Capture mode: the scanned value goes to `onCode` (e.g. a form field) instead of an asset lookup. */
+export interface ScanCapture {
+  title: string;
+  onCode: (code: string) => void;
+}
 interface ShellContextValue {
   openPalette: () => void;
-  openScanner: () => void;
+  openScanner: (capture?: ScanCapture) => void;
 }
 const ShellContext = React.createContext<ShellContextValue>({ openPalette: () => {}, openScanner: () => {} });
 export const useShell = () => React.useContext(ShellContext);
@@ -642,6 +647,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const { profile, save } = useCurrentProfile();
   const [paletteOpen, setPaletteOpen] = React.useState(false);
   const [scanOpen, setScanOpen] = React.useState(false);
+  const [scanCapture, setScanCapture] = React.useState<ScanCapture | null>(null);
   const [moreOpen, setMoreOpen] = React.useState(false);
   const [profileOpen, setProfileOpen] = React.useState(false);
   const [shortcutsOpen, setShortcutsOpen] = React.useState(false);
@@ -682,7 +688,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const ctx = React.useMemo(() => ({ openPalette: () => setPaletteOpen(true), openScanner: () => setScanOpen(true) }), []);
+  const ctx = React.useMemo(
+    () => ({
+      openPalette: () => setPaletteOpen(true),
+      openScanner: (capture?: ScanCapture) => {
+        setScanCapture(capture ?? null);
+        setScanOpen(true);
+      },
+    }),
+    [],
+  );
 
   if (location.pathname.startsWith('/print-handover')) return <>{children}</>;
 
@@ -703,7 +718,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} onScan={() => setScanOpen(true)} />
-      <ScanDialog open={scanOpen} onOpenChange={setScanOpen} />
+      <ScanDialog
+        open={scanOpen}
+        onOpenChange={(o) => {
+          setScanOpen(o);
+          if (!o) setScanCapture(null);
+        }}
+        capture={scanCapture}
+      />
       <MoreSheet open={moreOpen} onOpenChange={setMoreOpen} profile={profile} onEditProfile={() => setProfileOpen(true)} onShortcuts={() => setShortcutsOpen(true)} />
       <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       <EditProfileDialog user={profile} open={profileOpen} onOpenChange={setProfileOpen} onSave={save} />
