@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { CheckCircle2, FileX, Printer } from 'lucide-react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, CheckCircle2, FileX, Printer } from 'lucide-react';
 import { useAccess, useHandoverDocument, useSignHandover } from '@/hooks/useCollab';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { formatDate } from '@/lib/assetMeta';
 
 export default function SignHandover() {
   const { id = '' } = useParams();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const { access } = useAccess();
   const { data: doc, isLoading, error } = useHandoverDocument(id);
@@ -48,7 +49,11 @@ export default function SignHandover() {
   return (
     <div className="mx-auto max-w-[860px] space-y-5">
       <PageHeader
-        breadcrumb={[{ label: 'My assets', to: '/me' }, { label: docNumber(doc) }]}
+        breadcrumb={
+          !isSigner && doc.employeeId
+            ? [{ label: 'People', to: '/people' }, { label: doc.employeeName, to: `/people/${doc.employeeId}?tab=documents` }, { label: docNumber(doc) }]
+            : [{ label: 'My assets', to: '/me' }, { label: docNumber(doc) }]
+        }
         title={doc.kind === 'return' ? 'Asset return form' : 'Asset handover form'}
         description={
           <span className="flex flex-wrap items-center gap-2">
@@ -57,9 +62,14 @@ export default function SignHandover() {
           </span>
         }
         actions={
-          <Button variant="secondary" asChild>
-            <Link to={`/print-handover/doc/${doc.id}`}><Printer /> Print / PDF</Link>
-          </Button>
+          <>
+            <Button variant="ghost" onClick={() => (window.history.length > 1 ? navigate(-1) : navigate(!isSigner && doc.employeeId ? `/people/${doc.employeeId}?tab=documents` : '/me'))}>
+              <ArrowLeft /> Back
+            </Button>
+            <Button variant="secondary" asChild>
+              <Link to={`/print-handover/doc/${doc.id}`}><Printer /> Print / PDF</Link>
+            </Button>
+          </>
         }
       />
 

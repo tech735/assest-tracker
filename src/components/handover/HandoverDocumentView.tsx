@@ -3,6 +3,7 @@ import { CheckCircle2 } from 'lucide-react';
 import type { HandoverDocument } from '@/types/asset';
 import { formatDate } from '@/lib/assetMeta';
 import { cn } from '@/lib/utils';
+import kotuLogo from '@/assets/kotu-logo.png';
 
 export const docNumber = (d: Pick<HandoverDocument, 'docNo' | 'createdAt' | 'kind'>) =>
   `${d.kind === 'return' ? 'RT' : 'HO'}-${new Date(d.createdAt).getFullYear()}-${String(d.docNo).padStart(4, '0')}`;
@@ -24,7 +25,7 @@ export function HandoverDocumentView({
   return (
     <article className={cn('mx-auto flex w-full max-w-[794px] flex-col gap-6 bg-white p-6 text-[#12151B] sm:p-12 print:max-w-none print:p-0', className)}>
       <header className="flex flex-wrap items-center gap-x-4 gap-y-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-[#02019B] text-xl font-bold text-white">K</span>
+        <img src={kotuLogo} alt="KOTU" width={44} height={44} className="h-11 w-11 shrink-0 rounded-[10px]" />
         <div className="min-w-0 flex-1">
           <h1 className="text-lg font-semibold leading-tight sm:text-2xl">{doc.kind === 'return' ? 'Asset Return Form' : 'Asset Handover Form'}</h1>
           <p className="text-[13px] text-[#6B7385]">IT &amp; Tech · {orgName}</p>

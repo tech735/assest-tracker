@@ -5,6 +5,8 @@
 
 const DEFAULT_RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const MAIL_FROM = Deno.env.get("MAIL_FROM") || "Asset Compass <notifications@asset.kotu.co.in>";
+// Replies to notifications reach IT instead of the unattended sending address.
+const MAIL_REPLY_TO = Deno.env.get("MAIL_REPLY_TO") || "tech@kotu.co.in";
 
 export interface SendEmailParams {
   to: string[];
@@ -38,6 +40,7 @@ export async function sendEmail({ to, subject, html, apiKey }: SendEmailParams):
     body: JSON.stringify({
       from: MAIL_FROM,
       to,
+      reply_to: MAIL_REPLY_TO,
       subject,
       html,
     }),

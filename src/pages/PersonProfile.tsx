@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeftRight, Ban, Briefcase, CalendarDays, Copy, FileSignature, LogOut, Mail, MapPin, Package, Pencil, Plus, Printer, Send, Users } from 'lucide-react';
 import { useAssets, useAssignments, useEmployees, useSettings } from '@/hooks/useSupabaseData';
 import { supabase } from '@/lib/supabase';
@@ -43,7 +43,10 @@ export default function PersonProfile() {
   const voidDoc = useVoidHandover();
   const { data: docs = [], error: docsError } = useHandoverDocuments({ employeeId: id }, !!id);
   const [requesting, setRequesting] = useState(false);
-  const [tab, setTab] = useState<Tab>('assets');
+  // Kept in the URL so coming back from a form (or a refresh) lands on the same tab.
+  const [params, setParams] = useSearchParams();
+  const tab = (['assets', 'history', 'documents'].includes(params.get('tab') || '') ? params.get('tab') : 'assets') as Tab;
+  const setTab = (t: Tab) => setParams(t === 'assets' ? {} : { tab: t }, { replace: true });
   const [editing, setEditing] = useState(false);
   const [offboarding, setOffboarding] = useState(false);
   const [assigning, setAssigning] = useState(false);
