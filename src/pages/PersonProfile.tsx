@@ -26,6 +26,7 @@ import { requestHandoverSignature } from '@/components/assets/CheckOutDialog';
 import { docNumber } from '@/components/handover/HandoverDocumentView';
 import { signingLink } from '@/services/collabService';
 import { daysUntil, displayLocation, EMPLOYEE_STATUS_META, formatDate, formatMoney, timeAgo, titleCase } from '@/lib/assetMeta';
+import { AssetLink } from '@/components/app/AssetLink';
 
 type Tab = 'assets' | 'history' | 'documents';
 
@@ -47,6 +48,7 @@ export default function PersonProfile() {
   const [params, setParams] = useSearchParams();
   const tab = (['assets', 'history', 'documents'].includes(params.get('tab') || '') ? params.get('tab') : 'assets') as Tab;
   const setTab = (t: Tab) => setParams(t === 'assets' ? {} : { tab: t }, { replace: true });
+  const canSeeDocs = can('assets.checkout') || can('people.manage');
   const [editing, setEditing] = useState(false);
   const [offboarding, setOffboarding] = useState(false);
   const [assigning, setAssigning] = useState(false);
@@ -135,14 +137,18 @@ export default function PersonProfile() {
                 <FileSignature /> <span className="hidden sm:inline">Request signature</span>
               </Button>
             )}
-            <Button variant="secondary" onClick={() => setConfirmEmail(true)} disabled={!held.length}>
-              <Send /> <span className="hidden sm:inline">Email summary</span>
-            </Button>
-            <Button variant="secondary" asChild>
-              <Link to={`/print-handover/employee/${person.id}`}>
-                <Printer /> <span className="hidden sm:inline">Handover form</span>
-              </Link>
-            </Button>
+            {(can('assets.checkout') || can('people.manage')) && (
+              <Button variant="secondary" onClick={() => setConfirmEmail(true)} disabled={!held.length}>
+                <Send /> <span className="hidden sm:inline">Email summary</span>
+              </Button>
+            )}
+            {can('assets.checkout') && (
+              <Button variant="secondary" asChild>
+                <Link to={`/print-handover/employee/${person.id}`}>
+                  <Printer /> <span className="hidden sm:inline">Handover form</span>
+                </Link>
+              </Button>
+            )}
             {!offboarded && can('assets.checkout') && (
               <Button onClick={() => setAssigning(true)}>
                 <Plus /> Assign assets
@@ -159,25 +165,34 @@ export default function PersonProfile() {
         <KpiCard compact label="Handovers" value={history.filter((h) => h.eventType === 'assign').length} />
       </div>
 
-      <ViewTabs<Tab> value={tab} onChange={setTab} tabs={[{ value: 'assets', label: 'Assets', count: held.length }, { value: 'history', label: 'History', count: history.length }, { value: 'documents', label: 'Documents', count: pendingDocs ? `${pendingDocs} to sign` : docs.length }]} />
+      <ViewTabs<Tab>
+        value={tab}
+        onChange={setTab}
+        tabs={[
+          { value: 'assets', label: 'Assets', count: held.length },
+          { value: 'history', label: 'History', count: history.length },
+          // Handover forms are only readable by IT (and the employee, on My assets).
+          ...(canSeeDocs ? [{ value: 'documents' as Tab, label: 'Documents', count: pendingDocs ? `${pendingDocs} to sign` : docs.length }] : []),
+        ]}
+      />
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0">
           {tab === 'assets' ? (
             <div className="overflow-hidden rounded-xl border bg-card">
               {held.length === 0 ? (
-                <EmptyState icon={Package} title="No assets assigned" description={offboarded ? 'All assets have been returned.' : 'Assign a laptop, monitor or phone to get started.'} action={!offboarded && <Button onClick={() => setAssigning(true)}><Plus /> Assign assets</Button>} />
+                <EmptyState icon={Package} title="No assets assigned" description={offboarded ? 'All assets have been returned.' : 'Assign a laptop, monitor or phone to get started.'} action={!offboarded && can('assets.checkout') && <Button onClick={() => setAssigning(true)}><Plus /> Assign assets</Button>} />
               ) : (
                 <ul className="divide-y">
                   {held.map((a) => (
                     <li key={a.id} className="flex items-center gap-3 px-4 py-3 hover:bg-subtle">
                       <AssetThumb category={a.category} />
-                      <Link to={`/assets/${a.id}`} className="min-w-0 flex-1">
+                      <AssetLink id={a.id} className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{a.name}</p>
                         <p className="truncate text-xs text-muted-foreground">
                           <span className="font-mono">{a.assetTag}</span> · since {formatDate(sinceFor(a.id))} · {titleCase(a.condition)}
                         </p>
-                      </Link>
+                      </AssetLink>
                       {can('assets.checkout') && (
                         <Button size="sm" variant="ghost" onClick={() => act('return', a)}>
                           <ArrowLeftRight /> <span className="hidden sm:inline">Check in</span>
@@ -234,7 +249,7 @@ export default function PersonProfile() {
                       <div className="min-w-0 flex-1">
                         <p className="text-sm">
                           {h.eventType === 'assign' ? 'Received' : h.eventType === 'return' ? 'Returned' : titleCase(h.eventType.replace('_', ' '))}{' '}
-                          <Link to={`/assets/${h.assetId}`} className="font-medium hover:underline">{h.assetName}</Link>
+                          <AssetLink id={h.assetId} className="font-medium hover:underline">{h.assetName}</AssetLink>
                         </p>
                         <p className="text-xs text-muted-foreground">{h.assetTag} · {formatDate(h.assignedDate)} · {timeAgo(h.assignedDate)}</p>
                       </div>

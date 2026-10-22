@@ -17,8 +17,11 @@ import {
   Tag,
   Wallet,
   Wrench,
+  AlertTriangle,
 } from 'lucide-react';
-import { useAssets, useSettings } from '@/hooks/useSupabaseData';
+import { useAssets, useEmployees, useSettings } from '@/hooks/useSupabaseData';
+import { NoAccess } from '@/components/RequirePage';
+import { ReportProblemDialog } from '@/components/assets/ReportProblemDialog';
 import { Button } from '@/components/ui/button';
 import { ViewTabs } from '@/components/app/controls';
 import { AssetThumb, CardLink, EmptyState, KeyValue, PageHeader, PageLoader, PersonAvatar, SectionCard, StatusBadge } from '@/components/app/primitives';
@@ -41,9 +44,15 @@ export default function AssetDetail() {
   const currency = settings?.currency;
   const asset = useMemo(() => assets.find((a) => a.id === id), [assets, id]);
   const { open: act, dialogs } = useAssetActions();
-  const { can } = useAccess();
+  const { can, access, ready } = useAccess();
+  const { data: employees = [] } = useEmployees();
   const [tab, setTab] = useState<Tab>('overview');
   const [labelOpen, setLabelOpen] = useState(false);
+  const [reporting, setReporting] = useState(false);
+  // Without the Assets page, people can still open (read-only) the assets assigned to them.
+  const holderEmail = employees.find((e) => e.id === asset?.assignedToId)?.email?.toLowerCase();
+  const mine = !!asset && asset.status === 'assigned' && !!access?.email && holderEmail === access.email.toLowerCase();
+  const staff = can('assets.view');
 
   // Deep links from the scanner / quick view: ?action=checkout|checkin, ?print=label
   useEffect(() => {
@@ -56,7 +65,8 @@ export default function AssetDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [asset?.id]);
 
-  if (isLoading) return <PageLoader label="Loading asset" />;
+  if (isLoading || !ready) return <PageLoader label="Loading asset" />;
+  if (!staff && !mine) return <NoAccess />;
   if (!asset)
     return (
       <EmptyState
@@ -88,12 +98,13 @@ export default function AssetDetail() {
     ...(canEdit ? [{ label: 'Edit', icon: Pencil, onClick: () => act('edit', asset) }] : []),
     { label: 'Label', icon: Printer, onClick: () => setLabelOpen(true) },
     ...(can('maintenance.manage') ? [{ label: asset.status === 'repair' ? 'Repair' : 'Issue', icon: Wrench, onClick: () => act('repair', asset) }] : []),
+    ...(mine && !can('maintenance.manage') ? [{ label: 'Report', icon: AlertTriangle, onClick: () => setReporting(true) }] : []),
   ];
 
   return (
     <div className="space-y-5">
       <PageHeader
-        breadcrumb={[{ label: 'Assets', to: '/assets' }, { label: titleCase(asset.category), to: `/assets?category=${asset.category?.toLowerCase()}` }, { label: asset.assetTag }]}
+        breadcrumb={staff ? [{ label: 'Assets', to: '/assets' }, { label: titleCase(asset.category), to: `/assets?category=${asset.category?.toLowerCase()}` }, { label: asset.assetTag }] : [{ label: 'My assets', to: '/me' }, { label: asset.assetTag }]}
         title={
           <span className="flex items-center gap-4">
             <AssetThumb category={asset.category} size="xl" className="hidden sm:inline-flex" />
@@ -122,6 +133,11 @@ export default function AssetDetail() {
             {primary && (
               <Button onClick={() => act(primary.action, asset)}>
                 <ArrowLeftRight /> {primary.label}
+              </Button>
+            )}
+            {mine && (
+              <Button variant="secondary" onClick={() => setReporting(true)}>
+                <AlertTriangle /> Report a problem
               </Button>
             )}
             {canEdit && <AssetRowMenu asset={asset} onAction={act} trigger={<Button variant="secondary" size="icon" aria-label="More actions"><MoreHorizontal /></Button>} />}
@@ -281,6 +297,7 @@ export default function AssetDetail() {
 
       {dialogs}
       <LabelDialog asset={asset} open={labelOpen} onOpenChange={setLabelOpen} />
+      <ReportProblemDialog asset={asset} open={reporting} onOpenChange={setReporting} />
     </div>
   );
 }

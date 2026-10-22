@@ -16,6 +16,8 @@ export interface SendEmailParams {
   // key (e.g. a key scoped to a different verified sending domain) instead
   // of the default RESEND_API_KEY secret.
   apiKey?: string;
+  // Where replies go; defaults to MAIL_REPLY_TO (IT).
+  replyTo?: string;
 }
 
 export interface SendEmailResult {
@@ -23,14 +25,33 @@ export interface SendEmailResult {
   data?: unknown;
 }
 
-export async function sendEmail({ to, subject, html, apiKey }: SendEmailParams): Promise<SendEmailResult> {
-  const resendApiKey = apiKey || DEFAULT_RESEND_API_KEY;
+// Every Resend key configured on the project. A key can be revoked or limited to another sending
+// domain; when Resend refuses one for that reason, the next is tried.
+const ALL_KEYS = [DEFAULT_RESEND_API_KEY, Deno.env.get("RESEND_API_KEY_ASSET_SUMMARY"), Deno.env.get("RESEND_API_KEY_AMC")];
 
-  if (!resendApiKey) {
+export async function sendEmail({ to, subject, html, apiKey, replyTo }: SendEmailParams): Promise<SendEmailResult> {
+  const keys = [...new Set([apiKey, ...ALL_KEYS].filter((k): k is string => !!k && k.trim().length > 0))];
+
+  if (!keys.length) {
     console.log(`Mocking email send to [${to.join(", ")}] (No RESEND_API_KEY found):`, html);
     return { mock: true };
   }
 
+  let lastError = "";
+  for (const key of keys) {
+    try {
+      return await sendWithKey(key, { to, subject, html, replyTo });
+    } catch (e) {
+      lastError = e instanceof Error ? e.message : String(e);
+      console.error(`Resend rejected a key: ${lastError}`);
+      // Only an auth / domain problem is worth retrying with another key.
+      if (!/401|403|api key|domain|not verified|restricted/i.test(lastError)) break;
+    }
+  }
+  throw new Error(lastError || "Email could not be sent");
+}
+
+async function sendWithKey(resendApiKey: string, { to, subject, html, replyTo }: { to: string[]; subject: string; html: string; replyTo?: string }): Promise<SendEmailResult> {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -40,7 +61,7 @@ export async function sendEmail({ to, subject, html, apiKey }: SendEmailParams):
     body: JSON.stringify({
       from: MAIL_FROM,
       to,
-      reply_to: MAIL_REPLY_TO,
+      reply_to: replyTo || MAIL_REPLY_TO,
       subject,
       html,
     }),
@@ -49,7 +70,7 @@ export async function sendEmail({ to, subject, html, apiKey }: SendEmailParams):
   const data = await res.json();
 
   if (!res.ok) {
-    throw new Error(`Resend API Error: ${JSON.stringify(data)}`);
+    throw new Error(`Resend ${res.status}: ${data?.message || JSON.stringify(data)}`);
   }
 
   return { mock: false, data };

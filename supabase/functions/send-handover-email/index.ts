@@ -6,7 +6,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { sendEmail } from "../_shared/mailer.ts";
-import { APP_URL, IT_EMAIL, button, emailLayout, escapeHtml, itemList, note, spacer, titleCase } from "../_shared/emailLayout.ts";
+import { APP_URL, IT_EMAIL, button, deviceKind, emailLayout, escapeHtml, facts, formatDate, itemList, sectionTitle, spacer, supportList, titleCase } from "../_shared/emailLayout.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -39,11 +39,12 @@ serve(async (req: Request) => {
     const link = `${APP_URL}/sign/${doc.id}`;
     const items = ((doc.items as Item[]) || []).map((i) => ({
       name: i.name,
-      type: i.brand || undefined,
-      tag: i.tag,
+      kind: deviceKind({ name: i.name, brand: i.brand }),
+      detail: [i.brand, i.tag].filter(Boolean).join(" · "),
       serial: i.serial,
-      meta: i.condition ? `${titleCase(i.condition)} condition` : undefined,
-      sub: i.accessories ? `With ${i.accessories}` : undefined,
+      note: i.accessories ? `With ${i.accessories}` : undefined,
+      asideLabel: i.condition ? "Condition" : undefined,
+      asideValue: i.condition ? titleCase(i.condition) : undefined,
     }));
     const isReturn = doc.kind === "return";
     const firstName = String(doc.employee_name || "").split(" ")[0] || "there";
@@ -52,21 +53,31 @@ serve(async (req: Request) => {
 
     const html = emailLayout({
       preheader: `Please review and sign ${docNo} for ${count}.`,
-      title: isReturn ? "Please sign your return form" : "Please sign your handover form",
-      intro: `Hi ${escapeHtml(firstName)}, ${isReturn ? "IT has recorded the return of" : "IT has handed over"} the ${count} below${doc.handed_over_by ? ` (by ${escapeHtml(doc.handed_over_by)})` : ""}. Please check them and sign form <strong style="color:#12151B;">${docNo}</strong>.`,
+      eyebrow: "Action needed",
+      title: isReturn ? "Sign your return form" : "Sign your handover form",
+      intro: `Hi ${escapeHtml(firstName)}, ${doc.handed_over_by ? escapeHtml(doc.handed_over_by) : "IT"} ${isReturn ? "has recorded the return of" : "has handed over"} the ${count} below. Check them, then sign — it takes under a minute.`,
       body: [
+        facts([
+          { label: "Form", value: `<span style="font-family:'SFMono-Regular',Consolas,Menlo,monospace;">${docNo}</span>` },
+          { label: "Issued", value: formatDate(doc.created_at) },
+        ]),
+        spacer(28),
+        sectionTitle("Items", count),
         itemList(items),
-        spacer(22),
+        spacer(28),
         button(link, "Review & sign"),
-        spacer(10),
-        `<p style="margin:0;font-size:13px;line-height:20px;color:#6B7385;">Sign in with your KOTU Google account. The link only works for you.</p>`,
-        spacer(20),
-        note(`Didn’t receive these items, or something doesn’t match? Don’t sign — reply to this email or write to <a href="mailto:${IT_EMAIL}" style="color:#02019B;">${IT_EMAIL}</a>.`),
+        spacer(12),
+        `<p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:19px;color:#6B7385;text-align:center;">Sign in with your KOTU Google account — the link only works for you.</p>`,
+        spacer(36),
+        supportList("Something not right?", [
+          { label: "I didn’t receive an item", hint: "Don’t sign. Reply to this email and IT will correct the form.", href: `mailto:${IT_EMAIL}?subject=${encodeURIComponent(`${docNo} — correction`)}` },
+        ]),
       ].join(""),
     });
 
     const result = await sendEmail({ to: [doc.employee_email], subject: `Action needed: sign your asset ${isReturn ? "return" : "handover"} form (${docNo})`, html });
-    return json({ success: true, mock: result.mock });
+    if (result.mock) return json({ error: "No Resend API key is set on Supabase (RESEND_API_KEY)" }, 503);
+    return json({ success: true });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }

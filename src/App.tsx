@@ -8,6 +8,7 @@ import AppShell from "./components/layout/AppShell";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { RequirePage } from "./components/RequirePage";
 import { UserProvider } from "@/contexts/UserContext";
 import { PageLoader } from "@/components/app/primitives";
 import { lazyPage } from "@/lib/lazyPage";
@@ -53,22 +54,23 @@ const App = () => (
                   <AppShell>
                     <Suspense fallback={<PageLoader />}>
                       <Routes>
-                        <Route path="/" element={<Dashboard />} />
-                        <Route path="/assets" element={<Assets />} />
-                        <Route path="/assets/new" element={<AssetNew />} />
-                        <Route path="/assets/import" element={<AssetImport />} />
+                        <Route path="/" element={<RequirePage perm="dashboard.view" redirectTo="/me"><Dashboard /></RequirePage>} />
+                        <Route path="/assets" element={<RequirePage perm="assets.view"><Assets /></RequirePage>} />
+                        <Route path="/assets/new" element={<RequirePage perm="assets.view"><AssetNew /></RequirePage>} />
+                        <Route path="/assets/import" element={<RequirePage perm="assets.view"><AssetImport /></RequirePage>} />
+                        {/* Asset pages check access themselves: staff with Assets, or the employee holding it. */}
                         <Route path="/assets/:id" element={<AssetDetail />} />
-                        <Route path="/people" element={<People />} />
-                        <Route path="/people/:id" element={<PersonProfile />} />
-                        <Route path="/locations" element={<Locations />} />
-                        <Route path="/maintenance" element={<Maintenance />} />
-                        <Route path="/audits" element={<Audits />} />
-                        <Route path="/audits/:id" element={<AuditRun />} />
+                        <Route path="/people" element={<RequirePage perm="people.view"><People /></RequirePage>} />
+                        <Route path="/people/:id" element={<RequirePage perm="people.view"><PersonProfile /></RequirePage>} />
+                        <Route path="/locations" element={<RequirePage perm="locations.view"><Locations /></RequirePage>} />
+                        <Route path="/maintenance" element={<RequirePage perm="maintenance.view"><Maintenance /></RequirePage>} />
+                        <Route path="/audits" element={<RequirePage perm="audits.view"><Audits /></RequirePage>} />
+                        <Route path="/audits/:id" element={<RequirePage perm="audits.view"><AuditRun /></RequirePage>} />
                         <Route path="/sign/:id" element={<SignHandover />} />
                         <Route path="/me" element={<MyAssets />} />
-                        <Route path="/reports" element={<Reports />} />
-                        <Route path="/notifications" element={<Notifications />} />
-                        <Route path="/settings" element={<Settings />} />
+                        <Route path="/reports" element={<RequirePage perm="reports.view"><Reports /></RequirePage>} />
+                        <Route path="/notifications" element={<RequirePage perm="dashboard.view"><Notifications /></RequirePage>} />
+                        <Route path="/settings" element={<RequirePage perm="settings.view"><Settings /></RequirePage>} />
                         <Route path="/print-handover/:type/:id" element={<PrintHandover />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>

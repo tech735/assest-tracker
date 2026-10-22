@@ -38,6 +38,26 @@ export interface Asset {
   updatedAt: string;
 }
 
+export type RepairRequestStatus = 'open' | 'in_progress' | 'resolved' | 'declined';
+export type RepairUrgency = 'low' | 'normal' | 'high';
+
+/** A problem an employee reported with an asset they hold (My assets → Report a problem). */
+export interface RepairRequest {
+  id: string;
+  assetId: string;
+  assetTag?: string;
+  assetName?: string;
+  issue: string;
+  urgency: RepairUrgency;
+  status: RepairRequestStatus;
+  itNote?: string;
+  reportedBy?: string;
+  reporterName?: string;
+  reporterEmail?: string;
+  createdAt: string;
+  closedAt?: string;
+}
+
 export type ContractKind = 'amc' | 'warranty';
 export type ContractCoverage = 'comprehensive' | 'non_comprehensive';
 

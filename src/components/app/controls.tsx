@@ -98,7 +98,7 @@ export function ViewTabs<T extends string>({
       {tabs.map((t) => {
         const active = t.value === value;
         return (
-          <button
+          <button type="button"
             key={t.value}
             role="tab"
             aria-selected={active}
@@ -147,7 +147,7 @@ export function Segmented<T extends string>({
   return (
     <div className={cn('inline-flex rounded-lg bg-muted p-0.5', className)} role="radiogroup">
       {options.map((o) => (
-        <button
+        <button type="button"
           key={o.value}
           role="radio"
           aria-checked={o.value === value}
@@ -312,14 +312,14 @@ export function BulkBar({
     >
       <span className="whitespace-nowrap pr-1 text-sm font-semibold tabular">{count} selected</span>
       {onSelectAll && totalMatching !== undefined && totalMatching > count && (
-        <button onClick={onSelectAll} className="hidden whitespace-nowrap px-2 text-xs font-medium text-background/70 underline-offset-2 hover:underline lg:inline">
+        <button type="button" onClick={onSelectAll} className="hidden whitespace-nowrap px-2 text-xs font-medium text-background/70 underline-offset-2 hover:underline lg:inline">
           Select all {totalMatching}
         </button>
       )}
       <span className="mx-1 h-5 w-px bg-background/25" />
       <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-hide">
         {actions.map((a) => (
-          <button
+          <button type="button"
             key={a.label}
             onClick={a.onClick}
             className={cn('flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition-colors hover:bg-background/10', a.destructive && 'text-red-300')}
@@ -331,7 +331,7 @@ export function BulkBar({
         ))}
       </div>
       {overflow}
-      <button onClick={onClear} aria-label="Clear selection" className="ml-0.5 rounded-lg p-1.5 text-background/60 hover:bg-background/10 hover:text-background">
+      <button type="button" onClick={onClear} aria-label="Clear selection" className="ml-0.5 rounded-lg p-1.5 text-background/60 hover:bg-background/10 hover:text-background">
         <X className="h-4 w-4" />
       </button>
     </div>
@@ -377,14 +377,14 @@ export function PaginationFooter({
         </label>
       )}
       <div className="flex items-center gap-1">
-        <button disabled={page <= 1} onClick={() => onPage(page - 1)} className="rounded-md px-2 py-1 text-[13px] text-muted-foreground hover:bg-muted disabled:opacity-40" aria-label="Previous page">
+        <button type="button" disabled={page <= 1} onClick={() => onPage(page - 1)} className="rounded-md px-2 py-1 text-[13px] text-muted-foreground hover:bg-muted disabled:opacity-40" aria-label="Previous page">
           ‹
         </button>
         {nums.map((n, i) =>
           n === '…' ? (
             <span key={`e${i}`} className="px-1 text-[13px] text-faint">…</span>
           ) : (
-            <button
+            <button type="button"
               key={n}
               onClick={() => onPage(n)}
               aria-current={n === page ? 'page' : undefined}
@@ -394,7 +394,7 @@ export function PaginationFooter({
             </button>
           ),
         )}
-        <button disabled={page >= pages} onClick={() => onPage(page + 1)} className="rounded-md px-2 py-1 text-[13px] text-muted-foreground hover:bg-muted disabled:opacity-40" aria-label="Next page">
+        <button type="button" disabled={page >= pages} onClick={() => onPage(page + 1)} className="rounded-md px-2 py-1 text-[13px] text-muted-foreground hover:bg-muted disabled:opacity-40" aria-label="Next page">
           ›
         </button>
       </div>

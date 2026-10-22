@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as svc from '@/services/collabService';
 import type { Permission } from '@/services/collabService';
-import type { AssetFile, AssetFileKind, ServiceContract } from '@/types/asset';
+import type { AssetFile, AssetFileKind, RepairRequestStatus, RepairUrgency, ServiceContract } from '@/types/asset';
 
 /* ---------------- Permissions ---------------- */
 
@@ -11,7 +11,7 @@ export function useAccess() {
   const access = query.data;
   // While loading, don't hide actions (avoids flicker); the database enforces either way.
   const can = useCallback((p: Permission) => !access || access.legacy || access.permissions.includes(p), [access]);
-  return { ...query, access, can, isAdmin: access?.role === 'ADMIN' };
+  return { ...query, access, can, ready: !!access || query.isError, isAdmin: access?.role === 'ADMIN' };
 }
 
 export function useProfiles(enabled = true) {
@@ -168,3 +168,31 @@ export const useDeleteContract = () => useContractMutation(svc.deleteContract);
 export const useAddAssetsToContract = () => useContractMutation(({ contract, ids }: { contract: ServiceContract; ids: string[] }) => svc.addAssetsToContract(contract, ids));
 export const useRemoveAssetsFromContract = () => useContractMutation(({ contract, ids }: { contract: ServiceContract; ids: string[] }) => svc.removeAssetsFromContract(contract, ids));
 export const useUploadContractDocument = () => useContractMutation(({ contract, file }: { contract: ServiceContract; file: File }) => svc.uploadContractDocument(contract, file));
+
+/* ---------------- Repair requests ---------------- */
+
+export function useRepairRequests(enabled = true) {
+  return useQuery({ queryKey: ['repairRequests'], queryFn: svc.getRepairRequests, enabled, retry: false });
+}
+
+export function useCreateRepairRequest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { assetId: string; issue: string; urgency: RepairUrgency }) => svc.createRepairRequest(v),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['repairRequests'] });
+      qc.invalidateQueries({ queryKey: ['alerts'] });
+    },
+  });
+}
+
+export function useUpdateRepairRequest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...patch }: { id: string; status?: RepairRequestStatus; itNote?: string }) => svc.updateRepairRequest(id, patch),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['repairRequests'] });
+      qc.invalidateQueries({ queryKey: ['alerts'] });
+    },
+  });
+}

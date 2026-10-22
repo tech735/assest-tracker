@@ -61,8 +61,8 @@ export async function requestHandoverSignature({
   const link = signingLink(doc.id);
   const emailed = await emailHandoverLink(doc.id);
   toast({
-    title: emailed ? 'Handover form sent for signature' : 'Handover form ready to sign',
-    description: emailed ? `Emailed to ${employee.email}` : 'Email isn’t set up yet — copy the signing link and share it.',
+    title: emailed.ok ? 'Handover form sent for signature' : 'Handover form ready to sign',
+    description: emailed.ok ? `Emailed to ${employee.email}` : `Couldn’t email it${emailed.reason ? ` (${emailed.reason})` : ''} — copy the signing link and share it.`,
     action: (
       <ToastAction altText="Copy signing link" onClick={() => navigator.clipboard.writeText(link)}>
         Copy link

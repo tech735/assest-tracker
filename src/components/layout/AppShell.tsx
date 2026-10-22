@@ -30,7 +30,7 @@ import { supabase } from '@/lib/supabase';
 import { useUser } from '@/contexts/UserContext';
 import { useAlerts, useAssets } from '@/hooks/useSupabaseData';
 import { amcExpiring } from '@/lib/assetMeta';
-import { useAccess } from '@/hooks/useCollab';
+import { useAccess, useRepairRequests } from '@/hooks/useCollab';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -48,6 +48,7 @@ import { PersonAvatar } from '@/components/app/primitives';
 import { CommandPalette } from './CommandPalette';
 import { ScanDialog } from './ScanDialog';
 import kotuLogo from '@/assets/kotu-logo.png';
+import type { Permission } from '@/services/collabService';
 
 /* ------------------------------------------------------------------ */
 /* Shell context: lets any page open the palette or scanner            */
@@ -70,34 +71,46 @@ interface NavItem {
   short: string;
   icon: LucideIcon;
   countKey?: 'assets' | 'maintenance';
+  /** Page permission needed to see it (Settings → Roles & permissions → Pages). My assets has none. */
+  perm?: Permission;
 }
 
 const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: 'Overview',
     items: [
-      { to: '/', label: 'Dashboard', short: 'Dashboard', icon: LayoutDashboard },
+      { to: '/', label: 'Dashboard', short: 'Dashboard', icon: LayoutDashboard, perm: 'dashboard.view' },
       { to: '/me', label: 'My assets', short: 'Mine', icon: Briefcase },
     ],
   },
   {
     label: 'Inventory',
     items: [
-      { to: '/assets', label: 'Assets', short: 'Assets', icon: Package, countKey: 'assets' },
-      { to: '/maintenance', label: 'Maintenance', short: 'Maintain', icon: Wrench, countKey: 'maintenance' },
-      { to: '/audits', label: 'Audits', short: 'Audits', icon: ClipboardCheck },
+      { to: '/assets', label: 'Assets', short: 'Assets', icon: Package, countKey: 'assets', perm: 'assets.view' },
+      { to: '/maintenance', label: 'Maintenance', short: 'Maintain', icon: Wrench, countKey: 'maintenance', perm: 'maintenance.view' },
+      { to: '/audits', label: 'Audits', short: 'Audits', icon: ClipboardCheck, perm: 'audits.view' },
     ],
   },
   {
     label: 'Directory',
     items: [
-      { to: '/people', label: 'People', short: 'People', icon: Users },
-      { to: '/locations', label: 'Locations', short: 'Places', icon: MapPin },
+      { to: '/people', label: 'People', short: 'People', icon: Users, perm: 'people.view' },
+      { to: '/locations', label: 'Locations', short: 'Places', icon: MapPin, perm: 'locations.view' },
     ],
   },
-  { label: 'Insights', items: [{ to: '/reports', label: 'Reports', short: 'Reports', icon: BarChart3 }] },
+  { label: 'Insights', items: [{ to: '/reports', label: 'Reports', short: 'Reports', icon: BarChart3, perm: 'reports.view' }] },
 ];
-const ALL_NAV = NAV_GROUPS.flatMap((g) => g.items);
+const SETTINGS_ITEM: NavItem = { to: '/settings', label: 'Settings', short: 'Settings', icon: SlidersHorizontal, perm: 'settings.view' };
+
+/** The navigation this user's role may see. */
+function useNav() {
+  const { can } = useAccess();
+  return React.useMemo(() => {
+    const ok = (i: NavItem) => !i.perm || can(i.perm);
+    const groups = NAV_GROUPS.map((g) => ({ ...g, items: g.items.filter(ok) })).filter((g) => g.items.length);
+    return { groups, all: groups.flatMap((g) => g.items), settings: ok(SETTINGS_ITEM), can };
+  }, [can]);
+}
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: 'Admin',
@@ -145,15 +158,18 @@ function useCurrentProfile() {
 }
 
 function useNavCounts() {
+  const { can } = useAccess();
   const { data: assets = [] } = useAssets();
   const { data: alerts = [] } = useAlerts();
+  const { data: requests = [] } = useRepairRequests(can('maintenance.manage'));
   return React.useMemo(
     () => ({
       assets: assets.length,
-      maintenance: assets.filter((a) => a.status === 'repair' || amcExpiring(a)).length,
+      // Repairs, AMC ending soon and employees' open repair requests.
+      maintenance: assets.filter((a) => a.status === 'repair' || amcExpiring(a)).length + requests.filter((r) => r.status === 'open').length,
       alerts: alerts.filter((a) => !a.isResolved).length,
     }),
-    [assets, alerts],
+    [assets, alerts, requests],
   );
 }
 
@@ -169,6 +185,7 @@ interface MenuProps {
 
 function UserMenu({ compact, profile, onEditProfile, onShortcuts }: MenuProps & { compact?: boolean }) {
   const { logout } = useUser();
+  const { can } = useAccess();
   const navigate = useNavigate();
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -204,9 +221,11 @@ function UserMenu({ compact, profile, onEditProfile, onShortcuts }: MenuProps & 
         <DropdownMenuItem onSelect={onEditProfile}>
           <Users /> Edit profile
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => navigate('/settings')}>
-          <Settings /> Settings
-        </DropdownMenuItem>
+        {can('settings.view') && (
+          <DropdownMenuItem onSelect={() => navigate('/settings')}>
+            <Settings /> Settings
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem onSelect={onShortcuts}>
           <HelpCircle /> Keyboard shortcuts
         </DropdownMenuItem>
@@ -269,6 +288,7 @@ function SidebarLink({ item, collapsed, count }: { item: NavItem; collapsed: boo
 
 function Sidebar({ profile, onEditProfile, onShortcuts }: MenuProps) {
   const counts = useNavCounts();
+  const nav = useNav();
   const [collapsed, setCollapsed] = React.useState<boolean>(() => localStorage.getItem('sidebarCollapsed') === 'true');
   const toggle = () =>
     setCollapsed((c) => {
@@ -292,7 +312,7 @@ function Sidebar({ profile, onEditProfile, onShortcuts }: MenuProps) {
         </button>
       </div>
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto scrollbar-hide" aria-label="Main">
-        {NAV_GROUPS.map((g) => (
+        {nav.groups.map((g) => (
           <div key={g.label} className="flex flex-col gap-0.5">
             {collapsed ? (
               <div className="mx-auto my-2 h-px w-6 bg-border first:hidden" />
@@ -306,7 +326,7 @@ function Sidebar({ profile, onEditProfile, onShortcuts }: MenuProps) {
         ))}
       </nav>
       <div className={cn('flex flex-col gap-0.5 pb-4 pt-2', collapsed && 'items-center')}>
-        <SidebarLink item={{ to: '/settings', label: 'Settings', short: 'Settings', icon: SlidersHorizontal }} collapsed={collapsed} />
+        {nav.settings && <SidebarLink item={SETTINGS_ITEM} collapsed={collapsed} />}
         {collapsed ? (
           <Tooltip delayDuration={300}>
             <TooltipTrigger asChild>
@@ -335,11 +355,12 @@ function Sidebar({ profile, onEditProfile, onShortcuts }: MenuProps) {
 
 function Rail({ profile, onEditProfile, onShortcuts }: MenuProps) {
   const { pathname } = useLocation();
+  const nav = useNav();
   return (
     <aside className="hidden w-[76px] shrink-0 flex-col items-center border-r bg-card pb-4 pt-5 md:flex xl:hidden">
       <Brand compact />
       <nav className="mt-5 flex flex-1 flex-col items-center gap-1 overflow-y-auto scrollbar-hide" aria-label="Main">
-        {ALL_NAV.map((item) => {
+        {nav.all.map((item) => {
           const active = isActive(pathname, item.to);
           return (
             <NavLink
@@ -357,9 +378,11 @@ function Rail({ profile, onEditProfile, onShortcuts }: MenuProps) {
         })}
       </nav>
       <div className="flex flex-col items-center gap-2">
-        <NavLink to="/settings" aria-label="Settings" className={({ isActive: a }) => cn('rounded-lg p-2', a ? 'bg-primary-soft text-link' : 'text-muted-foreground hover:bg-muted')}>
-          <SlidersHorizontal className="h-5 w-5" />
-        </NavLink>
+        {nav.settings && (
+          <NavLink to="/settings" aria-label="Settings" className={({ isActive: a }) => cn('rounded-lg p-2', a ? 'bg-primary-soft text-link' : 'text-muted-foreground hover:bg-muted')}>
+            <SlidersHorizontal className="h-5 w-5" />
+          </NavLink>
+        )}
         <UserMenu compact profile={profile} onEditProfile={onEditProfile} onShortcuts={onShortcuts} />
       </div>
     </aside>
@@ -372,7 +395,11 @@ function Rail({ profile, onEditProfile, onShortcuts }: MenuProps) {
 
 function MobileTabBar({ onScan, onMore, alertCount }: { onScan: () => void; onMore: () => void; alertCount: number }) {
   const { pathname } = useLocation();
-  const moreActive = ['/maintenance', '/audits', '/people', '/locations', '/reports', '/settings', '/me', '/sign'].some((p) => pathname.startsWith(p));
+  const { can } = useNav();
+  const staff = can('assets.view');
+  // Staff: Home, Assets, Scan, Alerts. Everyone else (e.g. viewers): My assets, People, Locations.
+  const direct = staff ? ['/', '/assets', '/notifications'] : ['/me', '/people', '/locations'];
+  const moreActive = ['/maintenance', '/audits', '/people', '/locations', '/reports', '/settings', '/me', '/sign'].some((p) => pathname.startsWith(p) && !direct.includes(p));
   const tab = (to: string, label: string, Icon: LucideIcon, badge?: number) => {
     const active = isActive(pathname, to);
     return (
@@ -389,14 +416,24 @@ function MobileTabBar({ onScan, onMore, alertCount }: { onScan: () => void; onMo
   };
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 flex items-end justify-between border-t bg-card/95 px-3 pt-2 backdrop-blur pb-safe md:hidden" aria-label="Main">
-      {tab('/', 'Home', LayoutDashboard)}
-      {tab('/assets', 'Assets', Package)}
-      <button onClick={onScan} className="-mt-5 flex w-16 flex-col items-center" aria-label="Scan a label">
-        <span className="flex h-[52px] w-[52px] items-center justify-center rounded-full bg-primary text-primary-foreground shadow-card-hover transition-transform active:scale-95">
-          <ScanLine className="h-6 w-6" />
-        </span>
-      </button>
-      {tab('/notifications', 'Alerts', Bell, alertCount)}
+      {staff ? (
+        <>
+          {can('dashboard.view') ? tab('/', 'Home', LayoutDashboard) : tab('/me', 'Mine', Briefcase)}
+          {tab('/assets', 'Assets', Package)}
+          <button onClick={onScan} className="-mt-5 flex w-16 flex-col items-center" aria-label="Scan a label">
+            <span className="flex h-[52px] w-[52px] items-center justify-center rounded-full bg-primary text-primary-foreground shadow-card-hover transition-transform active:scale-95">
+              <ScanLine className="h-6 w-6" />
+            </span>
+          </button>
+          {can('dashboard.view') ? tab('/notifications', 'Alerts', Bell, alertCount) : tab('/people', 'People', Users)}
+        </>
+      ) : (
+        <>
+          {tab('/me', 'My assets', Briefcase)}
+          {can('people.view') && tab('/people', 'People', Users)}
+          {can('locations.view') && tab('/locations', 'Places', MapPin)}
+        </>
+      )}
       <button onClick={onMore} className="flex w-16 flex-col items-center gap-0.5 text-[11px] font-medium">
         <span className={cn('flex h-7 w-12 items-center justify-center rounded-full', moreActive && 'bg-primary-soft')}>
           <MoreHorizontal className={cn('h-[22px] w-[22px]', moreActive ? 'text-link' : 'text-faint')} />
@@ -411,25 +448,27 @@ function MoreSheet({ open, onOpenChange, profile, onEditProfile, onShortcuts }: 
   const { logout } = useUser();
   const navigate = useNavigate();
   const counts = useNavCounts();
+  const { can } = useNav();
   const go = (to: string) => {
     onOpenChange(false);
     navigate(to);
   };
-  const groups: { title: string; items: { icon: LucideIcon; label: string; to?: string; onClick?: () => void; meta?: string }[] }[] = [
+  type MoreItem = { icon: LucideIcon; label: string; to?: string; onClick?: () => void; meta?: string; perm?: Permission };
+  const allGroups: { title: string; items: MoreItem[] }[] = [
     { title: 'Mine', items: [{ icon: Briefcase, label: 'My assets & forms', to: '/me' }] },
-    { title: 'Directory', items: [{ icon: Users, label: 'People', to: '/people' }, { icon: MapPin, label: 'Locations', to: '/locations' }] },
+    { title: 'Directory', items: [{ icon: Users, label: 'People', to: '/people', perm: 'people.view' }, { icon: MapPin, label: 'Locations', to: '/locations', perm: 'locations.view' }] },
     {
       title: 'Operations',
       items: [
-        { icon: Wrench, label: 'Maintenance & AMC', to: '/maintenance', meta: counts.maintenance ? String(counts.maintenance) : undefined },
-        { icon: ClipboardCheck, label: 'Audits', to: '/audits' },
-        { icon: BarChart3, label: 'Reports', to: '/reports' },
+        { icon: Wrench, label: 'Maintenance & AMC', to: '/maintenance', meta: counts.maintenance ? String(counts.maintenance) : undefined, perm: 'maintenance.view' },
+        { icon: ClipboardCheck, label: 'Audits', to: '/audits', perm: 'audits.view' },
+        { icon: BarChart3, label: 'Reports', to: '/reports', perm: 'reports.view' },
       ],
     },
     {
       title: 'Account',
       items: [
-        { icon: SlidersHorizontal, label: 'Settings', to: '/settings' },
+        { icon: SlidersHorizontal, label: 'Settings', to: '/settings', perm: 'settings.view' },
         { icon: HelpCircle, label: 'Help & shortcuts', onClick: () => { onOpenChange(false); onShortcuts(); } },
         {
           icon: LogOut,
@@ -443,6 +482,7 @@ function MoreSheet({ open, onOpenChange, profile, onEditProfile, onShortcuts }: 
       ],
     },
   ];
+  const groups = allGroups.map((g) => ({ ...g, items: g.items.filter((i) => !i.perm || can(i.perm)) })).filter((g) => g.items.length);
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="bg-background px-4 pt-3">
@@ -502,9 +542,11 @@ function TopBar({ onPalette, onScan, alertCount }: { onPalette: () => void; onSc
       <button onClick={onPalette} className="rounded-full p-2 text-muted-foreground hover:bg-muted md:hidden" aria-label="Search">
         <Search className="h-5 w-5" />
       </button>
-      <Button variant="secondary" size="sm" onClick={onScan} className="hidden md:inline-flex">
-        <ScanLine /> Scan
-      </Button>
+      {can('assets.view') && (
+        <Button variant="secondary" size="sm" onClick={onScan} className="hidden md:inline-flex">
+          <ScanLine /> Scan
+        </Button>
+      )}
       {canCreate && <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button size="sm" className="hidden md:inline-flex">
@@ -540,10 +582,12 @@ function TopBar({ onPalette, onScan, alertCount }: { onPalette: () => void; onSc
           )}
         </DropdownMenuContent>
       </DropdownMenu>}
-      <Link to="/notifications" className="relative hidden rounded-lg p-2 text-muted-foreground hover:bg-muted md:block" aria-label={`Notifications${alertCount ? `, ${alertCount} unresolved` : ''}`}>
-        <Bell className="h-[18px] w-[18px]" />
-        {alertCount > 0 && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full border-2 border-card bg-destructive" />}
-      </Link>
+      {can('dashboard.view') && (
+        <Link to="/notifications" className="relative hidden rounded-lg p-2 text-muted-foreground hover:bg-muted md:block" aria-label={`Notifications${alertCount ? `, ${alertCount} unresolved` : ''}`}>
+          <Bell className="h-[18px] w-[18px]" />
+          {alertCount > 0 && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full border-2 border-card bg-destructive" />}
+        </Link>
+      )}
     </header>
   );
 }
@@ -606,6 +650,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   // just before a route change.
   const navigateRef = React.useRef(navigate);
   navigateRef.current = navigate;
+  const { can } = useAccess();
+  const canScanRef = React.useRef(false);
+  canScanRef.current = can('assets.view');
   React.useEffect(() => {
     const navigate = (to: string) => navigateRef.current(to);
     let lastG = 0;
@@ -628,7 +675,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         return;
       }
       if (k === 'n') navigate('/assets/new');
-      if (k === 's') setScanOpen(true);
+      if (k === 's' && canScanRef.current) setScanOpen(true);
       if (k === '?') setShortcutsOpen(true);
     };
     window.addEventListener('keydown', onKey);

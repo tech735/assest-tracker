@@ -14,15 +14,28 @@ export const ROLE_INFO: Record<UserRole, { label: string; description: string }>
   SUPPORT: { label: 'IT Support', description: 'Day-to-day asset work and people' },
   WAREHOUSE: { label: 'Warehouse', description: 'Stock, locations, repairs and audits' },
   INVOICING: { label: 'Finance', description: 'Costs, depreciation and reports' },
-  VIEWER: { label: 'Viewer', description: 'Read-only; new sign-ins start here' },
+  VIEWER: { label: 'Viewer', description: 'My assets, People and Locations (read-only); can report repairs. New sign-ins start here' },
 };
 const ROLES: UserRole[] = ['ADMIN', 'SUPPORT', 'WAREHOUSE', 'INVOICING', 'VIEWER'];
 
 const GROUPS: { title: string; items: { p: Permission; label: string }[] }[] = [
+  {
+    title: 'Pages — what each role sees (My assets is always on)',
+    items: [
+      { p: 'dashboard.view', label: 'Dashboard & notifications' },
+      { p: 'assets.view', label: 'Assets (all company assets, scan)' },
+      { p: 'maintenance.view', label: 'Maintenance & AMC' },
+      { p: 'audits.view', label: 'Audits' },
+      { p: 'people.view', label: 'People' },
+      { p: 'locations.view', label: 'Locations' },
+      { p: 'reports.view', label: 'Reports & exports' },
+      { p: 'settings.view', label: 'Settings (read-only without “Settings, users & roles”)' },
+    ],
+  },
   { title: 'Assets', items: [{ p: 'assets.edit', label: 'Create, edit & import assets' }, { p: 'assets.checkout', label: 'Check out / check in, handover forms' }, { p: 'assets.delete', label: 'Delete assets & history' }] },
   { title: 'Operations', items: [{ p: 'maintenance.manage', label: 'Log repairs & renew AMC' }, { p: 'audits.run', label: 'Run audits' }] },
   { title: 'Directory', items: [{ p: 'people.manage', label: 'Add, edit & offboard people' }, { p: 'locations.manage', label: 'Manage locations' }] },
-  { title: 'Insights & admin', items: [{ p: 'reports.view', label: 'Run reports' }, { p: 'costs.view', label: 'See costs & depreciation' }, { p: 'settings.manage', label: 'Settings, users & roles' }] },
+  { title: 'Insights & admin', items: [{ p: 'costs.view', label: 'See costs & depreciation' }, { p: 'settings.manage', label: 'Settings, users & roles' }] },
 ];
 
 export function AccessSettings() {

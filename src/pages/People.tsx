@@ -237,9 +237,11 @@ export default function People() {
         description={`${counts.current.toLocaleString()} current employees · ${assignedTotal.toLocaleString()} assets assigned`}
         actions={
           <>
-            <Button variant="secondary" className="hidden md:inline-flex" onClick={() => exportToCSV(filtered, 'people_export')}>
-              <Download /> Export
-            </Button>
+            {(can('people.manage') || can('reports.view')) && (
+              <Button variant="secondary" className="hidden md:inline-flex" onClick={() => exportToCSV(filtered, 'people_export')}>
+                <Download /> Export
+              </Button>
+            )}
             {can('people.manage') && <Button onClick={() => setAdding(true)}>
               <UserPlus /> <span className="hidden sm:inline">Add person</span>
               <span className="sm:hidden">Add</span>
@@ -270,7 +272,7 @@ export default function People() {
 
       {filtered.length === 0 ? (
         <div className="rounded-xl border bg-card">
-          <EmptyState icon={Users} title="No people here" description={q ? 'Try a different search.' : 'Nobody matches this view yet.'} action={<Button onClick={() => setAdding(true)}><UserPlus /> Add person</Button>} />
+          <EmptyState icon={Users} title="No people here" description={q ? 'Try a different search.' : 'Nobody matches this view yet.'} action={can('people.manage') && <Button onClick={() => setAdding(true)}><UserPlus /> Add person</Button>} />
         </div>
       ) : (
         <>

@@ -18,7 +18,9 @@ import {
   Users,
   Wrench,
   type LucideIcon,
+  Briefcase,
 } from 'lucide-react';
+import { useAccess } from '@/hooks/useCollab';
 import { useAssets, useEmployees, useLocations } from '@/hooks/useSupabaseData';
 import { categoryIcon, displayLocation } from '@/lib/assetMeta';
 import { StatusBadge } from '@/components/app/primitives';
@@ -70,6 +72,7 @@ const Group = ({ heading, children }: { heading: string; children: React.ReactNo
 
 export function CommandPalette({ open, onOpenChange, onScan }: { open: boolean; onOpenChange: (o: boolean) => void; onScan: () => void }) {
   const navigate = useNavigate();
+  const { can } = useAccess();
   const [query, setQuery] = React.useState('');
   const { data: assets = [] } = useAssets();
   const { data: people = [] } = useEmployees();
@@ -88,9 +91,10 @@ export function CommandPalette({ open, onOpenChange, onScan }: { open: boolean; 
 
   const q = query.trim().toLowerCase();
   const match = (...fields: (string | undefined)[]) => fields.some((f) => f?.toLowerCase().includes(q));
-  const assetHits = q ? assets.filter((a) => match(a.name, a.assetTag, a.serialNumber, a.brand, a.model, a.assignedTo)).slice(0, 6) : [];
-  const peopleHits = q ? people.filter((p) => match(p.name, p.email, p.department)).slice(0, 4) : [];
-  const locationHits = q ? locations.filter((l) => match(l.name, l.address)).slice(0, 3) : [];
+  // Search only covers what the role's pages show.
+  const assetHits = q && can('assets.view') ? assets.filter((a) => match(a.name, a.assetTag, a.serialNumber, a.brand, a.model, a.assignedTo)).slice(0, 6) : [];
+  const peopleHits = q && can('people.view') ? people.filter((p) => match(p.name, p.email, p.department)).slice(0, 4) : [];
+  const locationHits = q && can('locations.view') ? locations.filter((l) => match(l.name, l.address)).slice(0, 3) : [];
 
   const run = (fn: () => void) => {
     if (q) {
@@ -102,24 +106,26 @@ export function CommandPalette({ open, onOpenChange, onScan }: { open: boolean; 
     fn();
   };
 
-  const actions: { icon: LucideIcon; label: string; kbd?: string; run: () => void }[] = [
-    { icon: ArrowLeftRight, label: 'Check out an asset…', run: () => navigate('/assets?view=available&checkout=1') },
-    { icon: Plus, label: 'Add asset', kbd: 'N', run: () => navigate('/assets/new') },
-    { icon: ScanLine, label: 'Scan a label', kbd: 'S', run: onScan },
-    { icon: Upload, label: 'Import assets from CSV', run: () => navigate('/assets/import') },
-    { icon: UserPlus, label: 'Add person', run: () => navigate('/people?new=1') },
-    { icon: ClipboardCheck, label: 'Start an audit', run: () => navigate('/audits') },
-  ];
-  const pages: { icon: LucideIcon; label: string; to: string }[] = [
-    { icon: LayoutDashboard, label: 'Go to Dashboard', to: '/' },
-    { icon: Package, label: 'Go to Assets', to: '/assets' },
-    { icon: Wrench, label: 'Go to Maintenance & AMC', to: '/maintenance' },
-    { icon: Users, label: 'Go to People', to: '/people' },
-    { icon: MapPin, label: 'Go to Locations', to: '/locations' },
-    { icon: BarChart3, label: 'Go to Reports', to: '/reports' },
-  ];
+  const actions: { icon: LucideIcon; label: string; kbd?: string; run: () => void; ok: boolean }[] = [
+    { icon: ArrowLeftRight, label: 'Check out an asset…', run: () => navigate('/assets?view=available&checkout=1'), ok: can('assets.view') && can('assets.checkout') },
+    { icon: Plus, label: 'Add asset', kbd: 'N', run: () => navigate('/assets/new'), ok: can('assets.view') && can('assets.edit') },
+    { icon: ScanLine, label: 'Scan a label', kbd: 'S', run: onScan, ok: can('assets.view') },
+    { icon: Upload, label: 'Import assets from CSV', run: () => navigate('/assets/import'), ok: can('assets.view') && can('assets.edit') },
+    { icon: UserPlus, label: 'Add person', run: () => navigate('/people?new=1'), ok: can('people.view') && can('people.manage') },
+    { icon: ClipboardCheck, label: 'Start an audit', run: () => navigate('/audits'), ok: can('audits.view') && can('audits.run') },
+  ].filter((a) => a.ok);
+  const pages: { icon: LucideIcon; label: string; to: string; ok: boolean }[] = [
+    { icon: LayoutDashboard, label: 'Go to Dashboard', to: '/', ok: can('dashboard.view') },
+    { icon: Briefcase, label: 'Go to My assets', to: '/me', ok: true },
+    { icon: Package, label: 'Go to Assets', to: '/assets', ok: can('assets.view') },
+    { icon: Wrench, label: 'Go to Maintenance & AMC', to: '/maintenance', ok: can('maintenance.view') },
+    { icon: Users, label: 'Go to People', to: '/people', ok: can('people.view') },
+    { icon: MapPin, label: 'Go to Locations', to: '/locations', ok: can('locations.view') },
+    { icon: BarChart3, label: 'Go to Reports', to: '/reports', ok: can('reports.view') },
+  ].filter((p) => p.ok);
   const actionHits = q ? actions.filter((a) => a.label.toLowerCase().includes(q)) : actions;
-  const pageHits = q ? pages.filter((p) => p.label.toLowerCase().includes(q)) : [];
+  // With nothing to act on (e.g. viewers), show the pages they can open instead.
+  const pageHits = q ? pages.filter((p) => p.label.toLowerCase().includes(q)) : actions.length ? [] : pages;
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>

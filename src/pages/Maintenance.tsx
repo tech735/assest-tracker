@@ -11,10 +11,11 @@ import { useAssetActions } from '@/components/assets/useAssetActions';
 import { BulkAmcUpdateDialog } from '@/components/assets/BulkAmcUpdateDialog';
 import { coverage, daysUntil, displayLocation, formatDate, formatMoney, type Tone } from '@/lib/assetMeta';
 import { exportToCSV } from '@/lib/exportUtils';
-import { useAccess, useContracts } from '@/hooks/useCollab';
+import { useAccess, useContracts, useRepairRequests } from '@/hooks/useCollab';
+import { RepairRequestsPanel } from '@/components/maintenance/RepairRequestsPanel';
 import { ContractsPanel } from '@/components/maintenance/ContractsPanel';
 
-type Tab = 'contracts' | 'amc' | 'repairs' | 'warranty';
+type Tab = 'contracts' | 'requests' | 'amc' | 'repairs' | 'warranty';
 type Window = 'all' | 'expiring' | 'expired';
 
 export default function Maintenance() {
@@ -29,6 +30,8 @@ export default function Maintenance() {
   const [windowF, setWindowF] = useState<Window>('expiring');
   const [renewing, setRenewing] = useState<Asset | null>(null);
   const { data: contracts = [] } = useContracts();
+  const { data: requests = [] } = useRepairRequests(canMaintain);
+  const openRequests = requests.filter((r) => r.status === 'open' || r.status === 'in_progress').length;
   const vendorOf = useMemo(() => new Map(contracts.map((c) => [c.id, c.vendor])), [contracts]);
 
   const data = useMemo(() => {
@@ -203,6 +206,7 @@ export default function Maintenance() {
         onChange={(t) => setParams(t === 'contracts' ? {} : { tab: t }, { replace: true })}
         tabs={[
           { value: 'contracts', label: 'Contracts', count: contracts.length },
+          ...(canMaintain ? [{ value: 'requests' as Tab, label: 'Requests', count: openRequests }] : []),
           { value: 'amc', label: 'AMC by asset', count: data.amc.length },
           { value: 'repairs', label: 'Repairs', count: data.repairs.length },
           { value: 'warranty', label: 'Warranty by asset', count: data.warranty.length },
@@ -216,6 +220,7 @@ export default function Maintenance() {
           </div>
         )}
         {tab === 'contracts' && <ContractsPanel />}
+        {tab === 'requests' && <RepairRequestsPanel />}
         {tab === 'amc' && coverageRows(filterWindow(data.amc, (a) => a.amcEndDate), (a) => a.amcStartDate, (a) => a.amcEndDate, canMaintain, (a) => a.amcContractId)}
         {tab === 'warranty' && coverageRows(filterWindow(data.warranty, (a) => a.warrantyEnd), (a) => a.warrantyStart || a.purchaseDate, (a) => a.warrantyEnd, false, (a) => a.warrantyContractId)}
         {tab === 'repairs' &&

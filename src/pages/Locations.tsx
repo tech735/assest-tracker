@@ -14,6 +14,7 @@ import { DeleteLocationDialog } from '@/components/locations/DeleteLocationDialo
 import { displayLocation, LOCATION_TYPE_META, STATUS_META, STATUS_ORDER } from '@/lib/assetMeta';
 import { exportToCSV } from '@/lib/exportUtils';
 import { useAccess } from '@/hooks/useCollab';
+import { AssetLink } from '@/components/app/AssetLink';
 
 const TYPE_ICON: Record<Location['type'], LucideIcon> = { office: Building2, warehouse: Layers, outlet: Store, remote: MapPin };
 
@@ -71,7 +72,7 @@ export default function Locations() {
       <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
         <DropdownMenuItem onSelect={() => open(l)}><MapPin /> View details</DropdownMenuItem>
         {can('locations.manage') && <DropdownMenuItem onSelect={() => setEditing(l)}><Pencil /> Edit</DropdownMenuItem>}
-        <DropdownMenuItem asChild><Link to={`/print-handover/location/${l.id}`}><Printer /> Handover form</Link></DropdownMenuItem>
+        {can('assets.checkout') && <DropdownMenuItem asChild><Link to={`/print-handover/location/${l.id}`}><Printer /> Handover form</Link></DropdownMenuItem>}
         {can('locations.manage') && <DropdownMenuSeparator />}
         {can('locations.manage') && <DropdownMenuItem onSelect={() => setDeleting(l)} className="text-destructive-strong focus:text-destructive-strong [&_svg]:text-destructive-strong"><Trash2 /> Delete</DropdownMenuItem>}
       </DropdownMenuContent>
@@ -101,7 +102,7 @@ export default function Locations() {
         actions={
           <>
             <Segmented<"grid" | "table"> className="hidden md:inline-flex" value={layout} onChange={setLayout} options={[{ value: 'grid', label: 'Grid' }, { value: 'table', label: 'Table' }]} />
-            <Button variant="secondary" className="hidden md:inline-flex" onClick={() => exportToCSV(locations, 'locations')}>
+            <Button variant="secondary" className={can('locations.manage') || can('reports.view') ? 'hidden md:inline-flex' : 'hidden'} onClick={() => exportToCSV(locations, 'locations')}>
               <Download /> Export
             </Button>
             {can('locations.manage') && <Button onClick={() => setAdding(true)}>
@@ -115,7 +116,7 @@ export default function Locations() {
 
       {filtered.length === 0 ? (
         <div className="rounded-xl border bg-card">
-          <EmptyState icon={MapPin} title="No locations" description="Add an office, warehouse or outlet to start placing assets." action={<Button onClick={() => setAdding(true)}><Plus /> Add location</Button>} />
+          <EmptyState icon={MapPin} title="No locations" description="Add an office, warehouse or outlet to start placing assets." action={can('locations.manage') && <Button onClick={() => setAdding(true)}><Plus /> Add location</Button>} />
         </div>
       ) : layout === 'grid' ? (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -200,8 +201,8 @@ export default function Locations() {
                   ))}
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="secondary" asChild><Link to={`/assets?location=${viewing.id}`}><Package /> All assets here</Link></Button>
-                  <Button size="sm" variant="secondary" asChild><Link to={`/print-handover/location/${viewing.id}`}><Printer /> Handover form</Link></Button>
+                  {can('assets.view') && <Button size="sm" variant="secondary" asChild><Link to={`/assets?location=${viewing.id}`}><Package /> All assets here</Link></Button>}
+                  {can('assets.checkout') && <Button size="sm" variant="secondary" asChild><Link to={`/print-handover/location/${viewing.id}`}><Printer /> Handover form</Link></Button>}
                   {can('locations.manage') && <Button size="sm" variant="secondary" onClick={() => setEditing(viewing)}><Pencil /> Edit</Button>}
                 </div>
                 <ViewTabs<'assets' | 'people'> value={tab} onChange={setTab} tabs={[{ value: 'assets', label: 'Assets', count: viewAssets.length }, { value: 'people', label: 'People', count: viewPeople.length }]} />
@@ -210,14 +211,14 @@ export default function Locations() {
                 {tab === 'assets' ? (
                   viewAssets.length ? (
                     viewAssets.slice(0, 100).map((a) => (
-                      <Link key={a.id} to={`/assets/${a.id}`} className="flex items-center gap-3 rounded-lg px-2 py-2.5 hover:bg-subtle">
+                      <AssetLink key={a.id} id={a.id} className="flex items-center gap-3 rounded-lg px-2 py-2.5 hover:bg-subtle">
                         <AssetThumb category={a.category} size="sm" />
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm font-medium">{a.name}</span>
                           <span className="block truncate text-xs text-muted-foreground"><span className="font-mono">{a.assetTag}</span>{a.assignedTo ? ` · ${a.assignedTo}` : ''}</span>
                         </span>
                         <StatusBadge status={a.status} />
-                      </Link>
+                      </AssetLink>
                     ))
                   ) : (
                     <EmptyState icon={Package} title="No assets here yet" className="py-10" />

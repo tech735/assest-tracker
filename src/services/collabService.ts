@@ -12,6 +12,9 @@ import type {
   AuditScanResult,
   HandoverDocument,
   HandoverItem,
+  RepairRequest,
+  RepairRequestStatus,
+  RepairUrgency,
   ServiceContract,
 } from '@/types/asset';
 import type { UserRole } from '@/types/database';
@@ -32,8 +35,20 @@ export const PERMISSIONS = [
   'reports.view',
   'costs.view',
   'settings.manage',
+  // Page access (which pages a role sees). My assets is always visible.
+  'dashboard.view',
+  'assets.view',
+  'maintenance.view',
+  'audits.view',
+  'people.view',
+  'locations.view',
+  'settings.view',
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
+
+const PAGE_PERMISSIONS: Permission[] = ['dashboard.view', 'assets.view', 'maintenance.view', 'audits.view', 'people.view', 'locations.view', 'reports.view', 'settings.view'];
+/** Page access before migration 0015 is applied: staff roles see every page, viewers only People and Locations. */
+const DEFAULT_PAGES = (role: UserRole | null): Permission[] => (role === 'VIEWER' || !role ? ['people.view', 'locations.view'] : PAGE_PERMISSIONS);
 
 export interface MyAccess {
   userId: string | null;
@@ -52,16 +67,15 @@ export async function getMyAccess(): Promise<MyAccess> {
   const { data: profile } = await supabase.from('profiles').select('id, role, full_name, email').eq('id', user.id).maybeSingle();
   const role = (profile?.role as UserRole) ?? null;
   const name = (profile?.full_name as string) || (user.user_metadata?.full_name as string) || null;
-  const { data: perms, error } = await supabase.from('role_permissions').select('permission').eq('role', role ?? '');
+  const [{ data: perms, error }, pagesMigrated] = await Promise.all([
+    supabase.from('role_permissions').select('permission').eq('role', role ?? ''),
+    // 0015 adds page permissions together with this table.
+    supabase.from('repair_requests').select('id', { head: true }).limit(1).then((r) => !r.error),
+  ]);
   if (error) return { userId: user.id, email: user.email ?? null, name, role, permissions: [...PERMISSIONS], legacy: true };
-  return {
-    userId: user.id,
-    email: user.email ?? null,
-    name,
-    role,
-    permissions: role === 'ADMIN' ? [...PERMISSIONS] : ((perms || []).map((p) => p.permission) as Permission[]),
-    legacy: false,
-  };
+  let permissions = role === 'ADMIN' ? [...PERMISSIONS] : ((perms || []).map((p) => p.permission) as Permission[]);
+  if (role !== 'ADMIN' && !pagesMigrated) permissions = [...permissions.filter((p) => p !== 'reports.view' || role !== 'VIEWER'), ...DEFAULT_PAGES(role)];
+  return { userId: user.id, email: user.email ?? null, name, role, permissions: [...new Set(permissions)], legacy: false };
 }
 
 export interface ProfileRow {
@@ -337,9 +351,20 @@ export async function voidHandoverDocument(id: string) {
 export const signingLink = (id: string) => `${window.location.origin}/sign/${id}`;
 
 /** Emails the signing link (edge function send-handover-email). Resolves false if the function isn't deployed. */
-export async function emailHandoverLink(documentId: string): Promise<boolean> {
-  const { error } = await supabase.functions.invoke('send-handover-email', { body: { documentId, appUrl: window.location.origin } });
-  return !error;
+/** Emails the signing link. Returns the reason when it couldn't be sent, so the UI can say why. */
+export async function emailHandoverLink(documentId: string): Promise<{ ok: boolean; reason?: string }> {
+  const { error } = await supabase.functions.invoke('send-handover-email', { body: { documentId } });
+  if (!error) return { ok: true };
+  let reason = error.message;
+  const ctx = (error as { context?: Response }).context;
+  if (ctx && typeof ctx.json === 'function') {
+    try {
+      reason = (await ctx.json())?.error || reason;
+    } catch {
+      /* not JSON */
+    }
+  }
+  return { ok: false, reason };
 }
 
 /* ---------------- Service contracts (AMC / warranty) ---------------- */
@@ -454,4 +479,50 @@ export async function uploadContractDocument(c: ServiceContract, file: File): Pr
   }
   if (c.documentPath) await supabase.storage.from(BUCKET).remove([c.documentPath]);
   return mapContract(data);
+}
+
+/* ---------------- Repair requests (employees report problems) ---------------- */
+
+const mapRequest = (r: Row): RepairRequest => ({
+  id: String(r.id),
+  assetId: String(r.asset_id),
+  assetTag: s(r.asset_tag),
+  assetName: s(r.asset_name),
+  issue: String(r.issue),
+  urgency: r.urgency as RepairUrgency,
+  status: r.status as RepairRequestStatus,
+  itNote: s(r.it_note),
+  reportedBy: s(r.reported_by),
+  reporterName: s(r.reporter_name),
+  reporterEmail: s(r.reporter_email),
+  createdAt: String(r.created_at),
+  closedAt: s(r.closed_at),
+});
+
+/** IT sees every request; an employee sees their own (row-level security decides). */
+export async function getRepairRequests(): Promise<RepairRequest[]> {
+  const rows = await fetchAllPages<Row>((from, to, count) =>
+    supabase.from('repair_requests').select('*', count ? { count: 'exact' } : undefined).order('created_at', { ascending: false }).order('id').range(from, to));
+  return rows.map(mapRequest);
+}
+
+export async function createRepairRequest(input: { assetId: string; issue: string; urgency: RepairUrgency }): Promise<RepairRequest> {
+  const { data: auth } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from('repair_requests')
+    .insert({ asset_id: input.assetId, issue: input.issue.trim(), urgency: input.urgency, reported_by: auth.user?.id })
+    .select()
+    .single();
+  if (error) throw error;
+  // Email IT; the request is saved either way.
+  await supabase.functions.invoke('notify-repair-request', { body: { requestId: data.id } }).catch(() => undefined);
+  return mapRequest(data);
+}
+
+export async function updateRepairRequest(id: string, patch: { status?: RepairRequestStatus; itNote?: string }) {
+  const row: Record<string, unknown> = {};
+  if (patch.status) row.status = patch.status;
+  if (patch.itNote !== undefined) row.it_note = patch.itNote.trim() || null;
+  const { error } = await supabase.from('repair_requests').update(row).eq('id', id);
+  if (error) throw error;
 }

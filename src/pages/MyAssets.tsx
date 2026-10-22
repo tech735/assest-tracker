@@ -1,9 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, ChevronRight, FileSignature, Mail, Package, PackageOpen, Wrench } from 'lucide-react';
+import { AlertTriangle, ChevronRight, FileSignature, Package, PackageOpen, Wrench } from 'lucide-react';
 import { useAssets, useAssignments, useEmployees } from '@/hooks/useSupabaseData';
-import { useAccess, useContracts, useHandoverDocuments } from '@/hooks/useCollab';
-import type { Asset } from '@/types/asset';
+import { useAccess, useContracts, useHandoverDocuments, useRepairRequests } from '@/hooks/useCollab';
+import type { Asset, RepairRequest } from '@/types/asset';
+import { ReportProblemDialog } from '@/components/assets/ReportProblemDialog';
 import { Button } from '@/components/ui/button';
 import { EmptyState, PageHeader, PageLoader, Pill, SectionCard } from '@/components/app/primitives';
 import { DeviceArt, deviceKind, type DeviceKind } from '@/components/app/DeviceArt';
@@ -14,6 +15,12 @@ const IT_EMAIL = 'tech@kotu.co.in';
 // Main devices first, accessories after.
 const KIND_ORDER: DeviceKind[] = ['laptop', 'desktop', 'monitor', 'phone', 'tablet', 'printer', 'keyboard', 'mouse', 'headphones', 'bag', 'charger', 'box'];
 const rank = (a: Asset) => KIND_ORDER.indexOf(deviceKind(a));
+const REQUEST_META: Record<RepairRequest['status'], { label: string; tone: 'warning' | 'info' | 'success' | 'quiet' }> = {
+  open: { label: 'Reported', tone: 'warning' },
+  in_progress: { label: 'IT is on it', tone: 'info' },
+  resolved: { label: 'Resolved', tone: 'success' },
+  declined: { label: 'Closed', tone: 'quiet' },
+};
 
 /** Employee self-service: what I hold and what I still need to sign. */
 export default function MyAssets() {
@@ -25,6 +32,15 @@ export default function MyAssets() {
   const email = access?.email?.toLowerCase();
   const me = employees.find((e) => e.email?.toLowerCase() === email);
   const { data: docs = [] } = useHandoverDocuments({ email: access?.email || '' }, !!access?.email);
+  const { data: allRequests = [] } = useRepairRequests(!!access);
+  const [reporting, setReporting] = useState<Asset | null>(null);
+  // Only my own reports (IT staff can read everyone's).
+  const requests = useMemo(() => allRequests.filter((r) => r.reportedBy === access?.userId), [allRequests, access?.userId]);
+  const openRequestFor = useMemo(() => {
+    const m = new Map<string, RepairRequest>();
+    requests.filter((r) => r.status === 'open' || r.status === 'in_progress').forEach((r) => !m.has(r.assetId) && m.set(r.assetId, r));
+    return m;
+  }, [requests]);
 
   const mine = useMemo(() => (me ? assets.filter((a) => a.status === 'assigned' && a.assignedToId === me.id).sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name)) : []), [assets, me]);
   // When each asset was handed to me: the latest check-out to me.
@@ -80,10 +96,29 @@ export default function MyAssets() {
         <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 min-[1680px]:grid-cols-4">
           {mine.map((a) => (
             <li key={a.id}>
-              <DeviceCard asset={a} since={since.get(a.id)} amcVendor={a.amcContractId ? vendorOf.get(a.amcContractId) : undefined} />
+              <DeviceCard asset={a} since={since.get(a.id)} amcVendor={a.amcContractId ? vendorOf.get(a.amcContractId) : undefined} request={openRequestFor.get(a.id)} onReport={() => setReporting(a)} />
             </li>
           ))}
         </ul>
+      )}
+
+      {requests.length > 0 && (
+        <SectionCard title="Your repair requests" bodyClassName="px-3 pb-3">
+          <ul>
+            {requests.slice(0, 10).map((r) => (
+              <li key={r.id} className="flex items-start gap-3 rounded-lg px-2 py-2.5">
+                <Wrench className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium">{r.assetName} <span className="font-mono text-xs font-normal text-muted-foreground">{r.assetTag}</span></span>
+                  <span className="block text-[13px] text-muted-foreground">{r.issue}</span>
+                  {r.itNote && <span className="mt-1 block text-[13px]"><span className="font-medium">IT:</span> {r.itNote}</span>}
+                  <span className="block text-xs text-faint">Reported {formatDate(r.createdAt)}{r.closedAt ? ` · closed ${formatDate(r.closedAt)}` : ''}</span>
+                </span>
+                <Pill tone={REQUEST_META[r.status].tone}>{REQUEST_META[r.status].label}</Pill>
+              </li>
+            ))}
+          </ul>
+        </SectionCard>
       )}
 
       <SectionCard title="Forms" bodyClassName="px-3 pb-3">
@@ -109,17 +144,17 @@ export default function MyAssets() {
 
       <div className="flex items-start gap-2.5 rounded-xl bg-subtle px-4 py-3 text-[13px] text-muted-foreground">
         <Wrench className="mt-0.5 h-4 w-4 shrink-0" />
-        Something broken or missing? Use “Report a problem” on the device, or email {IT_EMAIL} with the asset tag (on the label) and IT will log a repair.
+        Something broken? Use “Report a problem” on the device and IT will log a repair. Something missing or not yours? Email {IT_EMAIL} with the asset tag (on the label).
       </div>
+      <ReportProblemDialog asset={reporting} open={!!reporting} onOpenChange={(o) => !o && setReporting(null)} />
     </div>
   );
 }
 
-function DeviceCard({ asset: a, since, amcVendor }: { asset: Asset; since?: { date: string; by?: string }; amcVendor?: string }) {
+function DeviceCard({ asset: a, since, amcVendor, request, onReport }: { asset: Asset; since?: { date: string; by?: string }; amcVendor?: string; request?: RepairRequest; onReport: () => void }) {
   const warranty = coverage(a.warrantyStart || a.purchaseDate, a.warrantyEnd);
   const amc = coverage(a.amcStartDate, a.amcEndDate);
   const model = [a.brand, a.model].filter(Boolean).join(' ');
-  const report = `mailto:${IT_EMAIL}?subject=${encodeURIComponent(`Problem with ${a.assetTag} (${a.name})`)}&body=${encodeURIComponent(`Asset: ${a.name}\nTag: ${a.assetTag}\nSerial: ${a.serialNumber || '—'}\n\nWhat’s wrong:\n`)}`;
 
   return (
     <article className="flex h-full flex-col overflow-hidden rounded-xl border bg-card shadow-xs transition-shadow hover:shadow-card-hover">
@@ -170,9 +205,14 @@ function DeviceCard({ asset: a, since, amcVendor }: { asset: Asset; since?: { da
         </div>
       </div>
 
-      <footer className="mt-3 flex border-t bg-subtle/60">
-        <Button asChild variant="ghost" size="sm" className="h-11 flex-1 rounded-none text-[13px]">
-          <a href={report}><Mail /> Report a problem</a>
+      <footer className="mt-3 flex items-center gap-2 border-t bg-subtle/60 px-2">
+        {request && (
+          <span className="pl-2">
+            <Pill tone={REQUEST_META[request.status].tone}>{REQUEST_META[request.status].label}</Pill>
+          </span>
+        )}
+        <Button variant="ghost" size="sm" className="h-11 flex-1 text-[13px]" onClick={onReport}>
+          <AlertTriangle /> {request ? 'Report another problem' : 'Report a problem'}
         </Button>
       </footer>
     </article>

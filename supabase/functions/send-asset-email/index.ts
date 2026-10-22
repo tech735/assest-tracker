@@ -6,7 +6,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { sendEmail } from "../_shared/mailer.ts";
-import { APP_URL, IT_EMAIL, button, emailLayout, escapeHtml, formatDate, itemList, note, spacer, titleCase } from "../_shared/emailLayout.ts";
+import { APP_URL, IT_EMAIL, button, deviceKind, emailLayout, escapeHtml, facts, formatDate, itemList, sectionTitle, spacer, supportList, titleCase } from "../_shared/emailLayout.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -66,23 +66,34 @@ serve(async (req: Request) => {
 
     const html = emailLayout({
       preheader: `${count} on record as assigned to you as of ${today}.`,
-      title: "Your assigned assets",
-      intro: `Hi ${escapeHtml(firstName)}, here’s everything IT has on record as assigned to you as of <strong style="color:#12151B;">${today}</strong> — ${count}.`,
+      eyebrow: "Asset summary",
+      title: "Your assigned equipment",
+      intro: `Hi ${escapeHtml(firstName)}, this is everything IT has on record as assigned to you. Please check it matches what you have.`,
       body: [
+        facts([
+          { label: "Employee", value: escapeHtml(employee.name) },
+          { label: "Items", value: String(list.length) },
+          { label: "As of", value: today },
+        ]),
+        spacer(28),
+        sectionTitle("Assigned to you", count),
         itemList(
           list.map((a) => ({
             name: a.name,
-            type: titleCase(a.category),
-            tag: a.asset_tag,
+            kind: deviceKind(a),
+            detail: [titleCase(a.category), a.asset_tag].filter(Boolean).join(" · "),
             serial: a.serial_number,
-            meta: `Since ${formatDate(since.get(a.id) || a.updated_at)}`,
-            sub: a.condition ? `${titleCase(a.condition)} condition` : undefined,
+            asideLabel: "Since",
+            asideValue: formatDate(since.get(a.id) || a.updated_at),
           })),
         ),
-        spacer(22),
+        spacer(28),
         button(`${APP_URL}/me`, "View my assets"),
-        spacer(22),
-        note(`Something missing, or not with you? Reply to this email or write to <a href="mailto:${IT_EMAIL}" style="color:#02019B;">${IT_EMAIL}</a> with the asset tag (on the label) so IT can update the record.`),
+        spacer(36),
+        supportList("Need help?", [
+          { label: "Something’s broken", hint: "Report a problem from My assets and IT will log a repair.", href: `${APP_URL}/me` },
+          { label: "Something here isn’t with you", hint: `Reply to this email or write to ${IT_EMAIL} with the asset tag.`, href: `mailto:${IT_EMAIL}?subject=${encodeURIComponent("Asset summary — correction")}` },
+        ]),
       ].join(""),
     });
 
