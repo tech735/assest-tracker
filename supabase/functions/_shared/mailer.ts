@@ -4,7 +4,7 @@
 // editing only this file.
 
 const DEFAULT_RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-const MAIL_FROM = Deno.env.get("MAIL_FROM") || "Asset Compass <notifications@asset.kotu.co.in>";
+const MAIL_FROM = Deno.env.get("MAIL_FROM") || "KOTU Asset Tracker <notifications@kotu.co.in>";
 // Replies to notifications reach IT instead of the unattended sending address.
 const MAIL_REPLY_TO = Deno.env.get("MAIL_REPLY_TO") || "tech@kotu.co.in";
 

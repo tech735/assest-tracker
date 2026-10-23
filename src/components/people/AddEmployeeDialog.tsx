@@ -29,6 +29,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useCreateEmployee, useLocations } from '@/hooks/useSupabaseData';
+import type { Employee } from '@/types/asset';
 import { useToast } from '@/hooks/use-toast';
 
 const employeeSchema = z.object({
@@ -76,7 +77,7 @@ export function AddEmployeeDialog({ open: controlledOpen, onOpenChange, showTrig
                 joinDate: new Date().toISOString(),
             };
 
-            await createEmployee.mutateAsync(finalValues as any);
+            await createEmployee.mutateAsync(finalValues as Omit<Employee, 'id' | 'assetsCount'>);
 
             toast({
                 title: 'Employee Added',

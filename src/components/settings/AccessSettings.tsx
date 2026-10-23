@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { EmptyState, PersonAvatar } from '@/components/app/primitives';
 import { SearchField } from '@/components/app/controls';
 
-export const ROLE_INFO: Record<UserRole, { label: string; description: string }> = {
+const ROLE_INFO: Record<UserRole, { label: string; description: string }> = {
   ADMIN: { label: 'Admin', description: 'Everything, including settings and roles' },
   SUPPORT: { label: 'IT Support', description: 'Day-to-day asset work and people' },
   WAREHOUSE: { label: 'Warehouse', description: 'Stock, locations, repairs and audits' },

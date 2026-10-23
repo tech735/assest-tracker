@@ -1,24 +1,27 @@
-import { useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Compass } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/app/primitives';
 
-const NotFound = () => {
-  const location = useLocation();
-
-  useEffect(() => {
-    console.error("404 Error: User attempted to access non-existent route:", location.pathname);
-  }, [location.pathname]);
-
+export default function NotFound() {
+  const navigate = useNavigate();
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">404</h1>
-        <p className="mb-4 text-xl text-muted-foreground">Oops! Page not found</p>
-        <a href="/" className="text-primary underline hover:text-primary/90">
-          Return to Home
-        </a>
-      </div>
+    <div className="rounded-xl border bg-card">
+      <EmptyState
+        icon={Compass}
+        title="Page not found"
+        description="The link may be wrong, or the page has moved."
+        action={
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button variant="secondary" onClick={() => navigate(-1)}>
+              <ArrowLeft /> Go back
+            </Button>
+            <Button asChild>
+              <Link to="/me">Go to My assets</Link>
+            </Button>
+          </div>
+        }
+      />
     </div>
   );
-};
-
-export default NotFound;
+}

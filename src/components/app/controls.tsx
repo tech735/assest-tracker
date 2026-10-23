@@ -8,7 +8,7 @@ import { toneClasses } from './primitives';
 
 /* ---------- KPI card (🧩 KPI card) ---------- */
 
-export function Sparkline({ data, className }: { data: number[]; className?: string }) {
+function Sparkline({ data, className }: { data: number[]; className?: string }) {
   if (data.length < 2) return <div className={cn('h-8', className)} />;
   const max = Math.max(...data);
   const min = Math.min(...data);

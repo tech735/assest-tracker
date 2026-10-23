@@ -22,4 +22,3 @@ export const contractTotal = (c: Pick<ServiceContract, 'units' | 'rate' | 'taxPe
 
 export const contractIdOf = (asset: Asset, kind: ContractKind) => (kind === 'amc' ? asset.amcContractId : asset.warrantyContractId);
 
-export const contractTitle = (c: ServiceContract) => `${c.vendor} ${CONTRACT_KIND_LABEL[c.kind]}${c.category ? ` · ${c.category}` : ''}`;

@@ -7,7 +7,92 @@ import { Asset, AssetCategory, AssetCondition, AssetStatus, Assignment, Dashboar
 // MAPPING UTILITIES
 // =====================================================
 
-const mapAsset = (data: any): Asset => ({
+// Row shapes as returned by PostgREST (snake_case columns). Field types mirror the app types so the
+// mappers stay one-to-one; nullable columns arrive as null and are passed through unchanged.
+interface AssetRow {
+    id: string;
+    asset_tag: string;
+    serial_number: string;
+    name: string;
+    brand: string;
+    model: string;
+    category: AssetCategory;
+    status: AssetStatus;
+    condition: AssetCondition;
+    location: string;
+    location_id: string;
+    assigned_to?: string;
+    assigned_to_id?: string;
+    purchase_date?: string;
+    purchase_cost?: number;
+    vendor?: string;
+    warranty_start?: string;
+    warranty_end?: string;
+    amc_start_date?: string;
+    amc_end_date?: string;
+    amc_contract_id?: string | null;
+    warranty_contract_id?: string | null;
+    notes?: string;
+    repair_vendor?: string;
+    repair_est_return?: string;
+    repair_cost?: number;
+    repair_notes?: string;
+    lost_reference?: string;
+    lost_notes?: string;
+    created_at: string;
+    updated_at: string;
+}
+interface EmployeeRow {
+    id: string;
+    name: string;
+    email: string;
+    department: string;
+    position: string;
+    location: string;
+    location_id: string;
+    avatar_url?: string;
+    assets_count?: number;
+    status: Employee['status'];
+    join_date: string;
+    exit_date?: string;
+}
+interface LocationRow {
+    id: string;
+    name: string;
+    type: Location['type'];
+    address?: string;
+    assets_count?: number;
+    employees_count?: number;
+}
+interface AssignmentRow {
+    id: string;
+    asset_id: string;
+    asset_tag: string;
+    asset_name: string;
+    employee_id?: string;
+    employee_name?: string;
+    event_type?: Assignment['eventType'];
+    assigned_date: string;
+    return_date?: string;
+    condition: AssetCondition;
+    handed_over_by?: string;
+    received_by?: string;
+    bundle_id?: string;
+    notes?: string;
+}
+interface AlertRow {
+    id: string;
+    type: Alert['type'];
+    title: string;
+    description: string;
+    asset_id?: string;
+    severity: Alert['severity'];
+    is_resolved: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+const mapAsset = (data: AssetRow): Asset => ({
     id: data.id,
     assetTag: data.asset_tag,
     serialNumber: data.serial_number,
@@ -41,7 +126,7 @@ const mapAsset = (data: any): Asset => ({
     updatedAt: data.updated_at,
 });
 
-const mapEmployee = (data: any): Employee => ({
+const mapEmployee = (data: EmployeeRow): Employee => ({
     id: data.id,
     name: data.name,
     email: data.email,
@@ -56,7 +141,7 @@ const mapEmployee = (data: any): Employee => ({
     exitDate: data.exit_date,
 });
 
-const mapLocation = (data: any): Location => ({
+const mapLocation = (data: LocationRow): Location => ({
     id: data.id,
     name: data.name,
     type: data.type,
@@ -65,7 +150,7 @@ const mapLocation = (data: any): Location => ({
     employeesCount: data.employees_count || 0,
 });
 
-const mapAssignment = (data: any): Assignment => ({
+const mapAssignment = (data: AssignmentRow): Assignment => ({
     id: data.id,
     assetId: data.asset_id,
     assetTag: data.asset_tag,
@@ -82,7 +167,7 @@ const mapAssignment = (data: any): Assignment => ({
     notes: data.notes,
 });
 
-const mapAlert = (data: any): Alert => ({
+const mapAlert = (data: AlertRow): Alert => ({
     id: data.id,
     type: data.type,
     title: data.title,
@@ -109,7 +194,7 @@ export async function getAssets(): Promise<Asset[]> {
     return rows.map(mapAsset);
 }
 
-export async function getAssetById(id: string): Promise<Asset | null> {
+async function getAssetById(id: string): Promise<Asset | null> {
     const { data, error } = await supabase
         .from('assets')
         .select('*')
@@ -264,7 +349,7 @@ export async function returnAsset({
     locationName?: string;
 }): Promise<void> {
     // 1. Update asset status, condition and location
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
         status: 'available',
         assigned_to: null,
         assigned_to_id: null,
@@ -535,17 +620,6 @@ export async function getEmployees(): Promise<Employee[]> {
     return rows.map(mapEmployee);
 }
 
-export async function getEmployeeById(id: string): Promise<Employee | null> {
-    const { data, error } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-    if (error) throw error;
-    return data ? mapEmployee(data) : null;
-}
-
 export async function createEmployee(employee: Omit<Employee, 'id' | 'assetsCount'>): Promise<Employee> {
     const { data, error } = await supabase
         .from('employees')
@@ -589,15 +663,6 @@ export async function updateEmployee(id: string, updates: Partial<Employee>): Pr
 
     if (error) throw error;
     return mapEmployee(data);
-}
-
-export async function deleteEmployee(id: string): Promise<void> {
-    const { error } = await supabase
-        .from('employees')
-        .delete()
-        .eq('id', id);
-
-    if (error) throw error;
 }
 
 // =====================================================
@@ -669,17 +734,6 @@ export async function getLocations(): Promise<Location[]> {
     return rows.map(mapLocation);
 }
 
-export async function getLocationById(id: string): Promise<Location | null> {
-    const { data, error } = await supabase
-        .from('locations')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-    if (error) throw error;
-    return data ? mapLocation(data) : null;
-}
-
 export async function createLocation(location: Omit<Location, 'id' | 'assetsCount' | 'employeesCount'>): Promise<Location> {
     const { data, error } = await supabase
         .from('locations')
@@ -747,7 +801,7 @@ export async function getAssignmentsByAssetId(assetId: string): Promise<Assignme
     return (data || []).map(mapAssignment);
 }
 
-export async function createAssignment(assignment: Omit<Assignment, 'id'>): Promise<Assignment> {
+async function createAssignment(assignment: Omit<Assignment, 'id'>): Promise<Assignment> {
     const { data, error } = await supabase
         .from('assignments')
         .insert([{
@@ -772,7 +826,7 @@ export async function createAssignment(assignment: Omit<Assignment, 'id'>): Prom
     return mapAssignment(data);
 }
 
-export async function createAssignments(assignments: Omit<Assignment, 'id'>[]): Promise<Assignment[]> {
+async function createAssignments(assignments: Omit<Assignment, 'id'>[]): Promise<Assignment[]> {
     const { data, error } = await supabase
         .from('assignments')
         .insert(assignments.map(assignment => ({
@@ -796,15 +850,6 @@ export async function createAssignments(assignments: Omit<Assignment, 'id'>[]): 
     return (data || []).map(mapAssignment);
 }
 
-export async function deleteAssignment(id: string): Promise<void> {
-    const { error } = await supabase
-        .from('assignments')
-        .delete()
-        .eq('id', id);
-
-    if (error) throw error;
-}
-
 // =====================================================
 // ALERT OPERATIONS
 // =====================================================
@@ -821,51 +866,6 @@ export async function getAlerts(): Promise<Alert[]> {
     return rows.map(mapAlert);
 }
 
-export async function createAlert(alert: Omit<Alert, 'id' | 'createdAt' | 'updatedAt' | 'isResolved'>): Promise<Alert> {
-    const { data, error } = await supabase
-        .from('alerts')
-        .insert([{
-            type: alert.type,
-            title: alert.title,
-            description: alert.description,
-            asset_id: alert.assetId,
-            severity: alert.severity,
-        }])
-        .select()
-        .single();
-
-    if (error) throw error;
-    return mapAlert(data);
-}
-
-export async function updateAlert(id: string, updates: Partial<Alert>): Promise<Alert> {
-    const { data, error } = await supabase
-        .from('alerts')
-        .update({
-            type: updates.type,
-            title: updates.title,
-            description: updates.description,
-            severity: updates.severity,
-            asset_id: updates.assetId,
-            is_resolved: updates.isResolved,
-        })
-        .eq('id', id)
-        .select()
-        .single();
-
-    if (error) throw error;
-    return mapAlert(data);
-}
-
-export async function deleteAlert(id: string): Promise<void> {
-    const { error } = await supabase
-        .from('alerts')
-        .delete()
-        .eq('id', id);
-
-    if (error) throw error;
-}
-
 export async function resolveAlert(id: string): Promise<void> {
     const { error } = await supabase
         .from('alerts')
@@ -876,34 +876,11 @@ export async function resolveAlert(id: string): Promise<void> {
 }
 
 // =====================================================
-// DASHBOARD STATS
-// =====================================================
-
-export async function getDashboardStats(): Promise<DashboardStats> {
-    const assets = await fetchAllPages<{ status: string }>((from, to, count) =>
-        supabase
-            .from('assets')
-            .select('status', count ? { count: 'exact' } : undefined)
-            .order('id')
-            .range(from, to));
-
-    const stats: DashboardStats = {
-        totalAssets: assets?.length || 0,
-        assigned: assets?.filter(a => a.status === 'assigned').length || 0,
-        available: assets?.filter(a => a.status === 'available').length || 0,
-        inRepair: assets?.filter(a => a.status === 'repair').length || 0,
-        retired: assets?.filter(a => a.status === 'retired').length || 0,
-    };
-
-    return stats;
-}
-
-// =====================================================
 // SETTINGS OPERATIONS
 // =====================================================
 
-export const DEFAULT_SETTINGS = {
-    orgName: "Asset Compass",
+const DEFAULT_SETTINGS = {
+    orgName: "School Style Supplies Pvt. Ltd. (KOTU)",
     tagPrefix: "AST-",
     currency: "INR",
     timezone: "UTC",
@@ -923,7 +900,9 @@ export const DEFAULT_SETTINGS = {
     ]
 };
 
-export async function getSettings(): Promise<any> {
+export type AppSettings = typeof DEFAULT_SETTINGS;
+
+export async function getSettings(): Promise<AppSettings> {
     const { data, error } = await supabase
         .from('app_settings')
         .select('*')
@@ -934,7 +913,7 @@ export async function getSettings(): Promise<any> {
     return data?.config || DEFAULT_SETTINGS;
 }
 
-export async function updateSettings(config: any): Promise<any> {
+export async function updateSettings(config: AppSettings): Promise<AppSettings> {
     // First check if a row exists
     const { data: existing } = await supabase
         .from('app_settings')

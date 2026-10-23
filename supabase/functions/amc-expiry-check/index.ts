@@ -13,6 +13,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { sendEmail } from "../_shared/mailer.ts";
+import { APP_URL, button, deviceKind, emailLayout, facts, formatDate, itemList, sectionTitle, spacer, titleCase } from "../_shared/emailLayout.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -24,10 +25,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Reminder windows, in days before amc_end_date. This is the single source of
-// truth for the backend reminder cadence — keep in sync with the display-only
-// AMC_REMINDER_DAYS constant in src/lib/amc.ts (used for the "Expiring Soon"
-// badge threshold), and change only here to retune when reminders go out.
+// Reminder windows, in days before amc_end_date — the single source of truth for when reminders go
+// out. (The app flags AMC as "expiring" within 30 days; see amcExpiring in src/lib/assetMeta.ts.)
 const REMINDER_DAYS = [30, 15, 7];
 const SORTED_THRESHOLDS = [...REMINDER_DAYS].sort((a, b) => b - a);
 
@@ -70,65 +69,34 @@ function matchReminderStage(daysRemaining: number): number | null {
 }
 
 function buildReportHtml(rows: Array<{ asset: AssetRow; daysRemaining: number }>): string {
-  const tableRows = rows
-    .map(({ asset, daysRemaining }) => `
-      <tr>
-        <td style="padding: 8px; border: 1px solid #ddd;">${asset.name}</td>
-        <td style="padding: 8px; border: 1px solid #ddd;">${asset.asset_tag}</td>
-        <td style="padding: 8px; border: 1px solid #ddd;">${asset.category || "N/A"}</td>
-        <td style="padding: 8px; border: 1px solid #ddd;">${asset.location || "N/A"}</td>
-        <td style="padding: 8px; border: 1px solid #ddd;">${asset.assigned_to || "Unassigned"}</td>
-        <td style="padding: 8px; border: 1px solid #ddd;">${asset.amc_start_date ? new Date(asset.amc_start_date).toLocaleDateString() : "N/A"}</td>
-        <td style="padding: 8px; border: 1px solid #ddd;">${new Date(asset.amc_end_date).toLocaleDateString()}</td>
-        <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">${daysRemaining} day${daysRemaining === 1 ? "" : "s"}</td>
-      </tr>
-    `)
-    .join("");
-
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th { background-color: #f4f4f4; text-align: left; padding: 10px; border: 1px solid #ddd; }
-        td { padding: 10px; border: 1px solid #ddd; }
-        .header { margin-bottom: 20px; }
-        .footer { margin-top: 30px; font-size: 0.9em; color: #666; }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <p>Hello,</p>
-        <p>The following assets are approaching their AMC expiry date. Please review the details below and take the necessary action for renewal or follow-up.</p>
-      </div>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Asset Name</th>
-            <th>Asset ID</th>
-            <th>Category</th>
-            <th>Location</th>
-            <th>Assigned To</th>
-            <th>AMC Start Date</th>
-            <th>AMC End Date</th>
-            <th>Days Remaining</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${tableRows}
-        </tbody>
-      </table>
-
-      <div class="footer">
-        <p>This is an automated reminder from Asset Compass. No action is needed if renewal is already in progress.</p>
-        <p>Regards,<br>Asset Compass</p>
-      </div>
-    </body>
-    </html>
-  `;
+  const soonest = Math.min(...rows.map((r) => r.daysRemaining));
+  return emailLayout({
+    preheader: `${rows.length} AMC contract${rows.length === 1 ? "" : "s"} ending soon — the first in ${soonest} day${soonest === 1 ? "" : "s"}.`,
+    eyebrow: "AMC reminder",
+    title: `${rows.length} AMC${rows.length === 1 ? "" : "s"} ending soon`,
+    intro: "These assets’ annual maintenance contracts are about to end. Renew them, or ignore this if renewal is already in progress.",
+    body: [
+      facts([
+        { label: "Assets", value: String(rows.length) },
+        { label: "Soonest", value: `${soonest} day${soonest === 1 ? "" : "s"}` },
+        { label: "Checked", value: formatDate(new Date().toISOString()) },
+      ]),
+      spacer(28),
+      sectionTitle("Ending soon"),
+      itemList(
+        rows.map(({ asset, daysRemaining }) => ({
+          name: asset.name,
+          kind: deviceKind(asset),
+          detail: [titleCase(asset.category), asset.asset_tag, asset.assigned_to || asset.location].filter(Boolean).join(" · "),
+          note: asset.amc_start_date ? `AMC since ${formatDate(asset.amc_start_date)}` : undefined,
+          asideLabel: `${daysRemaining} day${daysRemaining === 1 ? "" : "s"} left`,
+          asideValue: formatDate(asset.amc_end_date),
+        })),
+      ),
+      spacer(28),
+      button(`${APP_URL}/maintenance?tab=amc`, "Review AMC in Maintenance"),
+    ].join(""),
+  });
 }
 
 serve(async (req: Request) => {

@@ -57,11 +57,7 @@ export function AddLocationDialog({ open: controlledOpen, onOpenChange, showTrig
 
     const onSubmit = async (values: LocationFormValues) => {
         try {
-            await createLocation.mutateAsync({
-                ...values,
-                assetsCount: 0,
-                employeesCount: 0,
-            } as any);
+            await createLocation.mutateAsync({ name: values.name, type: values.type, address: values.address });
 
             toast({
                 title: 'Location Created',

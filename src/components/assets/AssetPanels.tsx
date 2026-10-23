@@ -224,7 +224,7 @@ export function CoverageCard({ title, start, end, action, contractId }: { title:
   );
 }
 
-export function AssetDetailsGrid({ asset, currency }: { asset: Asset; currency?: string }) {
+function AssetDetailsGrid({ asset, currency }: { asset: Asset; currency?: string }) {
   const bv = bookValue(asset);
   const { can } = useAccess();
   const costs = can('costs.view');

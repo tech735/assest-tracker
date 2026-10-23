@@ -24,7 +24,7 @@ const s = (v: unknown) => (v == null ? undefined : String(v));
 
 /* ---------------- Access ---------------- */
 
-export const PERMISSIONS = [
+const PERMISSIONS = [
   'assets.edit',
   'assets.checkout',
   'assets.delete',

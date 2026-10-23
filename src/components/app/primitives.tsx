@@ -254,40 +254,6 @@ export function EmptyState({
   );
 }
 
-export function ListRow({
-  icon,
-  title,
-  subtitle,
-  right,
-  to,
-  onClick,
-  className,
-}: {
-  icon?: React.ReactNode;
-  title: React.ReactNode;
-  subtitle?: React.ReactNode;
-  right?: React.ReactNode;
-  to?: string;
-  onClick?: () => void;
-  className?: string;
-}) {
-  const inner = (
-    <>
-      {icon}
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium text-foreground">{title}</span>
-        {subtitle && <span className="block truncate text-xs text-muted-foreground">{subtitle}</span>}
-      </span>
-      {right}
-      {(to || onClick) && !right && <ChevronRight className="h-4 w-4 shrink-0 text-faint" />}
-    </>
-  );
-  const cls = cn('flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left transition-colors duration-100', (to || onClick) && 'hover:bg-subtle', className);
-  if (to) return <Link to={to} className={cls}>{inner}</Link>;
-  if (onClick) return <button type="button" onClick={onClick} className={cls}>{inner}</button>;
-  return <div className={cls}>{inner}</div>;
-}
-
 export function PageLoader({ label = 'Loading…' }: { label?: string }) {
   return (
     <div className="space-y-4" aria-busy="true" aria-label={label}>

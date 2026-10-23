@@ -4,9 +4,9 @@ import type { Asset } from '@/types/asset';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
-export const assetUrl = (asset: Pick<Asset, 'id'>) => `${window.location.origin}/assets/${asset.id}`;
+const assetUrl = (asset: Pick<Asset, 'id'>) => `${window.location.origin}/assets/${asset.id}`;
 
-export function AssetLabel({ asset }: { asset: Asset }) {
+function AssetLabel({ asset }: { asset: Asset }) {
   return (
     <div className="asset-label flex items-center gap-4 rounded-lg border-2 border-foreground bg-white p-4 text-black">
       <QRCodeSVG value={assetUrl(asset)} size={84} level="M" marginSize={0} />

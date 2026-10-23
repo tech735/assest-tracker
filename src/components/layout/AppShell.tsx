@@ -268,7 +268,7 @@ function SidebarLink({ item, collapsed, count }: { item: NavItem; collapsed: boo
     <NavLink
       to={item.to}
       className={cn(
-        'group flex h-9 items-center rounded-lg text-sm transition-colors duration-[120ms]',
+        'group flex h-9 items-center rounded-lg text-sm transition-colors [transition-duration:120ms]',
         collapsed ? 'w-10 justify-center' : 'gap-2.5 px-2.5',
         active ? 'bg-primary-soft font-semibold text-link' : 'font-medium text-muted-foreground hover:bg-muted hover:text-foreground',
       )}

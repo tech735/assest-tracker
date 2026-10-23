@@ -4,7 +4,7 @@
  * @param data - Array of objects to export
  * @param fileName - Name of the file (without extension)
  */
-export function exportToCSV(data: any[], fileName: string) {
+export function exportToCSV<T extends object>(data: T[], fileName: string) {
     if (!data || !data.length) {
         console.error('No data to export');
         return;
@@ -21,7 +21,7 @@ export function exportToCSV(data: any[], fileName: string) {
         ...data.map((row) =>
             headers
                 .map((header) => {
-                    const value = row[header];
+                    const value = (row as Record<string, unknown>)[header];
                     // Escape quotes and wrap in quotes if value contains commas
                     const escaped = ('' + (value ?? '')).replace(/"/g, '""');
                     return `"${escaped}"`;

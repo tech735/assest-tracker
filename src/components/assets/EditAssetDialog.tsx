@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -81,7 +81,10 @@ export function EditAssetDialog({ asset, open, onOpenChange }: EditAssetDialogPr
         .sort();
 
     const normalizeCategory = (cat: string) => cat.charAt(0).toUpperCase() + cat.slice(1).toLowerCase();
-    const findLocationId = (locName: string) => locations.find(l => l.name === locName || (l.name === 'Warehouse' && locName === 'Central Warehouse'))?.id || '';
+    const findLocationId = useCallback(
+        (locName: string) => locations.find(l => l.name === locName || (l.name === 'Warehouse' && locName === 'Central Warehouse'))?.id || '',
+        [locations],
+    );
 
     const form = useForm<AssetFormValues>({
         resolver: zodResolver(assetSchema),
@@ -129,7 +132,7 @@ export function EditAssetDialog({ asset, open, onOpenChange }: EditAssetDialogPr
                 status: asset.status,
             });
         }
-    }, [asset, open, form, locations]);
+    }, [asset, open, form, locations, findLocationId]);
 
     const onSubmit = async (values: AssetFormValues) => {
         try {

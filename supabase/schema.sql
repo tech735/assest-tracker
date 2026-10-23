@@ -1,4 +1,4 @@
--- Asset Compass Database Schema
+-- KOTU Asset Tracker database schema (base; apply supabase/migrations in order on top)
 -- This schema defines all tables for the asset management system
 
 -- Enable UUID extension
@@ -396,7 +396,7 @@ CREATE POLICY "No client access to amc_notifications" ON amc_notifications
 CREATE TABLE IF NOT EXISTS app_settings (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   config JSONB NOT NULL DEFAULT '{
-    "orgName": "Asset Compass",
+    "orgName": "School Style Supplies Pvt. Ltd. (KOTU)",
     "tagPrefix": "AST-",
     "currency": "USD",
     "timezone": "UTC",

@@ -82,7 +82,7 @@ export default function Auth() {
                         type="button"
                         onClick={handleGoogleSignIn}
                         disabled={googleLoading}
-                        className="flex h-12 w-full items-center justify-center gap-3 rounded-[10px] border border-border-strong bg-card text-[15px] font-semibold shadow-xs transition-[background-color,transform] duration-[120ms] hover:bg-background active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                        className="flex h-12 w-full items-center justify-center gap-3 rounded-[10px] border border-border-strong bg-card text-[15px] font-semibold shadow-xs transition-[background-color,transform] [transition-duration:120ms] hover:bg-background active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         <GoogleIcon />
                         {googleLoading ? 'Redirecting…' : 'Continue with Google'}

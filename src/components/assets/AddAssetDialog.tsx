@@ -32,7 +32,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useCreateAsset, useLocations, useSettings, useAssets } from '@/hooks/useSupabaseData';
 import { useToast } from '@/hooks/use-toast';
-import { AssetCategory, AssetCondition } from '@/types/asset';
+import { AssetCategory, AssetCondition, AssetStatus } from '@/types/asset';
 import { Asset } from '@/types/asset';
 
 const assetSchema = z.object({
@@ -147,9 +147,6 @@ export function AddAssetDialog({
             // Find location name for the selected ID
             const selectedLocation = locations.find(l => l.id === values.locationId);
 
-            console.log('Creating asset with values:', values);
-            console.log('Selected location:', selectedLocation);
-            console.log('Location ID:', values.locationId);
 
             // Ensure location is properly selected
             if (!values.locationId || !selectedLocation) {
@@ -164,7 +161,7 @@ export function AddAssetDialog({
                 assetTag: values.assetTag || '',
                 category: values.category as AssetCategory,
                 condition: values.condition as AssetCondition,
-                status: values.status as any,
+                status: values.status as AssetStatus,
                 location: selectedLocation.name, // Use the actual location name
                 locationId: selectedLocation.id, // Ensure locationId is set correctly
                 purchaseDate: values.purchaseDate,

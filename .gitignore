@@ -24,3 +24,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local tool state
+.claude/settings.local.json
+deno.lock
