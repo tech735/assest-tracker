@@ -1,42 +1,34 @@
 // Emails an employee the list of assets currently assigned to them (People → profile → "Email summary").
 //
-// Security: data is read with the CALLER's JWT, so only signed-in staff can trigger it (row-level
-// security applies), and the email only ever goes to the employee's own address on record.
+// Security: staff only (people or check-out permission); data is read with the CALLER's JWT so row-level
+// security applies; the email only goes to the employee's own address on record; one email per
+// employee per 10 minutes.
 // Deploy: supabase functions deploy send-asset-email
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { sendEmail } from "../_shared/mailer.ts";
+import { checkThrottle, recordEmail, requireCaller } from "../_shared/guard.ts";
+import { PublicError, corsHeaders, errorResponse, json } from "../_shared/http.ts";
 import { APP_URL, IT_EMAIL, button, deviceKind, emailLayout, escapeHtml, facts, formatDate, itemList, sectionTitle, spacer, supportList, titleCase } from "../_shared/emailLayout.ts";
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const RESEND_API_KEY_ASSET_SUMMARY = Deno.env.get("RESEND_API_KEY_ASSET_SUMMARY");
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
 type AssetRow = { id: string; category?: string; name: string; asset_tag: string; serial_number?: string; condition?: string; brand?: string; model?: string; updated_at: string };
 
 serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return json({ error: "Not signed in" }, 401);
+    const caller = await requireCaller(req);
+    if (!caller.can("people.manage") && !caller.can("assets.checkout")) throw new PublicError("You don't have permission to email asset summaries", 403);
     const { employeeId } = (await req.json()) as { employeeId?: string };
-    if (!employeeId) return json({ error: "Employee ID is required" }, 400);
-
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { headers: { Authorization: authHeader } } });
-    const { data: user } = await supabase.auth.getUser(authHeader.replace(/^Bearer\s+/i, ""));
-    if (!user?.user) return json({ error: "Not signed in" }, 401);
+    if (!employeeId) throw new PublicError("Employee ID is required");
+    const supabase = caller.db;
 
     const { data: employee, error: empError } = await supabase.from("employees").select("id, name, email").eq("id", employeeId).maybeSingle();
     if (empError) throw empError;
-    if (!employee) return json({ error: "Employee not found" }, 404);
-    if (!employee.email) return json({ error: "Employee has no email address registered" }, 400);
+    if (!employee) throw new PublicError("Employee not found", 404);
+    if (!employee.email) throw new PublicError("Employee has no email address registered");
+    await checkThrottle("send-asset-email", employee.id, 10);
 
     const { data: assets, error: assetError } = await supabase
       .from("assets")
@@ -103,8 +95,10 @@ serve(async (req: Request) => {
       html,
       apiKey: RESEND_API_KEY_ASSET_SUMMARY,
     });
-    return json(result.mock ? { message: "Email simulation successful (See logs)", mock: true } : { message: "Email sent", mock: false });
-  } catch (error: unknown) {
-    return json({ error: error instanceof Error ? error.message : String(error) }, 400);
+    if (result.mock) throw new PublicError("Email isn't configured on the server (no Resend key)", 503);
+    await recordEmail("send-asset-email", employee.id, caller.id);
+    return json(req, { message: "Email sent" });
+  } catch (e) {
+    return errorResponse(req, "send-asset-email", e);
   }
 });

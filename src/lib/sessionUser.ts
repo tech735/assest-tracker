@@ -29,5 +29,7 @@ export async function profileUserFor(authUser: AuthUser): Promise<User | null> {
 export function takePostLoginRedirect(): string | null {
   const next = sessionStorage.getItem('postLoginRedirect');
   sessionStorage.removeItem('postLoginRedirect');
-  return next && next.startsWith('/') && !next.startsWith('//') ? next : null;
+  // In-app paths only: no protocol-relative "//host", no backslashes ("/\host"), no control characters.
+  // eslint-disable-next-line no-control-regex
+  return next && next.startsWith('/') && !next.startsWith('//') && !/[\\\u0000-\u001f]/.test(next) ? next : null;
 }

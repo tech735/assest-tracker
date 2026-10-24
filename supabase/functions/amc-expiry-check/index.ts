@@ -13,6 +13,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { sendEmail } from "../_shared/mailer.ts";
+import { isScheduler } from "../_shared/guard.ts";
 import { APP_URL, button, deviceKind, emailLayout, facts, formatDate, itemList, sectionTitle, spacer, titleCase } from "../_shared/emailLayout.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -20,10 +21,8 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const AMC_NOTIFICATION_EMAIL = Deno.env.get("AMC_NOTIFICATION_EMAIL");
 const RESEND_API_KEY_AMC = Deno.env.get("RESEND_API_KEY_AMC");
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+// Server-to-server only (pg_cron / Supabase Cron), so no browser CORS headers.
+const corsHeaders = {};
 
 // Reminder windows, in days before amc_end_date — the single source of truth for when reminders go
 // out. (The app flags AMC as "expiring" within 30 days; see amcExpiring in src/lib/assetMeta.ts.)
@@ -102,6 +101,10 @@ function buildReportHtml(rows: Array<{ asset: AssetRow; daysRemaining: number }>
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
+  // Only the scheduled job may run this (x-cron-secret or the service-role key); the anon key is not enough.
+  if (!isScheduler(req)) {
+    return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { "Content-Type": "application/json" } });
   }
 
   try {
@@ -189,7 +192,7 @@ serve(async (req: Request) => {
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("amc-expiry-check failed:", errorMessage);
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    return new Response(JSON.stringify({ error: "AMC check failed — see function logs" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

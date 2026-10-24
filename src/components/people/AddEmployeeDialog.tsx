@@ -38,7 +38,7 @@ const employeeSchema = z.object({
     department: z.string().min(1, { message: 'Department is required.' }),
     position: z.string().min(1, { message: 'Position is required.' }),
     locationId: z.string().min(1, { message: 'Location is required.' }),
-    status: z.string().default('active'),
+    status: z.string(),
     avatarUrl: z.string().optional(),
 });
 

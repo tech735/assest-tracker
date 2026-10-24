@@ -7,6 +7,8 @@ const DEFAULT_RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const MAIL_FROM = Deno.env.get("MAIL_FROM") || "KOTU Asset Tracker <notifications@kotu.co.in>";
 // Replies to notifications reach IT instead of the unattended sending address.
 const MAIL_REPLY_TO = Deno.env.get("MAIL_REPLY_TO") || "tech@kotu.co.in";
+// Overridable only so local end-to-end tests can capture mail instead of sending it.
+const MAIL_API_URL = Deno.env.get("MAIL_API_URL") || "https://api.resend.com/emails";
 
 export interface SendEmailParams {
   to: string[];
@@ -33,7 +35,8 @@ export async function sendEmail({ to, subject, html, apiKey, replyTo }: SendEmai
   const keys = [...new Set([apiKey, ...ALL_KEYS].filter((k): k is string => !!k && k.trim().length > 0))];
 
   if (!keys.length) {
-    console.log(`Mocking email send to [${to.join(", ")}] (No RESEND_API_KEY found):`, html);
+    // No personal data in logs: subject and recipient count only.
+    console.log(`Email not sent (no RESEND_API_KEY): "${subject}" to ${to.length} recipient(s)`);
     return { mock: true };
   }
 
@@ -52,7 +55,7 @@ export async function sendEmail({ to, subject, html, apiKey, replyTo }: SendEmai
 }
 
 async function sendWithKey(resendApiKey: string, { to, subject, html, replyTo }: { to: string[]; subject: string; html: string; replyTo?: string }): Promise<SendEmailResult> {
-  const res = await fetch("https://api.resend.com/emails", {
+  const res = await fetch(MAIL_API_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

@@ -41,7 +41,7 @@ const startRepairSchema = z.object({
 });
 
 const endRepairSchema = z.object({
-    condition: z.enum(['new', 'good', 'fair', 'poor'], { required_error: 'Condition is required.' }),
+    condition: z.enum(['new', 'good', 'fair', 'poor'], { error: 'Condition is required.' }),
     notes: z.string().optional(),
 });
 

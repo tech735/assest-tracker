@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseCSV, parseLooseDate, toCSV } from '@/lib/csv';
+import { csvCell, parseCSV, parseLooseDate, toCSV } from '@/lib/csv';
 import { bookValue, coverage, displayLocation, initials } from '@/lib/assetMeta';
 import { findAssetByCode } from '@/lib/scan';
 import { chunk, fetchAllPages, mapLimit } from '@/lib/paging';
@@ -114,5 +114,20 @@ describe('paging', () => {
     });
     expect(out).toEqual([2, 4, 6, 8, 10, 12, 14]);
     expect(peak).toBe(3);
+  });
+});
+
+describe('csvCell (formula injection)', () => {
+  it('neutralises cells a spreadsheet would run as formulas', () => {
+    expect(csvCell('=HYPERLINK("https://evil","x")')).toBe(`"'=HYPERLINK(""https://evil"",""x"")"`);
+    expect(csvCell('+cmd')).toBe(`"'+cmd"`);
+    expect(csvCell('@SUM(A1)')).toBe(`"'@SUM(A1)"`);
+    expect(csvCell('	x')).toBe(`"'	x"`);
+  });
+  it('leaves ordinary values and numbers alone', () => {
+    expect(csvCell('MacBook Pro')).toBe('"MacBook Pro"');
+    expect(csvCell(-1250)).toBe('"-1250"');
+    expect(csvCell('-3.5')).toBe('"-3.5"');
+    expect(csvCell(null)).toBe('""');
   });
 });

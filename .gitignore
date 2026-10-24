@@ -28,3 +28,9 @@ dist-ssr
 # Local tool state
 .claude/settings.local.json
 deno.lock
+
+# Security scan output (describes real weaknesses; the repo is public)
+security-reports/
+
+# Copy of the exchange-portal project (reference only; never commit)
+security/

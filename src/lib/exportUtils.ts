@@ -1,3 +1,5 @@
+import { csvCell } from '@/lib/csv';
+
 /**
  * Exports data to a CSV file and triggers a browser download.
  * 
@@ -21,10 +23,7 @@ export function exportToCSV<T extends object>(data: T[], fileName: string) {
         ...data.map((row) =>
             headers
                 .map((header) => {
-                    const value = (row as Record<string, unknown>)[header];
-                    // Escape quotes and wrap in quotes if value contains commas
-                    const escaped = ('' + (value ?? '')).replace(/"/g, '""');
-                    return `"${escaped}"`;
+                    return csvCell((row as Record<string, unknown>)[header]);
                 })
                 .join(',')
         ),

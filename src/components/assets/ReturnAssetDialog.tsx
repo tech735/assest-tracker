@@ -34,7 +34,7 @@ import { useAccess } from '@/hooks/useCollab';
 
 const returnSchema = z.object({
     assetId: z.string().min(1, { message: 'Asset is required.' }),
-    condition: z.enum(['new', 'good', 'fair', 'poor'], { required_error: 'Condition is required.' }),
+    condition: z.enum(['new', 'good', 'fair', 'poor'], { error: 'Condition is required.' }),
     receivedBy: z.string().min(1, { message: 'Received by is required.' }),
     notes: z.string().optional(),
 });

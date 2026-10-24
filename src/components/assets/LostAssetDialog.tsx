@@ -38,7 +38,7 @@ const markLostSchema = z.object({
 });
 
 const markFoundSchema = z.object({
-    condition: z.enum(['new', 'good', 'fair', 'poor'], { required_error: 'Condition is required.' }),
+    condition: z.enum(['new', 'good', 'fair', 'poor'], { error: 'Condition is required.' }),
     notes: z.string().optional(),
 });
 

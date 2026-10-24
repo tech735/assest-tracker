@@ -49,8 +49,8 @@ const assetSchema = z.object({
     amcStartDate: z.string().optional().nullable(),
     amcEndDate: z.string().optional().nullable(),
     notes: z.string().optional().nullable(),
-    condition: z.string().default('good'),
-    status: z.string().default('available'),
+    condition: z.string(),
+    status: z.string(),
 });
 
 type AssetFormValues = z.infer<typeof assetSchema>;

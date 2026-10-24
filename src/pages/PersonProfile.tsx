@@ -61,6 +61,8 @@ export default function PersonProfile() {
 
   if (isLoading) return <PageLoader label="Loading profile" />;
   if (!person) return <EmptyState icon={Users} title="Person not found" action={<Button onClick={() => navigate('/people')}>Back to people</Button>} />;
+  // Asset rows of other people are only readable with the Assets page (RLS); everyone sees their own.
+  const seesAssets = can('assets.view') || (!!access?.email && person.email?.toLowerCase() === access.email.toLowerCase());
 
   const value = held.reduce((s, a) => s + (a.purchaseCost || 0), 0);
   const avgDays = held.length
@@ -165,7 +167,7 @@ export default function PersonProfile() {
         <KpiCard compact label="Handovers" value={history.filter((h) => h.eventType === 'assign').length} />
       </div>
 
-      <ViewTabs<Tab>
+      {seesAssets && <ViewTabs<Tab>
         value={tab}
         onChange={setTab}
         tabs={[
@@ -174,11 +176,17 @@ export default function PersonProfile() {
           // Handover forms are only readable by IT (and the employee, on My assets).
           ...(canSeeDocs ? [{ value: 'documents' as Tab, label: 'Documents', count: pendingDocs ? `${pendingDocs} to sign` : docs.length }] : []),
         ]}
-      />
+      />}
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0">
-          {tab === 'assets' ? (
+          {!seesAssets ? (
+            <div className="rounded-xl border bg-card p-5">
+              <p className="text-sm font-semibold">Assets</p>
+              <p className="mt-1 text-2xl font-semibold tabular">{person.assetsCount || 0}</p>
+              <p className="text-[13px] text-muted-foreground">assigned to {person.name.split(' ')[0]}. Details are visible to IT.</p>
+            </div>
+          ) : tab === 'assets' ? (
             <div className="overflow-hidden rounded-xl border bg-card">
               {held.length === 0 ? (
                 <EmptyState icon={Package} title="No assets assigned" description={offboarded ? 'All assets have been returned.' : 'Assign a laptop, monitor or phone to get started.'} action={!offboarded && can('assets.checkout') && <Button onClick={() => setAssigning(true)}><Plus /> Assign assets</Button>} />

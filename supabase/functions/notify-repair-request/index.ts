@@ -4,35 +4,29 @@
 // email, and it always goes to the IT inbox — never to an address from the request body.
 // Deploy: supabase functions deploy notify-repair-request
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { sendEmail } from "../_shared/mailer.ts";
+import { checkThrottle, recordEmail, requireCaller } from "../_shared/guard.ts";
+import { PublicError, corsHeaders, errorResponse, json } from "../_shared/http.ts";
 import { APP_URL, IT_EMAIL, button, deviceKind, emailLayout, escapeHtml, facts, formatDate, itemList, sectionTitle, spacer } from "../_shared/emailLayout.ts";
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const TO = Deno.env.get("REPAIR_NOTIFICATION_EMAIL") || IT_EMAIL;
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 const URGENCY: Record<string, string> = { high: "Urgent", normal: "Soon", low: "Can wait" };
 
 serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return json({ error: "Not signed in" }, 401);
+    const caller = await requireCaller(req);
     const { requestId } = (await req.json()) as { requestId?: string };
-    if (!requestId) return json({ error: "requestId is required" }, 400);
+    if (!requestId) throw new PublicError("requestId is required");
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { headers: { Authorization: authHeader } } });
-    const { data: r, error } = await supabase.from("repair_requests").select("*").eq("id", requestId).maybeSingle();
+    // Read as the caller: only the reporter (or maintenance staff) can see the request.
+    const { data: r, error } = await caller.db.from("repair_requests").select("*").eq("id", requestId).maybeSingle();
     if (error) throw error;
-    if (!r) return json({ error: "Request not found" }, 404);
-    const { data: asset } = await supabase.from("assets").select("name, category, brand, model, serial_number, asset_tag").eq("id", r.asset_id).maybeSingle();
+    if (!r) throw new PublicError("Request not found", 404);
+    await checkThrottle("notify-repair-request", r.id, 0);
+    const { data: asset } = await caller.db.from("assets").select("name, category, brand, model, serial_number, asset_tag").eq("id", r.asset_id).maybeSingle();
 
     const who = r.reporter_name || r.reporter_email || "An employee";
     const urgency = URGENCY[r.urgency] || "Soon";
@@ -72,9 +66,10 @@ serve(async (req: Request) => {
       html,
       replyTo: r.reporter_email || undefined,
     });
-    if (result.mock) return json({ error: "No Resend API key is set on Supabase (RESEND_API_KEY)" }, 503);
-    return json({ success: true });
+    if (result.mock) throw new PublicError("Email isn't configured on the server (no Resend key)", 503);
+    await recordEmail("notify-repair-request", r.id, caller.id);
+    return json(req, { success: true });
   } catch (e) {
-    return json({ error: e instanceof Error ? e.message : String(e) }, 500);
+    return errorResponse(req, "notify-repair-request", e);
   }
 });

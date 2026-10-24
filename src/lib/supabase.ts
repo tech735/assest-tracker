@@ -9,4 +9,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
     );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// PKCE: Google sign-in returns a one-time code (exchanged by the client) instead of putting the
+// access and refresh tokens in the URL.
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, { auth: { flowType: 'pkce' } });

@@ -24,7 +24,6 @@ interface AssetRow {
     assigned_to?: string;
     assigned_to_id?: string;
     purchase_date?: string;
-    purchase_cost?: number;
     vendor?: string;
     warranty_start?: string;
     warranty_end?: string;
@@ -35,7 +34,6 @@ interface AssetRow {
     notes?: string;
     repair_vendor?: string;
     repair_est_return?: string;
-    repair_cost?: number;
     repair_notes?: string;
     lost_reference?: string;
     lost_notes?: string;
@@ -107,7 +105,6 @@ const mapAsset = (data: AssetRow): Asset => ({
     assignedTo: data.assigned_to,
     assignedToId: data.assigned_to_id,
     purchaseDate: data.purchase_date,
-    purchaseCost: data.purchase_cost,
     vendor: data.vendor,
     warrantyStart: data.warranty_start,
     warrantyEnd: data.warranty_end,
@@ -118,7 +115,6 @@ const mapAsset = (data: AssetRow): Asset => ({
     notes: data.notes,
     repairVendor: data.repair_vendor,
     repairEstReturn: data.repair_est_return,
-    repairCost: data.repair_cost,
     repairNotes: data.repair_notes,
     lostReference: data.lost_reference,
     lostNotes: data.lost_notes,
@@ -180,6 +176,49 @@ const mapAlert = (data: AlertRow): Alert => ({
 });
 
 // =====================================================
+// ASSET COSTS (own table: readable only with "See costs" or by the people who enter them)
+// =====================================================
+
+interface AssetCostRow {
+    asset_id: string;
+    purchase_cost: number | null;
+    repair_cost: number | null;
+}
+
+/** Costs the current user may see, by asset id. Empty for roles without access (RLS). */
+async function getAssetCosts(ids?: string[]): Promise<Map<string, AssetCostRow>> {
+    try {
+        const rows = ids
+            ? (await mapLimit(chunk(ids, 150), 3, async (part) => {
+                const { data, error } = await supabase.from('asset_costs').select('asset_id, purchase_cost, repair_cost').in('asset_id', part);
+                if (error) throw error;
+                return (data || []) as AssetCostRow[];
+            })).flat()
+            : await fetchAllPages<AssetCostRow>((from, to, count) =>
+                supabase.from('asset_costs').select('asset_id, purchase_cost, repair_cost', count ? { count: 'exact' } : undefined).order('asset_id').range(from, to));
+        return new Map(rows.map((r) => [r.asset_id, r]));
+    } catch {
+        return new Map();
+    }
+}
+
+const withCosts = (asset: Asset, costs: Map<string, AssetCostRow>): Asset => {
+    const c = costs.get(asset.id);
+    return c ? { ...asset, purchaseCost: c.purchase_cost ?? undefined, repairCost: c.repair_cost ?? undefined } : asset;
+};
+
+/** Writes only the cost fields present in `patch`. */
+async function saveAssetCosts(assetId: string, patch: { purchaseCost?: number | null; repairCost?: number | null }) {
+    const row: Record<string, unknown> = { asset_id: assetId, updated_at: new Date().toISOString() };
+    // undefined = not provided (leave as is); null = clear.
+    if (patch.purchaseCost !== undefined) row.purchase_cost = patch.purchaseCost;
+    if (patch.repairCost !== undefined) row.repair_cost = patch.repairCost;
+    if (Object.keys(row).length === 2) return;
+    const { error } = await supabase.from('asset_costs').upsert(row, { onConflict: 'asset_id' });
+    if (error) throw error;
+}
+
+// =====================================================
 // ASSET OPERATIONS
 // =====================================================
 
@@ -191,7 +230,8 @@ export async function getAssets(): Promise<Asset[]> {
             .order('created_at', { ascending: false })
             .order('id')
             .range(from, to));
-    return rows.map(mapAsset);
+    const costs = await getAssetCosts();
+    return rows.map((r) => withCosts(mapAsset(r), costs));
 }
 
 async function getAssetById(id: string): Promise<Asset | null> {
@@ -202,7 +242,7 @@ async function getAssetById(id: string): Promise<Asset | null> {
         .single();
 
     if (error) throw error;
-    return data ? mapAsset(data) : null;
+    return data ? withCosts(mapAsset(data), await getAssetCosts([id])) : null;
 }
 
 export async function createAsset(asset: Omit<Asset, 'id' | 'createdAt' | 'updatedAt'>): Promise<Asset> {
@@ -222,7 +262,6 @@ export async function createAsset(asset: Omit<Asset, 'id' | 'createdAt' | 'updat
             assigned_to: asset.assignedTo,
             assigned_to_id: asset.assignedToId,
             purchase_date: asset.purchaseDate,
-            purchase_cost: asset.purchaseCost,
             vendor: asset.vendor,
             warranty_start: asset.warrantyStart,
             warranty_end: asset.warrantyEnd,
@@ -231,7 +270,6 @@ export async function createAsset(asset: Omit<Asset, 'id' | 'createdAt' | 'updat
             notes: asset.notes,
             repair_vendor: asset.repairVendor,
             repair_est_return: asset.repairEstReturn,
-            repair_cost: asset.repairCost,
             repair_notes: asset.repairNotes,
             lost_reference: asset.lostReference,
             lost_notes: asset.lostNotes,
@@ -240,7 +278,11 @@ export async function createAsset(asset: Omit<Asset, 'id' | 'createdAt' | 'updat
         .single();
 
     if (error) throw error;
-    return mapAsset(data);
+    const created = mapAsset(data);
+    if (asset.purchaseCost != null || asset.repairCost != null) {
+        await saveAssetCosts(created.id, { purchaseCost: asset.purchaseCost, repairCost: asset.repairCost });
+    }
+    return { ...created, purchaseCost: asset.purchaseCost, repairCost: asset.repairCost };
 }
 
 export async function updateAsset(id: string, updates: Partial<Asset>): Promise<Asset> {
@@ -260,7 +302,6 @@ export async function updateAsset(id: string, updates: Partial<Asset>): Promise<
             assigned_to: updates.assignedTo,
             assigned_to_id: updates.assignedToId,
             purchase_date: updates.purchaseDate,
-            purchase_cost: updates.purchaseCost,
             vendor: updates.vendor,
             warranty_start: updates.warrantyStart,
             warranty_end: updates.warrantyEnd,
@@ -269,7 +310,6 @@ export async function updateAsset(id: string, updates: Partial<Asset>): Promise<
             notes: updates.notes,
             repair_vendor: updates.repairVendor,
             repair_est_return: updates.repairEstReturn,
-            repair_cost: updates.repairCost,
             repair_notes: updates.repairNotes,
             lost_reference: updates.lostReference,
             lost_notes: updates.lostNotes,
@@ -279,7 +319,11 @@ export async function updateAsset(id: string, updates: Partial<Asset>): Promise<
         .single();
 
     if (error) throw error;
-    return mapAsset(data);
+    const costPatch: { purchaseCost?: number | null; repairCost?: number | null } = {};
+    if (updates.purchaseCost !== undefined) costPatch.purchaseCost = updates.purchaseCost;
+    if (updates.repairCost !== undefined) costPatch.repairCost = updates.repairCost;
+    await saveAssetCosts(id, costPatch);
+    return withCosts(mapAsset(data), await getAssetCosts([id]));
 }
 
 export async function deleteAsset(id: string): Promise<void> {
@@ -468,12 +512,12 @@ export async function startRepair({
             status: 'repair',
             repair_vendor: vendor,
             repair_est_return: estReturn,
-            repair_cost: cost,
             repair_notes: notes,
         })
         .eq('id', assetId);
 
     if (assetError) throw assetError;
+    if (cost != null) await saveAssetCosts(assetId, { repairCost: cost });
 
     await createAssignment({
         assetId: asset.id,
@@ -505,12 +549,12 @@ export async function endRepair({
             condition,
             repair_vendor: null,
             repair_est_return: null,
-            repair_cost: null,
             repair_notes: null,
         })
         .eq('id', assetId);
 
     if (assetError) throw assetError;
+    await saveAssetCosts(assetId, { repairCost: null }).catch(() => undefined);
 
     await createAssignment({
         assetId: asset.id,

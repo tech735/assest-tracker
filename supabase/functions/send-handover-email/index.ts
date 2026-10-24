@@ -4,36 +4,29 @@
 // security decides whether they may see it — only IT staff and the employee themselves can.
 // Deploy: supabase functions deploy send-handover-email
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { sendEmail } from "../_shared/mailer.ts";
+import { checkThrottle, recordEmail, requireCaller } from "../_shared/guard.ts";
+import { PublicError, corsHeaders, errorResponse, json } from "../_shared/http.ts";
 import { APP_URL, IT_EMAIL, button, deviceKind, emailLayout, escapeHtml, facts, formatDate, itemList, sectionTitle, spacer, supportList, titleCase } from "../_shared/emailLayout.ts";
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
 type Item = { tag: string; name: string; serial?: string; brand?: string; condition?: string; accessories?: string };
 
 serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return json({ error: "Not signed in" }, 401);
+    const caller = await requireCaller(req);
     const { documentId } = (await req.json()) as { documentId?: string };
-    if (!documentId) return json({ error: "documentId is required" }, 400);
+    if (!documentId) throw new PublicError("documentId is required");
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { headers: { Authorization: authHeader } } });
-    const { data: doc, error } = await supabase.from("handover_documents").select("*").eq("id", documentId).maybeSingle();
+    // Read as the caller: only IT staff and the employee named on the form can see it.
+    const { data: doc, error } = await caller.db.from("handover_documents").select("*").eq("id", documentId).maybeSingle();
     if (error) throw error;
-    if (!doc) return json({ error: "Document not found" }, 404);
-    if (doc.status !== "pending") return json({ error: "Document is not awaiting signature" }, 409);
-    if (!doc.employee_email) return json({ error: "The employee has no email address" }, 400);
+    if (!doc) throw new PublicError("Document not found", 404);
+    if (doc.status !== "pending") throw new PublicError("Document is not awaiting signature", 409);
+    if (!doc.employee_email) throw new PublicError("The employee has no email address");
+    await checkThrottle("send-handover-email", doc.id, 10);
 
     // The link always points at the real app (APP_URL), never at a caller-supplied origin.
     const link = `${APP_URL}/sign/${doc.id}`;
@@ -76,9 +69,10 @@ serve(async (req: Request) => {
     });
 
     const result = await sendEmail({ to: [doc.employee_email], subject: `Action needed: sign your asset ${isReturn ? "return" : "handover"} form (${docNo})`, html });
-    if (result.mock) return json({ error: "No Resend API key is set on Supabase (RESEND_API_KEY)" }, 503);
-    return json({ success: true });
+    if (result.mock) throw new PublicError("Email isn't configured on the server (no Resend key)", 503);
+    await recordEmail("send-handover-email", doc.id, caller.id);
+    return json(req, { success: true });
   } catch (e) {
-    return json({ error: e instanceof Error ? e.message : String(e) }, 500);
+    return errorResponse(req, "send-handover-email", e);
   }
 });

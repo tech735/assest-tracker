@@ -211,8 +211,12 @@ export default function People() {
     const meta = EMPLOYEE_STATUS_META[e.status] ?? EMPLOYEE_STATUS_META.active;
     return <Pill tone={meta.tone}>{meta.label}</Pill>;
   };
+  // Without the Assets page the asset rows aren't readable (RLS), so fall back to the stored count.
+  const seesAssets = can('assets.view');
+  const heldCount = (e: Employee) => (seesAssets ? held.get(e.id)?.length || 0 : e.assetsCount || 0);
   const assetChips = (e: Employee) => {
     const cats = held.get(e.id) || [];
+    if (!seesAssets) return <span className="text-[13px] tabular">{e.assetsCount ? `${e.assetsCount} asset${e.assetsCount === 1 ? '' : 's'}` : <span className="text-faint">No assets</span>}</span>;
     if (!cats.length) return <span className="text-[13px] text-faint">No assets</span>;
     const uniq = [...new Set(cats.map((c) => c?.toLowerCase()))].slice(0, 3);
     return (
@@ -287,7 +291,7 @@ export default function People() {
                 </span>
                 <span className="flex flex-col items-end gap-1">
                   {status(e)}
-                  <span className="text-xs text-faint">{held.get(e.id)?.length || 0} assets</span>
+                  <span className="text-xs text-faint">{heldCount(e)} assets</span>
                 </span>
               </Link>
             ))}

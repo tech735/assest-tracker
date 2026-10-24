@@ -40,7 +40,7 @@ const bundleSchema = z.object({
     assetIds: z.array(z.string()).min(1, { message: 'Select at least one asset.' }),
     handoverDate: z.string().min(1, { message: 'Handover date is required.' }),
     handedOverBy: z.string().min(1, { message: 'Handed over by is required.' }),
-    condition: z.enum(['new', 'good', 'fair', 'poor'], { required_error: 'Condition is required.' }),
+    condition: z.enum(['new', 'good', 'fair', 'poor'], { error: 'Condition is required.' }),
     notes: z.string().optional(),
 });
 

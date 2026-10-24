@@ -41,7 +41,8 @@ const schema = z
   })
   .refine((v) => !v.hasAmc || (v.amcStartDate && v.amcEndDate), { message: 'Add the AMC start and end dates', path: ['amcEndDate'] });
 
-type Values = z.infer<typeof schema>;
+type FormInput = z.input<typeof schema>;
+type Values = z.output<typeof schema>;
 
 function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
@@ -72,7 +73,8 @@ export default function AssetNew() {
   }, [settings, assets]);
   const tagPrefix: string = settings?.tagPrefix || 'AST-';
 
-  const form = useForm<Values>({
+  // Purchase cost is typed as text and coerced to a number, so the form's input and output types differ.
+  const form = useForm<FormInput, unknown, Values>({
     resolver: zodResolver(schema),
     defaultValues: {
       category: '',

@@ -49,8 +49,18 @@ export function parseLooseDate(value: string): string | null {
   return Number.isNaN(t) ? null : new Date(t).toISOString().slice(0, 10);
 }
 
+/**
+ * One quoted CSV cell. Text a spreadsheet would run as a formula (starting with =, +, -, @, tab or
+ * CR) gets a leading apostrophe so Excel / Sheets show it as text; plain numbers are left alone.
+ */
+export function csvCell(value: unknown): string {
+  let s = String(value ?? '');
+  if (/^[=+\-@\t\r]/.test(s) && !/^[-+]?\d+(\.\d+)?$/.test(s)) s = `'${s}`;
+  return `"${s.replace(/"/g, '""')}"`;
+}
+
 export function toCSV(rows: (string | number | undefined | null)[][]): string {
-  return rows.map((r) => r.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+  return rows.map((r) => r.map(csvCell).join(',')).join('\n');
 }
 
 export function downloadText(filename: string, text: string, type = 'text/csv;charset=utf-8;') {
