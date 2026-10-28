@@ -10,6 +10,7 @@ import {
   MapPin,
   MoreHorizontal,
   Package,
+  Receipt,
   PanelLeft,
   Plus,
   ScanLine,
@@ -92,6 +93,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     label: 'Inventory',
     items: [
       { to: '/assets', label: 'Assets', short: 'Assets', icon: Package, countKey: 'assets', perm: 'assets.view' },
+      { to: '/purchases', label: 'Purchases', short: 'Purchases', icon: Receipt, perm: 'assets.view' },
       { to: '/maintenance', label: 'Maintenance', short: 'Maintain', icon: Wrench, countKey: 'maintenance', perm: 'maintenance.view' },
       { to: '/audits', label: 'Audits', short: 'Audits', icon: ClipboardCheck, perm: 'audits.view' },
     ],
@@ -465,6 +467,7 @@ function MoreSheet({ open, onOpenChange, profile, onEditProfile, onShortcuts }: 
     {
       title: 'Operations',
       items: [
+        { icon: Receipt, label: 'Purchases', to: '/purchases', perm: 'assets.view' },
         { icon: Wrench, label: 'Maintenance & AMC', to: '/maintenance', meta: counts.maintenance ? String(counts.maintenance) : undefined, perm: 'maintenance.view' },
         { icon: ClipboardCheck, label: 'Audits', to: '/audits', perm: 'audits.view' },
         { icon: BarChart3, label: 'Reports', to: '/reports', perm: 'reports.view' },

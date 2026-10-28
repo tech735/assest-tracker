@@ -4,6 +4,7 @@ import { ChevronRight, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { categoryIcon, initials, STATUS_META, type Tone } from '@/lib/assetMeta';
 import type { AssetStatus } from '@/types/asset';
+import { useModelPhoto } from '@/hooks/usePurchases';
 
 const TONE_CLASSES: Record<Tone, { pill: string; dot: string; bubble: string }> = {
   success: { pill: 'bg-success-soft text-success-strong', dot: 'bg-success', bubble: 'bg-success-soft text-success-strong' },
@@ -76,7 +77,19 @@ export function IconBubble({
   );
 }
 
-export function AssetThumb({ category, size = 'md', className }: { category?: string; size?: 'sm' | 'md' | 'lg' | 'xl'; className?: string }) {
+/** The model's product photo when one was added (pass `asset`), otherwise the category icon. */
+export function AssetThumb({
+  category,
+  asset,
+  size = 'md',
+  className,
+}: {
+  category?: string;
+  asset?: { brand?: string; model?: string };
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  className?: string;
+}) {
+  const photo = useModelPhoto(asset);
   const Icon = categoryIcon(category);
   const dims = {
     sm: 'h-8 w-8 rounded-lg [&_svg]:h-4 [&_svg]:w-4',
@@ -84,6 +97,12 @@ export function AssetThumb({ category, size = 'md', className }: { category?: st
     lg: 'h-12 w-12 rounded-xl [&_svg]:h-6 [&_svg]:w-6',
     xl: 'h-16 w-16 rounded-2xl [&_svg]:h-8 [&_svg]:w-8',
   }[size];
+  if (photo)
+    return (
+      <span className={cn('inline-flex shrink-0 items-center justify-center overflow-hidden border bg-white', dims, className)}>
+        <img src={photo.url} alt="" loading="lazy" decoding="async" className="h-full w-full object-contain p-0.5" />
+      </span>
+    );
   return (
     <span className={cn('inline-flex shrink-0 items-center justify-center bg-muted text-muted-foreground', dims, className)}>
       <Icon />

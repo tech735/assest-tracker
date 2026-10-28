@@ -13,6 +13,7 @@ import {
   Pencil,
   Printer,
   QrCode,
+  Receipt,
   ShieldCheck,
   Tag,
   Wallet,
@@ -30,6 +31,8 @@ import { primaryAction, useAssetActions } from '@/components/assets/useAssetActi
 import { LabelDialog } from '@/components/assets/LabelDialog';
 import { AssetFilesPanel, NoteComposer } from '@/components/assets/AssetCollab';
 import { useAccess } from '@/hooks/useCollab';
+import { usePurchaseInvoices } from '@/hooks/usePurchases';
+import { ModelPhotoCard } from '@/components/assets/ModelPhotoCard';
 import { bookValue, displayLocation, formatDate, formatMoney, titleCase } from '@/lib/assetMeta';
 import { cn } from '@/lib/utils';
 
@@ -53,6 +56,9 @@ export default function AssetDetail() {
   const holderEmail = employees.find((e) => e.id === asset?.assignedToId)?.email?.toLowerCase();
   const mine = !!asset && asset.status === 'assigned' && !!access?.email && holderEmail === access.email.toLowerCase();
   const staff = can('assets.view');
+  const seesInvoices = can('costs.view') || can('assets.edit');
+  const { data: invoices = [] } = usePurchaseInvoices(seesInvoices && !!asset?.purchaseInvoiceId);
+  const invoice = invoices.find((i) => i.id === asset?.purchaseInvoiceId);
 
   // Deep links from the scanner / quick view: ?action=checkout|checkin, ?print=label
   useEffect(() => {
@@ -107,8 +113,8 @@ export default function AssetDetail() {
         breadcrumb={staff ? [{ label: 'Assets', to: '/assets' }, { label: titleCase(asset.category), to: `/assets?category=${asset.category?.toLowerCase()}` }, { label: asset.assetTag }] : [{ label: 'My assets', to: '/me' }, { label: asset.assetTag }]}
         title={
           <span className="flex items-center gap-4">
-            <AssetThumb category={asset.category} size="xl" className="hidden sm:inline-flex" />
-            <AssetThumb category={asset.category} size="lg" className="sm:hidden" />
+            <AssetThumb category={asset.category} asset={asset} size="xl" className="hidden sm:inline-flex" />
+            <AssetThumb category={asset.category} asset={asset} size="lg" className="sm:hidden" />
             <span className="min-w-0">
               <span className="block truncate">{asset.name}</span>
               <span className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[13px] font-normal tracking-normal text-muted-foreground">
@@ -210,6 +216,8 @@ export default function AssetDetail() {
           </div>
 
           <div className="min-w-0 space-y-4">
+            <ModelPhotoCard asset={asset} />
+
             <SectionCard title="Properties" action={canEdit && <button onClick={() => act('edit', asset)} className="text-[13px] font-medium text-link hover:underline">Edit</button>}>
               <div className="space-y-3">
                 <KeyValue icon={Layers} label="Category">{titleCase(asset.category)}</KeyValue>
@@ -217,6 +225,13 @@ export default function AssetDetail() {
                 <KeyValue icon={MapPin} label="Location">{displayLocation(asset.location)}</KeyValue>
                 <KeyValue icon={CalendarDays} label="Purchased">{formatDate(asset.purchaseDate)}</KeyValue>
                 <KeyValue icon={Building2} label="Vendor">{asset.vendor || '—'}</KeyValue>
+                {invoice && (
+                  <KeyValue icon={Receipt} label="Invoice">
+                    <Link to={`/purchases?invoice=${invoice.id}`} className="text-link hover:underline">
+                      {invoice.invoiceNumber || 'View'} · {formatDate(invoice.invoiceDate)}
+                    </Link>
+                  </KeyValue>
+                )}
                 {can('costs.view') && <KeyValue icon={Wallet} label="Cost / book value">
                   {formatMoney(asset.purchaseCost, currency)}
                   {bv && <span className="text-muted-foreground"> / {formatMoney(bv.value, currency)}</span>}

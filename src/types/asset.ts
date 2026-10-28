@@ -27,6 +27,7 @@ export interface Asset {
   amcEndDate?: string;
   amcContractId?: string;
   warrantyContractId?: string;
+  purchaseInvoiceId?: string;
   notes?: string;
   repairVendor?: string;
   repairEstReturn?: string;
@@ -79,6 +80,22 @@ export interface ServiceContract {
   covers?: string;
   excludes?: string;
   supportContact?: string;
+  notes?: string;
+  documentPath?: string;
+  documentName?: string;
+  createdAt: string;
+}
+
+/** A vendor's tax invoice for one delivery (Purchases). Assets bought on it link back to it. */
+export interface PurchaseInvoice {
+  id: string;
+  vendor: string;
+  invoiceNumber?: string;
+  invoiceDate: string;
+  subtotal?: number;
+  taxAmount?: number;
+  totalAmount?: number;
+  currency: string;
   notes?: string;
   documentPath?: string;
   documentName?: string;

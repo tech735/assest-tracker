@@ -10,7 +10,6 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { EmptyState, PageHeader, ProgressBar } from '@/components/app/primitives';
 import { useAccess } from '@/hooks/useCollab';
-import { BulkAssetAddDialog } from '@/components/assets/BulkAssetAddDialog';
 import { downloadText, parseCSV, parseLooseDate, toCSV } from '@/lib/csv';
 import { displayLocation } from '@/lib/assetMeta';
 import { cn } from '@/lib/utils';
@@ -55,7 +54,6 @@ export default function AssetImport() {
   const [skipDuplicates, setSkipDuplicates] = useState(true);
   const [dragging, setDragging] = useState(false);
   const [progress, setProgress] = useState({ done: 0, failed: 0, total: 0, running: false, finished: false });
-  const [scanWizard, setScanWizard] = useState(false);
   const { can } = useAccess();
   const canEditAssets = can('assets.edit');
 
@@ -197,8 +195,10 @@ export default function AssetImport() {
         title="Import assets"
         actions={
           <>
-            <Button variant="ghost" onClick={() => setScanWizard(true)}>
-              <ScanLine /> Receive stock by scanning
+            <Button variant="ghost" asChild>
+              <Link to="/assets/receive">
+                <ScanLine /> Receive stock by scanning
+              </Link>
             </Button>
             <Button variant="ghost" onClick={template}>
               <Download /> Download template
@@ -385,7 +385,6 @@ export default function AssetImport() {
         </div>
       )}
 
-      <BulkAssetAddDialog open={scanWizard} onOpenChange={setScanWizard} showTrigger={false} />
       <p className="text-center text-xs text-muted-foreground">
         Prefer one at a time? <Link to="/assets/new" className="font-medium text-link hover:underline">Add a single asset</Link>
       </p>

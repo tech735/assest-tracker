@@ -19,6 +19,8 @@ const Assets = lazyPage(() => import("./pages/Assets"));
 const AssetDetail = lazyPage(() => import("./pages/AssetDetail"));
 const AssetNew = lazyPage(() => import("./pages/AssetNew"));
 const AssetImport = lazyPage(() => import("./pages/AssetImport"));
+const ReceiveDelivery = lazyPage(() => import("./pages/ReceiveDelivery"));
+const Purchases = lazyPage(() => import("./pages/Purchases"));
 const People = lazyPage(() => import("./pages/People"));
 const PersonProfile = lazyPage(() => import("./pages/PersonProfile"));
 const Locations = lazyPage(() => import("./pages/Locations"));
@@ -58,6 +60,8 @@ const App = () => (
                         <Route path="/assets" element={<RequirePage perm="assets.view"><Assets /></RequirePage>} />
                         <Route path="/assets/new" element={<RequirePage perm="assets.view"><AssetNew /></RequirePage>} />
                         <Route path="/assets/import" element={<RequirePage perm="assets.view"><AssetImport /></RequirePage>} />
+                        <Route path="/assets/receive" element={<RequirePage perm="assets.view"><ReceiveDelivery /></RequirePage>} />
+                        <Route path="/purchases" element={<RequirePage perm="assets.view"><Purchases /></RequirePage>} />
                         {/* Asset pages check access themselves: staff with Assets, or the employee holding it. */}
                         <Route path="/assets/:id" element={<AssetDetail />} />
                         <Route path="/people" element={<RequirePage perm="people.view"><People /></RequirePage>} />

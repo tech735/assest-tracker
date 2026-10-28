@@ -269,7 +269,7 @@ export function AssetQuickView({
       <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-[520px]" onOpenAutoFocus={(e) => e.preventDefault()}>
         <div className="space-y-4 px-6 pt-5">
           <div className="flex items-center gap-3.5 pr-16">
-            <AssetThumb category={asset.category} size="lg" />
+            <AssetThumb category={asset.category} asset={asset} size="lg" />
             <div className="min-w-0">
               <SheetTitle className="truncate text-lg">{asset.name}</SheetTitle>
               <p className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">

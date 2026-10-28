@@ -104,7 +104,7 @@ export function ContractAssetsDialog({ contract, open, onOpenChange }: { contrac
               <li key={a.id}>
                 <label className={cn('flex cursor-pointer items-center gap-3 px-6 py-2.5 hover:bg-subtle', on && 'bg-primary/[0.04]')}>
                   <Checkbox checked={on} onCheckedChange={(c) => toggle(a.id, c === true)} aria-label={`Cover ${a.assetTag}`} />
-                  <AssetThumb category={a.category} size="sm" />
+                  <AssetThumb category={a.category} asset={a} size="sm" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium">{a.name}</span>
                     <span className="block truncate text-xs text-muted-foreground">

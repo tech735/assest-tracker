@@ -94,7 +94,7 @@ export function ScanDialog({ open, onOpenChange, capture }: { open: boolean; onO
                     <CheckCircle2 className="h-4 w-4" /> Found · {result.asset.assetTag}
                   </span>
                   <div className="flex items-center gap-3">
-                    <AssetThumb category={result.asset.category} size="lg" />
+                    <AssetThumb category={result.asset.category} asset={result.asset} size="lg" />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-lg font-semibold">{result.asset.name}</p>
                       <div className="mt-1 flex items-center gap-2">

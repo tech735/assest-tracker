@@ -31,6 +31,7 @@ interface AssetRow {
     amc_end_date?: string;
     amc_contract_id?: string | null;
     warranty_contract_id?: string | null;
+    purchase_invoice_id?: string | null;
     notes?: string;
     repair_vendor?: string;
     repair_est_return?: string;
@@ -112,6 +113,7 @@ const mapAsset = (data: AssetRow): Asset => ({
     amcEndDate: data.amc_end_date,
     amcContractId: data.amc_contract_id ?? undefined,
     warrantyContractId: data.warranty_contract_id ?? undefined,
+    purchaseInvoiceId: data.purchase_invoice_id ?? undefined,
     notes: data.notes,
     repairVendor: data.repair_vendor,
     repairEstReturn: data.repair_est_return,
@@ -267,6 +269,7 @@ export async function createAsset(asset: Omit<Asset, 'id' | 'createdAt' | 'updat
             warranty_end: asset.warrantyEnd,
             amc_start_date: asset.amcStartDate,
             amc_end_date: asset.amcEndDate,
+            purchase_invoice_id: asset.purchaseInvoiceId,
             notes: asset.notes,
             repair_vendor: asset.repairVendor,
             repair_est_return: asset.repairEstReturn,
@@ -307,6 +310,7 @@ export async function updateAsset(id: string, updates: Partial<Asset>): Promise<
             warranty_end: updates.warrantyEnd,
             amc_start_date: updates.amcStartDate,
             amc_end_date: updates.amcEndDate,
+            purchase_invoice_id: updates.purchaseInvoiceId,
             notes: updates.notes,
             repair_vendor: updates.repairVendor,
             repair_est_return: updates.repairEstReturn,

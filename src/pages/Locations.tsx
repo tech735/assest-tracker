@@ -212,7 +212,7 @@ export default function Locations() {
                   viewAssets.length ? (
                     viewAssets.slice(0, 100).map((a) => (
                       <AssetLink key={a.id} id={a.id} className="flex items-center gap-3 rounded-lg px-2 py-2.5 hover:bg-subtle">
-                        <AssetThumb category={a.category} size="sm" />
+                        <AssetThumb category={a.category} asset={a} size="sm" />
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm font-medium">{a.name}</span>
                           <span className="block truncate text-xs text-muted-foreground"><span className="font-mono">{a.assetTag}</span>{a.assignedTo ? ` · ${a.assignedTo}` : ''}</span>

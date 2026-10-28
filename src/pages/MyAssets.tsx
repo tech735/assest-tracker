@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { AlertTriangle, ChevronRight, FileSignature, Package, PackageOpen, Wrench } from 'lucide-react';
 import { useAssets, useAssignments, useEmployees } from '@/hooks/useSupabaseData';
 import { useAccess, useContracts, useHandoverDocuments, useRepairRequests } from '@/hooks/useCollab';
+import { useModelPhoto } from '@/hooks/usePurchases';
 import type { Asset, RepairRequest } from '@/types/asset';
 import { ReportProblemDialog } from '@/components/assets/ReportProblemDialog';
 import { Button } from '@/components/ui/button';
@@ -155,6 +156,7 @@ function DeviceCard({ asset: a, since, amcVendor, request, onReport }: { asset: 
   const warranty = coverage(a.warrantyStart || a.purchaseDate, a.warrantyEnd);
   const amc = coverage(a.amcStartDate, a.amcEndDate);
   const model = [a.brand, a.model].filter(Boolean).join(' ');
+  const photo = useModelPhoto(a);
 
   return (
     <article className="flex h-full flex-col overflow-hidden rounded-xl border bg-card shadow-xs transition-shadow hover:shadow-card-hover">
@@ -164,7 +166,11 @@ function DeviceCard({ asset: a, since, amcVendor, request, onReport }: { asset: 
       </header>
 
       <Link to={`/assets/${a.id}`} className="mx-4 mt-3 flex h-40 items-center justify-center rounded-lg bg-gradient-to-b from-subtle to-muted/60 px-6 py-4" aria-label={`Open ${a.name}`}>
-        <DeviceArt kind={deviceKind(a)} className="max-h-32 max-w-[220px] drop-shadow-sm" />
+        {photo ? (
+          <img src={photo.url} alt={model || a.name} loading="lazy" decoding="async" className="max-h-32 max-w-full rounded-md object-contain" />
+        ) : (
+          <DeviceArt kind={deviceKind(a)} className="max-h-32 max-w-[220px] drop-shadow-sm" />
+        )}
       </Link>
 
       <div className="flex flex-1 flex-col px-4 pb-1 pt-3.5">

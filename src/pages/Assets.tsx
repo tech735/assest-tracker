@@ -8,7 +8,9 @@ import {
   MapPin,
   MoreHorizontal,
   Package,
+  PackagePlus,
   Plus,
+  Receipt,
   SlidersHorizontal,
   Tag,
   Trash2,
@@ -42,6 +44,7 @@ import { BulkChangeLocationDialog } from '@/components/assets/BulkChangeLocation
 import { BulkAmcUpdateDialog } from '@/components/assets/BulkAmcUpdateDialog';
 import { BulkUpdateCategoryDialog } from '@/components/assets/BulkUpdateCategoryDialog';
 import { BulkDeleteAssetsDialog } from '@/components/assets/BulkDeleteAssetsDialog';
+import { BulkInvoiceDialog } from '@/components/purchases/BulkInvoiceDialog';
 import { amcExpiring, coverage, displayLocation, formatDate, STATUS_META, STATUS_ORDER, titleCase } from '@/lib/assetMeta';
 import { exportToCSV } from '@/lib/exportUtils';
 import { useAccess } from '@/hooks/useCollab';
@@ -95,7 +98,7 @@ export default function Assets() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [quickView, setQuickView] = useState<Asset | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [bulk, setBulk] = useState<null | 'assign' | 'status' | 'location' | 'amc' | 'category' | 'delete'>(null);
+  const [bulk, setBulk] = useState<null | 'assign' | 'status' | 'location' | 'amc' | 'category' | 'invoice' | 'delete'>(null);
   const [cols, setCols] = useState<Record<Col, boolean>>(() => {
     try {
       return { tag: true, location: true, assignee: true, condition: false, coverage: true, ...JSON.parse(localStorage.getItem('assetColumns') || '{}') };
@@ -231,6 +234,12 @@ export default function Assets() {
             <Button variant="secondary" className="hidden md:inline-flex" onClick={() => exportToCSV(filtered, 'assets_export')} disabled={!filtered.length}>
               <Download /> Export
             </Button>
+            {can('assets.edit') && <Button variant="secondary" asChild>
+              <Link to="/assets/receive">
+                <PackagePlus /> <span className="hidden sm:inline">Receive delivery</span>
+                <span className="sm:hidden">Receive</span>
+              </Link>
+            </Button>}
             {can('assets.edit') && <Button asChild>
               <Link to="/assets/new">
                 <Plus /> <span className="hidden sm:inline">Add asset</span>
@@ -325,7 +334,7 @@ export default function Assets() {
             </div>
             {filtered.slice(0, page * pageSize).map((a) => (
               <button key={a.id} onClick={() => openRow(a)} className="flex w-full items-center gap-3 rounded-[14px] border bg-card px-3.5 py-3 text-left active:bg-subtle">
-                <AssetThumb category={a.category} size="lg" className="h-11 w-11" />
+                <AssetThumb category={a.category} asset={a} size="lg" className="h-11 w-11" />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[15px] font-medium">{a.name}</span>
                   <span className="mt-0.5 block truncate text-xs text-muted-foreground">
@@ -406,7 +415,7 @@ export default function Assets() {
                         </td>
                         <td className="px-3 py-2.5">
                           <div className="flex items-center gap-2.5">
-                            <AssetThumb category={a.category} size="sm" />
+                            <AssetThumb category={a.category} asset={a} size="sm" />
                             <div className="min-w-0">
                               <p className="truncate font-medium">{a.name}</p>
                               <p className="truncate text-xs text-muted-foreground">
@@ -506,6 +515,9 @@ export default function Assets() {
               {can('assets.edit') && <DropdownMenuItem onSelect={() => setBulk('category')}>
                 <Tag /> Update category
               </DropdownMenuItem>}
+              {can('assets.edit') && <DropdownMenuItem onSelect={() => setBulk('invoice')}>
+                <Receipt /> Link to invoice
+              </DropdownMenuItem>}
               {can('assets.delete') && <DropdownMenuSeparator />}
               {can('assets.delete') && <DropdownMenuItem onSelect={() => setBulk('delete')} className="text-destructive-strong focus:text-destructive-strong [&_svg]:text-destructive-strong">
                 <Trash2 /> Delete assets
@@ -529,6 +541,7 @@ export default function Assets() {
       <BulkChangeLocationDialog assetIds={ids} open={bulk === 'location'} onOpenChange={(o) => !o && setBulk(null)} onDone={() => setSelected(new Set())} />
       <BulkAmcUpdateDialog assetIds={ids} open={bulk === 'amc'} onOpenChange={(o) => !o && setBulk(null)} onDone={() => setSelected(new Set())} />
       <BulkUpdateCategoryDialog assetIds={ids} open={bulk === 'category'} onOpenChange={(o) => !o && setBulk(null)} onDone={() => setSelected(new Set())} />
+      <BulkInvoiceDialog assetIds={ids} open={bulk === 'invoice'} onOpenChange={(o) => !o && setBulk(null)} onDone={() => setSelected(new Set())} />
       <BulkDeleteAssetsDialog assetIds={ids} open={bulk === 'delete'} onOpenChange={(o) => !o && setBulk(null)} onDone={() => setSelected(new Set())} />
     </div>
   );

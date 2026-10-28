@@ -72,7 +72,7 @@ export function RepairRequestsPanel() {
             return (
               <li key={r.id} className="flex flex-col gap-3 px-4 py-4 md:flex-row md:items-start">
                 <div className="flex min-w-0 flex-1 gap-3">
-                  <AssetThumb category={a?.category} />
+                  <AssetThumb category={a?.category} asset={a} />
                   <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <Link to={`/assets/${r.assetId}`} className="font-medium hover:underline">{r.assetName}</Link>

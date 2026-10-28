@@ -194,7 +194,7 @@ export default function PersonProfile() {
                 <ul className="divide-y">
                   {held.map((a) => (
                     <li key={a.id} className="flex items-center gap-3 px-4 py-3 hover:bg-subtle">
-                      <AssetThumb category={a.category} />
+                      <AssetThumb category={a.category} asset={a} />
                       <AssetLink id={a.id} className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{a.name}</p>
                         <p className="truncate text-xs text-muted-foreground">
