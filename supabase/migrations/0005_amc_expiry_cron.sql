@@ -1,23 +1,21 @@
 -- Schedules the amc-expiry-check edge function to run daily so AMC reminder
 -- emails go out on their own, independent of anyone opening the app.
 --
--- MANUAL STEP REQUIRED before this migration will actually fire anything:
--- this file intentionally does NOT contain a real API key (committing a secret
--- to a migration would leak it in git history). After this migration runs,
--- store the project's service role key in Supabase Vault once, from the SQL
--- editor on the hosted project (NOT from a file that gets committed):
+-- MANUAL STEPS REQUIRED before this migration will actually fire anything:
+-- this file intentionally does NOT contain a real secret (committing one to a
+-- migration would leak it in git history).
 --
---   select vault.create_secret('<your-service-role-key>', 'amc_cron_service_role_key');
+-- 1. Generate a random secret and set it on the functions:
+--      supabase secrets set CRON_SECRET=<random-secret>
+-- 2. Store the same value in Supabase Vault once, from the SQL editor on the
+--    hosted project (NOT from a file that gets committed):
+--      select vault.create_secret('<random-secret>', 'amc_cron_secret');
+-- 3. Replace <project-ref> and <anon-key> below (the anon key is the public one
+--    the app uses; it only gets the call past the Functions gateway), then run
+--    the cron.schedule block from the SQL editor.
 --
--- Then replace <project-ref> below with this project's actual ref before
--- deploying this migration (`supabase db push`), or run the corrected
--- `cron.schedule` block manually from the SQL editor.
---
--- Simpler alternative: skip pg_cron entirely and use Supabase's built-in Cron
--- Jobs UI for Edge Functions (Dashboard -> Edge Functions -> amc-expiry-check
--- -> Cron) to schedule this function on a "0 8 * * *" (daily 08:00 UTC)
--- expression — no SQL or Vault setup needed. If you use that route, this
--- migration is optional and can be skipped/reverted.
+-- The function only runs for a matching x-cron-secret header (or the
+-- service-role key); see supabase/functions/_shared/guard.ts.
 
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 CREATE EXTENSION IF NOT EXISTS pg_net WITH SCHEMA extensions;
@@ -30,9 +28,10 @@ SELECT cron.schedule(
     url := 'https://<project-ref>.supabase.co/functions/v1/amc-expiry-check',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'Authorization', 'Bearer ' || (
+      'Authorization', 'Bearer <anon-key>',
+      'x-cron-secret', (
         SELECT decrypted_secret FROM vault.decrypted_secrets
-        WHERE name = 'amc_cron_service_role_key'
+        WHERE name = 'amc_cron_secret'
       )
     ),
     body := '{}'::jsonb
